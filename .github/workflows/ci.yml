@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same ref cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # postinstall copies the MediaPipe WASM runtime and tries to fetch the
+      # three .task models. A network hiccup must not fail the job, and the
+      # engine falls back to the CDN at runtime, so the models are optional.
+      - name: Install
+        run: npm ci --ignore-scripts
+        env:
+          HUSKY: 0
+
+      - name: Prepare MediaPipe assets
+        continue-on-error: true
+        run: node scripts/setup-assets.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      # Boot the production build and exercise every route + the API, including
+      # the auth flow. This is the step that would have caught the EPERM bug.
+      - name: Smoke test
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          AUTH_SECRET: ci-only-secret-not-used-anywhere-else
+        run: |
+          npx next start -p 3111 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3111/api/health >/dev/null; then break; fi
+            sleep 2
+          done
+          node scripts/smoke.mjs http://localhost:3111 | tee docs/logs/smoke.txt
+          ! grep -q "^FAIL" docs/logs/smoke.txt
+
+      - name: Upload transcripts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics
+          path: docs/logs/
+          if-no-files-found: ignore

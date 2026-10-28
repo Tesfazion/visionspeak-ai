@@ -1,0 +1,8 @@
+# Keep line endings stable across Windows and CI so diffs stay readable.
+* text=auto eol=lf
+
+*.woff2 binary
+*.task binary
+*.wasm binary
+*.png binary
+*.ico binary

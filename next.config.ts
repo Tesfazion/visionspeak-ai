@@ -1,0 +1,70 @@
+import type { NextConfig } from "next";
+
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Content-Security-Policy.
+ *
+ * `'unsafe-inline'` is required for the style attributes this UI uses and for
+ * Next's inlined bootstrap script; a nonce-based policy would need middleware
+ * that rewrites every script tag. `wasm-unsafe-eval` is what makes MediaPipe's
+ * WebAssembly run — without it the studio cannot start. External origins are
+ * limited to the two CDNs the engine falls back to when local assets are
+ * missing (see MODELS / CDN_WASM in src/lib/analysis/engine.ts).
+ */
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval' " : ""}'wasm-unsafe-eval'`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' blob: data: https://storage.googleapis.com https://cdn.jsdelivr.net",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // Camera and mic are the product; everything else is denied.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=()",
+  },
+  ...(isDev
+    ? []
+    : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]),
+];
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+  // MediaPipe ships WASM assets that must not be bundled by webpack/turbopack.
+  serverExternalPackages: [],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts"],
+  },
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The service worker must never be cached by the browser, or a fix to it
+      // can take days to roll out.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;

@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Next.js
+.next
+out
+build
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Environment
+.env
+.env*.local
+!.env.example
+
+# Local data — accounts, signed-session secret and recorded sessions.
+# These are per-machine state, never source.
+data/sessions.json
+data/sessions.pre-reseed.json
+data/users.json
+data/auth-secret
+
+# Downloaded/copied model runtime — both are restored by `npm install`
+# (scripts/setup-assets.mjs copies the WASM out of node_modules and fetches
+# the .task bundles). Committing them would put ~19 MB of binaries in history.
+public/mediapipe/models/*.task
+public/mediapipe/wasm/
+
+# Generated diagnostics — see docs/README.md. docs/README.md itself is tracked.
+docs/notes/
+docs/logs/
+docs/artifacts/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pem
+.vercel

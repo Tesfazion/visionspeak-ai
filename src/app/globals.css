@@ -1,0 +1,498 @@
+@import "tailwindcss";
+
+@theme {
+  --color-base: #06060b;
+  --color-surface: #0a0a12;
+  --color-elevated: #10101a;
+  --color-raised: #161622;
+  --color-line: #1d1d2b;
+  --color-line-bright: #2a2a3d;
+  --color-fog: #8b8ba4;
+  --color-mist: #b9b9cc;
+  --color-ink: #f4f4f9;
+
+  --color-brand: #7c5cff;
+  --color-brand-soft: #a78bfa;
+  --color-aqua: #22d3ee;
+  --color-mint: #34d399;
+  --color-amber: #fbbf24;
+  --color-rose: #fb7185;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  --font-display: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+
+  --animate-float: float 14s ease-in-out infinite;
+  --animate-float-slow: float 22s ease-in-out infinite;
+  --animate-drift: drift 26s linear infinite;
+  --animate-shimmer: shimmer 2.6s linear infinite;
+  --animate-scan: scan 5.5s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-rise: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-blink: blink 1.8s steps(2, start) infinite;
+
+  /* Ultra-wide breakpoint (1920px) — beyond Tailwind's default 2xl. */
+  --breakpoint-3xl: 120rem;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(-4%, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, -3%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-4%, 0, 0) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-12%);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.55;
+  }
+  92% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(112%);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+    /* Stop iOS Safari from inflating body text in landscape. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Fixed header clearance for anchor navigation (#platform, #signals…). */
+  html {
+    scroll-padding-top: 5rem;
+  }
+
+  /* Long unbroken strings (URLs, hashes) must never widen the page. */
+  body {
+    overflow-wrap: break-word;
+  }
+
+  body {
+    background-color: var(--color-base);
+    color: var(--color-ink);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Ambient light behind everything — the "studio" feel. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 40rem at 12% -8%, rgba(124, 92, 255, 0.16), transparent 62%),
+      radial-gradient(48rem 34rem at 92% 4%, rgba(34, 211, 238, 0.1), transparent 60%),
+      radial-gradient(52rem 40rem at 50% 108%, rgba(52, 211, 153, 0.07), transparent 62%);
+  }
+
+  /* Fine film grain kills the "flat CSS gradient" look. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: rgba(124, 92, 255, 0.32);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-soft);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #23233180;
+    border-radius: 99px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #34344a;
+    background-clip: content-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  .panel {
+    position: relative;
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-line);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 42%),
+      rgba(10, 10, 18, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.045),
+      0 24px 60px -32px rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(14px);
+  }
+
+  .panel-flat {
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-line);
+    background: rgba(10, 10, 18, 0.62);
+  }
+
+  .panel-hover {
+    transition:
+      border-color 220ms ease,
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease,
+      background-color 220ms ease;
+  }
+  .panel-hover:hover {
+    border-color: var(--color-line-bright);
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 30px 70px -34px rgba(0, 0, 0, 0.95),
+      0 0 0 1px rgba(124, 92, 255, 0.08);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page containers
+   *
+   * One horizontal scale for the whole product, so every route breathes
+   * identically from a 320px phone to a 2560px ultrawide:
+   *
+   *   < 640px   16px gutter   1248px canvas
+   *   640px+    24px gutter
+   *   1024px+   32px gutter
+   *   1536px+  1376px canvas
+   *   1920px+  1600px canvas
+   *
+   * Declared in the components layer so a per-page `max-w-*` utility can
+   * still override it where a layout genuinely needs to be narrower.
+   * ------------------------------------------------------------------ */
+  .container-page {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  /* The studio is a workspace rather than a page — it earns room sooner. */
+  .container-wide {
+    width: 100%;
+    max-width: 90rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-page,
+    .container-wide {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-page,
+    .container-wide {
+      padding-inline: 2rem;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container-page {
+      max-width: 86rem;
+    }
+    .container-wide {
+      max-width: 100rem;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .container-page {
+      max-width: 100rem;
+    }
+    .container-wide {
+      max-width: 110rem;
+    }
+  }
+
+  /* Gradient hairline used above headings and inside feature cards. */
+  .hairline {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(124, 92, 255, 0.45), rgba(34, 211, 238, 0.3), transparent);
+  }
+
+  .text-gradient {
+    background: linear-gradient(96deg, #ffffff 8%, #cdbcff 44%, #8be9f7 78%, #a7f3d0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(92deg, var(--color-brand-soft), var(--color-aqua));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--color-mist);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-fog);
+  }
+
+  .metric-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  .btn-shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.34) 50%, transparent 75%);
+    background-size: 220% 100%;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+  .btn-shine:hover::after {
+    opacity: 1;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  .glow-brand {
+    box-shadow:
+      0 0 0 1px rgba(124, 92, 255, 0.35),
+      0 18px 50px -18px rgba(124, 92, 255, 0.55);
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 78%);
+  }
+
+  .noise-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  /* Bottom-docked controls clear the iOS home indicator. */
+  .safe-b {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  /* A scroll area that does not drag the page behind it (trap on touch). */
+  .overscroll-contain-y {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  }
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, #000 72%, transparent 100%);
+  }
+  .balance {
+    text-wrap: balance;
+  }
+  .pretty {
+    text-wrap: pretty;
+  }
+}
+
+@media print {
+  /* A report is the one page people hand to someone else — make the printed
+     or "Save as PDF" output a real document, not a screenshot of the app. */
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body::before,
+  body::after {
+    display: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .panel,
+  .panel-flat {
+    break-inside: avoid;
+    background: #fff !important;
+    border-color: #ddd !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  body,
+  .panel *,
+  .panel-flat * {
+    color: #111 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  main {
+    padding-top: 0 !important;
+  }
+  /* Keep score colours legible on paper without printing the dark theme. */
+  .metric-num {
+    color: #111 !important;
+  }
+  section {
+    break-inside: auto;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  a[href^="http"]::after {
+    content: "";
+  }
+}

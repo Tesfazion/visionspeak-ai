@@ -1,0 +1,13 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+/** Used by the nav to render the account area without making every page dynamic. */
+export async function GET() {
+  const user = await getCurrentUser();
+  return NextResponse.json(
+    { user },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
