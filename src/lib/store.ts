@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import { buildDemoHistory } from "@/lib/analysis/demo";
+import { DATA_DIR, dataFile } from "@/lib/data-dir";
 import type { SessionRecord } from "@/lib/types";
 
 /**
@@ -18,10 +18,7 @@ import type { SessionRecord } from "@/lib/types";
  *   - records written before accounts existed have no `ownerId` and are
  *     therefore private — hidden rather than exposed to every new user.
  */
-const DATA_DIR = process.env.VS_DATA_DIR
-  ? path.resolve(process.env.VS_DATA_DIR)
-  : path.join(process.cwd(), "data");
-const FILE = path.join(DATA_DIR, "sessions.json");
+const FILE = dataFile("sessions.json");
 
 let queue: Promise<unknown> = Promise.resolve();
 const serialise = <T,>(fn: () => Promise<T>): Promise<T> => {

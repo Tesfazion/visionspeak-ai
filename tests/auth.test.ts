@@ -114,7 +114,10 @@ test("the secret is created once and reused", async () => {
 });
 
 test("rate limiter blocks after the limit and recovers after the window", () => {
-  const limiter = createRateLimiter({ limit: 2, windowMs: 40 });
+  // A long window keeps this deterministic: with a 40ms window a stalled CI
+  // runner could let the window expire between two checks and the test would
+  // fail for no real reason.
+  const limiter = createRateLimiter({ limit: 2, windowMs: 10_000 });
   assert.equal(limiter.check("k").allowed, true);
   assert.equal(limiter.check("k").allowed, true);
   const blocked = limiter.check("k");
@@ -122,6 +125,14 @@ test("rate limiter blocks after the limit and recovers after the window", () => 
   assert.ok(blocked.retryAfterSec >= 1);
   // A different key is unaffected.
   assert.equal(limiter.check("other").allowed, true);
+});
+
+test("rate limiter allows again once the window has elapsed", async () => {
+  const limiter = createRateLimiter({ limit: 1, windowMs: 30 });
+  assert.equal(limiter.check("k").allowed, true);
+  assert.equal(limiter.check("k").allowed, false);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(limiter.check("k").allowed, true);
 });
 
 test("rate limiter resets a cleared key", () => {

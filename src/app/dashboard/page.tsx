@@ -14,12 +14,14 @@ import {
   Smile,
   Sparkles,
   TrendingUp,
+  TriangleAlert,
 } from "@/components/icons";
 import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/trends";
 import { SiteFooter } from "@/components/site/footer";
 import { Bar, ButtonLink, Pill, cn, scoreLabel, toneFor } from "@/components/ui";
 import { formatDuration } from "@/lib/math";
 import { listSessions } from "@/lib/store";
+import { STORAGE_IS_EPHEMERAL } from "@/lib/data-dir";
 import { getCurrentUser, loginHref } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -157,6 +159,11 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {STORAGE_IS_EPHEMERAL && (
+            <Pill tone="warn" title="This deployment has no durable volume — records are lost on restart">
+              <TriangleAlert className="size-3" /> temporary storage
+            </Pill>
+          )}
           <Pill tone="brand">
             <Sparkles className="size-3" /> {scoreLabel(avgOverall)} baseline
           </Pill>

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { DATA_DIR, STORAGE_IS_EPHEMERAL, dataFile } from "./data-dir";
 
 /**
  * Password hashing, the user file and the signed session cookie.
@@ -18,12 +18,10 @@ const scrypt = promisify(scryptCb) as (
   keylen: number,
 ) => Promise<Buffer>;
 
-export const DATA_DIR = process.env.VS_DATA_DIR
-  ? path.resolve(process.env.VS_DATA_DIR)
-  : path.join(process.cwd(), "data");
+export const DATA_PATH = DATA_DIR;
 
-const USERS_FILE = path.join(DATA_DIR, "users.json");
-const SECRET_FILE = path.join(DATA_DIR, "auth-secret");
+const USERS_FILE = dataFile("users.json");
+const SECRET_FILE = dataFile("auth-secret");
 
 export const SESSION_COOKIE = "vs_session";
 export const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -191,6 +189,7 @@ export async function authenticate(email: string, password: string): Promise<Pub
  * ------------------------------------------------------------------ */
 
 let cachedSecret: string | null = null;
+let warnedEphemeralSecret = false;
 
 async function getSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
@@ -208,9 +207,25 @@ async function getSecret(): Promise<string> {
   } catch {
     /* generate below */
   }
+
+  if (STORAGE_IS_EPHEMERAL && !warnedEphemeralSecret) {
+    warnedEphemeralSecret = true;
+    console.warn(
+      "[auth] AUTH_SECRET is not set on an ephemeral filesystem — a random secret " +
+        "was generated. Sessions will be invalidated whenever a new instance starts. " +
+        "Set AUTH_SECRET in the deployment environment.",
+    );
+  }
+
   const generated = randomBytes(32).toString("hex");
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
+  } catch {
+    // Read-only deployment without AUTH_SECRET: keep it in memory rather than
+    // crashing every auth request. Logins still work for the life of this
+    // process; set AUTH_SECRET to make them survive a restart.
+  }
   cachedSecret = generated;
   return cachedSecret;
 }

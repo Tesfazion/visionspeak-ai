@@ -143,10 +143,13 @@ export function Pill({
   children,
   tone = "neutral",
   className,
+  title,
 }: {
   children: ReactNode;
   tone?: "neutral" | "good" | "warn" | "bad" | "brand";
   className?: string;
+  /** Tooltip text — used for status pills that need explaining on hover. */
+  title?: string;
 }) {
   const tones = {
     neutral: "border-line bg-white/[0.03] text-mist",
@@ -157,6 +160,7 @@ export function Pill({
   } as const;
   return (
     <span
+      title={title}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-wide",
         tones[tone],
