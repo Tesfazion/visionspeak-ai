@@ -29,17 +29,31 @@ the repository root.
 | `scripts/run-start.cjs` | `logs/start-run.log` |
 | `scripts/run-tsc.cjs` | `logs/tsc-report.log` |
 | `scripts/run-smoke.cjs` | `logs/smoke-run.log` + `logs/smoke.txt` |
+| `scripts/test.mjs` | `logs/test.log` |
 | `scripts/http-probe.cjs` | `logs/http-probe.log` |
+| `scripts/run-probe.cjs` | `notes/probe-<name>.txt` |
 | `scripts/grep.cjs` | `notes/grep.txt` |
 | `scripts/log-filter.cjs` | `notes/dev-errors.txt` |
 | `scripts/net-probe.cjs` | `artifacts/net-probe.json` |
 | `scripts/reseed.cjs` | `artifacts/reseed-report.json` |
 | `scripts/fetch-fonts.mjs` | `artifacts/fonts-report.json` |
+| `scripts/make-icons.mjs` | `artifacts/icons-report.json` |
 | `scripts/kill-port.cjs` | `logs/kill-port.log` |
 | `scripts/responsive-check.cjs` | `notes/responsive-check.txt` |
+| `scripts/probe-status.cjs` | `notes/probe-status.txt` |
 
 Paths are centralised in `scripts/lib/diagnostics.cjs` — new scripts must use
 `notePath()`, `logPath()` or `artifactPath()` rather than writing to the root.
+
+`scripts/run-probe.cjs <name> <command…>` is the general-purpose wrapper: it runs any
+command and captures its output to `notes/probe-<name>.txt`, which is how a check like
+`npm run verify` or `npx eslint .` can be read in this environment.
+
+## Logs are ignored by git
+
+Everything in `notes/`, `logs/` and `artifacts/` is generated per machine and listed in
+`.gitignore`. The CI workflow uploads `docs/logs/` as a build artifact instead, so the
+history contains code, never transcripts.
 
 ## Housekeeping
 
