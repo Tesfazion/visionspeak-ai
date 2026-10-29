@@ -107,6 +107,26 @@ export const en = {
   "auth.security": "Passwords are hashed and never shown. Your session is a signed, private cookie.",
   "auth.passwordCurrent": "Your password",
 
+  /* --------------------------------------------------- password reset */
+  "auth.forgot.eyebrow": "Reset password",
+  "auth.forgot.title": "Forgot your password?",
+  "auth.forgot.body": "Enter your email and we'll send a link to reset it. The link expires after one hour.",
+  "auth.forgot.submit": "Send reset link",
+  "auth.forgot.back": "Back to sign in",
+
+  "auth.reset.eyebrow": "New password",
+  "auth.reset.title": "Choose a new password",
+  "auth.reset.body": "Pick something you will remember and no one else can guess.",
+  "auth.reset.submit": "Set new password",
+  "auth.reset.resend": "Need a new link? Request one from the sign-in page.",
+
+  /* --------------------------------------------------- email verification */
+  "auth.verify.eyebrow": "Email verified",
+  "auth.verify.title": "Your address is confirmed",
+  "auth.verify.body": "Thanks for confirming your email. Your account is now fully set up.",
+  "auth.verify.cta": "Open the studio",
+  "auth.verify.dashboard": "Or go to your dashboard",
+
   /* ------------------------------------------------------------- footer */
   "footer.tagline":
     "A speaking coach that measures what an audience actually feels — and tells you the truth in time to use it.",

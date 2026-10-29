@@ -359,3 +359,102 @@ export function SectionHeading({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ *
+ * Cards & form fields
+ * ------------------------------------------------------------------ */
+
+export function Card({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("panel p-6 sm:p-7", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function Field({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("space-y-1.5", className)}>{children}</div>;
+}
+
+export function Label({
+  children,
+  htmlFor,
+  className,
+}: {
+  children: ReactNode;
+  htmlFor?: string;
+  className?: string;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={cn("block text-[11px] font-medium uppercase tracking-[0.14em] text-fog", className)}
+    >
+      {children}
+    </label>
+  );
+}
+
+export function Input({
+  className,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...rest}
+      className={cn(
+        "w-full rounded-lg border border-line bg-base/60 px-3 py-2 text-[13px] text-ink placeholder:text-fog/50",
+        "transition-colors focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/20",
+        className,
+      )}
+    />
+  );
+}
+
+export function Textarea({
+  className,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...rest}
+      className={cn(
+        "w-full rounded-lg border border-line bg-base/60 px-3 py-2 text-[13px] text-ink placeholder:text-fog/50",
+        "transition-colors focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/20",
+        "resize-y",
+        className,
+      )}
+    />
+  );
+}
+
+export function Select({
+  className,
+  children,
+  ...rest
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...rest}
+      className={cn(
+        "w-full rounded-lg border border-line bg-base/60 px-3 py-2 text-[13px] text-ink",
+        "transition-colors focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/20",
+        className,
+      )}
+    >
+      {children}
+    </select>
+  );
+}

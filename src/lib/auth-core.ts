@@ -27,6 +27,10 @@ const SECRET_FILE = dataFile("auth-secret");
 export const SESSION_COOKIE = "vs_session";
 export const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
+/** Password-reset links expire after 1 hour; email-verification after 7 days. */
+export const RESET_TTL_MS = 1000 * 60 * 60;
+export const VERIFY_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
 export interface StoredUser {
   id: string;
   email: string;
@@ -36,6 +40,10 @@ export interface StoredUser {
   createdAt: string;
   /** Commercial plan. Absent on accounts created before plans shipped → Free. */
   plan?: PlanId;
+  /** Set once the address is confirmed. Absent = unverified. */
+  emailVerifiedAt?: string;
+  /** When the account was deleted, for GDPR erasure. */
+  deletedAt?: string;
 }
 
 export interface PublicUser {
@@ -203,6 +211,191 @@ export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicU
     await writeUsers(users);
     return toPublicUser(users[index]);
   });
+}
+
+/* ------------------------------------------------------------------ *
+ * One-time action tokens (password reset, email verification)
+ *
+ * A separate JSON file, not the users file, so a token lookup never touches
+ * the password hashes. Tokens are single-use and time-boxed.
+ * ------------------------------------------------------------------ */
+
+export type TokenKind = "reset" | "verify";
+
+interface TokenRecord {
+  kind: TokenKind;
+  userId: string;
+  tokenHash: string;
+  createdAt: number;
+  expiresAt: number;
+  usedAt?: number;
+}
+
+const TOKENS_FILE = dataFile("tokens.json");
+let tokenQueue: Promise<unknown> = Promise.resolve();
+
+async function readTokens(): Promise<TokenRecord[]> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(TOKENS_FILE, "utf8"));
+    return Array.isArray(parsed) ? (parsed as TokenRecord[]) : [];
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    console.error("[auth] unreadable tokens file", err);
+    return [];
+  }
+}
+
+async function writeTokens(tokens: TokenRecord[]) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  const tmp = `${TOKENS_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(tokens, null, 2), "utf8");
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await fs.rename(tmp, TOKENS_FILE);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      const transient = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (!transient || attempt >= 5) {
+        await fs.rm(tmp, { force: true });
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, 25 * 2 ** attempt));
+    }
+  }
+}
+
+/** Issue a single-use token. Returns the raw token (store it in the link). */
+export async function createToken(
+  kind: TokenKind,
+  userId: string,
+  ttlMs: number,
+): Promise<string> {
+  const raw = randomBytes(24).toString("hex");
+  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const run = tokenQueue.then(async () => {
+    const tokens = await readTokens();
+    const now = Date.now();
+    // Purge expired and any existing unused token of the same kind for this user.
+    const fresh = tokens.filter(
+      (t) =>
+        !(t.userId === userId && t.kind === kind && !t.usedAt && t.expiresAt > now),
+    );
+    const record: TokenRecord = {
+      kind,
+      userId,
+      tokenHash,
+      createdAt: now,
+      expiresAt: now + ttlMs,
+    };
+    await writeTokens([...fresh, record]);
+    return raw;
+  });
+  tokenQueue = run.catch(() => undefined);
+  return run;
+}
+
+/** Consume a token. Returns the user id on success, null otherwise. */
+export async function consumeToken(
+  kind: TokenKind,
+  raw: string,
+): Promise<string | null> {
+  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const run = tokenQueue.then(async () => {
+    const tokens = await readTokens();
+    const now = Date.now();
+    const index = tokens.findIndex(
+      (t) =>
+        t.kind === kind &&
+        !t.usedAt &&
+        t.expiresAt > now &&
+        t.tokenHash === tokenHash,
+    );
+    if (index === -1) return null;
+    tokens[index].usedAt = now;
+    await writeTokens(tokens);
+    return tokens[index].userId;
+  });
+  tokenQueue = run.catch(() => undefined);
+  return run;
+}
+
+/* ------------------------------------------------------------------ *
+ * Account deletion (GDPR art. 17)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Soft-delete: marks the account deleted and removes identifying fields.
+ * Sessions are hard-deleted by the caller (store.deleteSession) — this
+ * function only owns the user row.
+ */
+export async function deleteAccount(userId: string): Promise<boolean> {
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return false;
+    users[index] = {
+      ...users[index],
+      name: "[deleted]",
+      email: `deleted-${users[index].id}@deleted.local`,
+      passwordHash: "",
+      salt: "",
+      emailVerifiedAt: undefined,
+      deletedAt: new Date().toISOString(),
+    };
+    await writeUsers(users);
+    return true;
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Public helpers used by route handlers
+ * ------------------------------------------------------------------ */
+
+/** Request a password-reset token. Returns true if the account exists. */
+export async function requestPasswordReset(email: string) {
+  const user = await findUserByEmail(email);
+  if (!user) return false; // don't reveal whether the address is registered
+  await createToken("reset", user.id, RESET_TTL_MS);
+  return true;
+}
+
+/** Consume a reset token and set a new password. */
+export async function resetPassword(token: string, newPassword: string) {
+  const userId = await consumeToken("reset", token);
+  if (!userId) return { error: "Reset link is invalid or has expired." } as const;
+  const { salt, passwordHash } = await hashPassword(newPassword);
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return { error: "Account not found." } as const;
+    users[index] = { ...users[index], salt, passwordHash };
+    await writeUsers(users);
+    return { ok: true } as const;
+  });
+}
+
+/** Mark an account's email as verified. */
+export async function verifyEmail(token: string) {
+  const userId = await consumeToken("verify", token);
+  if (!userId) return { error: "Verification link is invalid or has expired." } as const;
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return { error: "Account not found." } as const;
+    users[index] = { ...users[index], emailVerifiedAt: new Date().toISOString() };
+    await writeUsers(users);
+    return { ok: true } as const;
+  });
+}
+
+/** Issue a verification token for an account. */
+export async function requestEmailVerification(userId: string) {
+  return createToken("verify", userId, VERIFY_TTL_MS);
+}
+
+export async function isEmailVerified(user: StoredUser) {
+  return Boolean(user.emailVerifiedAt);
 }
 
 /* ------------------------------------------------------------------ *
