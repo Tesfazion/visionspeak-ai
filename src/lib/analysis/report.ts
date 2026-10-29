@@ -152,6 +152,7 @@ export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportDat
       fillerRate: round(fillerPer100, 1),
       fillers: agg.speech.fillers.slice(0, 8),
       longestPauseSec: round(agg.voice.avgPauseSec * 1.6, 1),
+      language: agg.speech.language,
     },
     emotions,
     dominantEmotion: dominant,
@@ -350,16 +351,46 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
     });
 
   items.sort((a, b) => a.score - b.score);
-  const chosen = items.slice(0, 4).map((i) => i.insight);
 
-  while (chosen.length < 3) {
-    chosen.push({
+  // A title is the identity of an insight: the report renders one card per
+  // entry, so a repeated title is both a duplicate React key and a duplicated
+  // recommendation. De-duplicate, then pad with *distinct* next steps.
+  const chosen: Insight[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (chosen.length >= 4) break;
+    if (seen.has(item.insight.title)) continue;
+    seen.add(item.insight.title);
+    chosen.push(item.insight);
+  }
+
+  const weakest = Math.round(
+    Math.min(p.eyeContact, p.posture, p.gestures, p.voice, p.expression),
+  );
+  const followUps: Insight[] = [
+    {
       icon: "sparkles",
       title: "Push for the next level",
-      detail: `Your weakest pillar is ${Math.round(
-        Math.min(p.eyeContact, p.posture, p.gestures, p.voice, p.expression),
-      )}/100. A single 10-minute drill focused there moves the composite score more than anything else.`,
-    });
+      detail: `Your weakest pillar is ${weakest}/100. A single 10-minute drill focused there moves the composite score more than anything else.`,
+    },
+    {
+      icon: "gauge",
+      title: "Hold the standard you just set",
+      detail: `You are at ${Math.round(p.confidence)}/100 for confidence. Repeat this same brief tomorrow — consistency is what turns a good session into a reliable habit.`,
+    },
+    {
+      icon: "crown",
+      title: "Rehearse the opening and the close",
+      detail:
+        "The first and last twenty seconds carry the room's memory of you. Run them twice more than the middle, out loud, standing.",
+    },
+  ];
+
+  for (const extra of followUps) {
+    if (chosen.length >= 3) break;
+    if (seen.has(extra.title)) continue;
+    seen.add(extra.title);
+    chosen.push(extra);
   }
   return chosen;
 }
@@ -461,6 +492,7 @@ export function emptyAggregate(): Agg {
     faceVisiblePct: 0,
     eyeContactPct: 0,
     gazeAwayCount: 0,
+    language: "en-US",
     avgGazeAwaySec: 0,
     blinkRatePerMin: 14,
     smilePct: 0,
@@ -488,7 +520,7 @@ export function emptyAggregate(): Agg {
       avgPauseSec: 0,
       energy: 0,
     },
-    speech: { transcript: "", words: 0, fillers: [], totalFillers: 0, fillerEvents: [], supported: false },
+    speech: { transcript: "", words: 0, fillers: [], totalFillers: 0, fillerEvents: [], supported: false, language: "en-US" },
     wpm: 0,
     paceSource: "acoustic",
     emotions: { neutral: 60, happy: 20, surprise: 5, sad: 5, angry: 5, fear: 5 },

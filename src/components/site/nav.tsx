@@ -3,21 +3,41 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Loader2, LogOut, Menu, X } from "@/components/icons";
+import { ArrowRight, LayoutDashboard, Loader2, LogOut, Menu, Moon, Play, Sun, X } from "@/components/icons";
 import { Logo } from "./brand";
 import { buttonClass, cn } from "@/components/ui";
+import { useTheme } from "./theme";
+import { useI18n } from "./locale-provider";
+import { LanguageSwitcher } from "./language-switcher";
+import type { MessageKey } from "@/lib/i18n";
 
-const LINKS = [
-  { href: "/#platform", label: "Platform" },
-  { href: "/#signals", label: "Signals" },
-  { href: "/#scoring", label: "Scoring" },
-  { href: "/report/demo", label: "Sample report" },
-  { href: "/dashboard", label: "History" },
+/**
+ * Two menus, one header.
+ *
+ * Signed out you are reading a marketing site: anchors into the pitch, then a
+ * sign-in link and a studio CTA. Signed in you are inside a workspace: the
+ * marketing anchors are gone and the links are the tools (studio, history,
+ * plan). Keeping the two sets disjoint is what stops the landing page and the
+ * dashboard from feeling like the same screen.
+ */
+const MARKETING_LINKS: { href: string; key: MessageKey }[] = [
+  { href: "/#platform", key: "nav.platform" },
+  { href: "/#signals", key: "nav.signals" },
+  { href: "/#scoring", key: "nav.scoring" },
+  { href: "/pricing", key: "nav.pricing" },
+  { href: "/report/demo", key: "nav.sample" },
+];
+
+const APP_LINKS: { href: string; key: MessageKey }[] = [
+  { href: "/studio", key: "nav.openStudio" },
+  { href: "/dashboard", key: "nav.history" },
+  { href: "/pricing", key: "nav.pricing" },
 ];
 
 interface Account {
   name: string;
   email: string;
+  plan?: string;
 }
 
 export function SiteNav() {
@@ -29,6 +49,8 @@ export function SiteNav() {
   // marketing pages stay statically rendered instead of reading cookies.
   const [account, setAccount] = useState<Account | null | undefined>(undefined);
   const [signingOut, setSigningOut] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const { t } = useI18n();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -85,6 +107,7 @@ export function SiteNav() {
   };
 
   const signedIn = Boolean(account);
+  const links = signedIn ? APP_LINKS : MARKETING_LINKS;
   const initial = account?.name?.trim().charAt(0).toUpperCase() || "?";
 
   return (
@@ -94,13 +117,17 @@ export function SiteNav() {
         scrolled || open
           ? "border-b border-line/70 bg-base/80 backdrop-blur-xl"
           : "border-b border-transparent",
+        // A violet hairline marks the workspace; the marketing site keeps a
+        // neutral edge. Small signal, but it is the first thing that tells you
+        // which half of the product you are in.
+        signedIn && (scrolled || open) && "shadow-[inset_0_1px_0_0_rgba(124,92,255,0.18)]",
       )}
     >
       <div className="container-page flex h-16 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-7">
           <Logo />
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
-            {LINKS.map((link) => {
+          <nav className="hidden items-center gap-1 lg:flex" aria-label={t("a11y.primaryNav")}>
+            {links.map((link) => {
               const active = link.href.startsWith("/") && !link.href.includes("#") && pathname === link.href;
               return (
                 <Link
@@ -111,7 +138,7 @@ export function SiteNav() {
                     active ? "text-ink" : "text-fog hover:text-ink",
                   )}
                 >
-                  {link.label}
+                  {t(link.key)}
                   {active && (
                     <span className="absolute inset-x-3 -bottom-px h-px bg-gradient-to-r from-transparent via-brand-soft to-transparent" />
                   )}
@@ -123,35 +150,58 @@ export function SiteNav() {
 
         {/*
          * One control set per width:
-         *   < 768px        hamburger only
-         *   768–1023px     studio CTA + hamburger
+         *   < 768px        language + theme + hamburger
+         *   768–1023px     language + studio CTA + hamburger
          *   >= 1024px      full links + CTAs + account
          */}
+        <div className="flex shrink-0 items-center gap-1">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="grid size-10 place-items-center rounded-lg text-mist transition-colors hover:text-ink"
+            aria-label={theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}
+            title={theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}
+          >
+            {theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+          </button>
+        </div>
+
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           {signedIn ? (
             <>
-              <Link href="/dashboard" className={buttonClass("ghost", "sm", "hidden lg:inline-flex")}>
-                Dashboard
-              </Link>
               <Link href="/studio" className={buttonClass("primary", "sm", "group")}>
-                Open studio
+                {t("nav.openStudio")}
                 <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <div className="ml-1 hidden items-center gap-2 border-l border-line/70 pl-2 lg:flex">
-                <span
-                  className="grid size-8 place-items-center rounded-full border border-brand/35 bg-brand/15 text-[12px] font-semibold text-brand-soft"
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-white/5"
                   title={account?.email}
-                  aria-hidden
                 >
-                  {initial}
-                </span>
+                  <span
+                    className="grid size-8 place-items-center rounded-full border border-brand/35 bg-brand/15 text-[12px] font-semibold text-brand-soft"
+                    aria-hidden
+                  >
+                    {initial}
+                  </span>
+                  <span className="hidden flex-col leading-tight xl:flex">
+                    <span className="max-w-[9rem] truncate text-[11.5px] font-medium text-ink">
+                      {account?.name ?? t("nav.account")}
+                    </span>
+                    <span className="text-[9.5px] uppercase tracking-[0.14em] text-fog">
+                      {account?.plan === "pro" ? t("common.pro") : t("common.free")}
+                    </span>
+                  </span>
+                </Link>
                 <button
                   type="button"
                   onClick={signOut}
                   disabled={signingOut}
                   className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-white/5 hover:text-ink disabled:opacity-50"
-                  aria-label="Sign out"
-                  title="Sign out"
+                  aria-label={t("nav.signOut")}
+                  title={t("nav.signOut")}
                 >
                   {signingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
                 </button>
@@ -161,11 +211,11 @@ export function SiteNav() {
             <>
               {account === null && (
                 <Link href="/login" className={buttonClass("ghost", "sm", "hidden lg:inline-flex")}>
-                  Sign in
+                  {t("nav.signIn")}
                 </Link>
               )}
               <Link href="/studio" className={buttonClass("primary", "sm", "group")}>
-                Open studio
+                {t("nav.openStudio")}
                 <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </>
@@ -176,7 +226,7 @@ export function SiteNav() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="-mr-1.5 grid size-10 place-items-center rounded-lg border border-line text-mist transition-colors hover:text-ink lg:hidden"
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label={open ? t("nav.closeMenu") : t("nav.menu")}
           aria-expanded={open}
           aria-controls="mobile-nav"
         >
@@ -189,38 +239,56 @@ export function SiteNav() {
         hidden={!open}
         className="max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain-y border-t border-line bg-base/95 backdrop-blur-xl lg:hidden"
       >
-        <nav className="container-page flex flex-col py-2" aria-label="Mobile">
-          {LINKS.map((link) => (
+        <nav className="container-page flex flex-col py-2" aria-label={t("a11y.mobileNav")}>
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
               className="flex min-h-11 items-center rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-white/5 hover:text-ink"
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           ))}
+
+          <LanguageSwitcher variant="full" />
+
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-white/5 hover:text-ink"
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}
+          </button>
+
           <div className="mt-2 flex flex-col gap-2 pb-1">
             {signedIn ? (
               <>
+                <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
+                  <span className="grid size-9 place-items-center rounded-full border border-brand/35 bg-brand/15 text-[12px] font-semibold text-brand-soft">
+                    {initial}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] text-ink">{account?.name}</span>
+                    <span className="block truncate text-[11px] text-fog">{account?.email}</span>
+                  </span>
+                </div>
                 <Link
                   href="/dashboard"
                   onClick={() => setOpen(false)}
                   className={buttonClass("subtle", "md", "w-full md:hidden")}
                 >
-                  Dashboard
+                  {t("nav.dashboard")}
                 </Link>
-                <Link
-                  href="/studio"
-                  onClick={() => setOpen(false)}
-                  className={buttonClass("primary", "md", "w-full")}
+                <button
+                  type="button"
+                  onClick={signOut}
+                  disabled={signingOut}
+                  className={buttonClass("ghost", "md", "w-full")}
                 >
-                  Open studio
-                  <ArrowRight className="size-4" />
-                </Link>
-                <button type="button" onClick={signOut} disabled={signingOut} className={buttonClass("ghost", "md", "w-full")}>
                   {signingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </>
             ) : (
@@ -231,7 +299,7 @@ export function SiteNav() {
                     onClick={() => setOpen(false)}
                     className={buttonClass("subtle", "md", "w-full")}
                   >
-                    Sign in
+                    {t("nav.signIn")}
                   </Link>
                 )}
                 <Link
@@ -239,12 +307,33 @@ export function SiteNav() {
                   onClick={() => setOpen(false)}
                   className={buttonClass("primary", "md", "w-full")}
                 >
-                  Open studio
+                  {t("nav.openStudio")}
                   <ArrowRight className="size-4" />
                 </Link>
               </>
             )}
           </div>
+
+          {/* Small reminder of what signed-in users get, so the drawer is not a
+              dead end on a phone. */}
+          {!signedIn && account === null && (
+            <Link
+              href="/signup"
+              onClick={() => setOpen(false)}
+              className="mb-1 mt-1 flex min-h-11 items-center gap-2 rounded-lg px-2 text-[13px] text-brand-soft"
+            >
+              <LayoutDashboard className="size-4" /> {t("auth.signUpButton")}
+            </Link>
+          )}
+          {signedIn && (
+            <Link
+              href="/studio"
+              onClick={() => setOpen(false)}
+              className="mb-1 mt-1 flex min-h-11 items-center gap-2 rounded-lg px-2 text-[13px] text-brand-soft"
+            >
+              <Play className="size-4" /> {t("landing.cta.start")}
+            </Link>
+          )}
         </nav>
       </div>
     </header>

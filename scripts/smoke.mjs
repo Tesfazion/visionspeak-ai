@@ -193,7 +193,12 @@ pass(!JSON.stringify(meBody).includes("passwordHash"), "the API never exposes a 
 const dash = await page("/dashboard");
 expect(dash.status, 200, "GET /dashboard while signed in");
 pass(dash.text.includes("Practice history"), "dashboard heading present");
-pass(dash.text.includes("Q4 Kickoff"), "dashboard shows the shared sample session");
+// A brand-new account's history is its own work: no seeded sample may be
+// presented as if the user had recorded it.
+pass(!dash.text.includes("Q4 Kickoff"), "a fresh dashboard shows no borrowed sample history");
+pass(dash.text.includes("No sessions yet"), "a fresh dashboard shows the empty state");
+pass(dash.text.includes("Free plan"), "the dashboard states the active plan");
+pass((await page("/report/demo")).status === 200, "the sample report is still one click away");
 
 const studio = await page("/studio");
 expect(studio.status, 200, "GET /studio while signed in");
@@ -241,6 +246,7 @@ const aggregate = {
     totalFillers: 3,
     fillerEvents: [],
     supported: true,
+    language: "en-US",
   },
   wpm: 148,
   paceSource: "transcript",
@@ -323,10 +329,10 @@ expect((await page("/report/demo")).status, 200, "account B can still read the s
 const listB = await request("/api/sessions");
 const listBBody = await listB.json().catch(() => []);
 pass(
-  !listBBody.some((s) => s.id === sessionId),
+  Array.isArray(listBBody) && !listBBody.some((s) => s.id === sessionId),
   "account B's session list excludes account A's session",
 );
-pass(listBBody.length > 0 && listBBody.every((s) => s.source === "demo"), "account B sees only sample sessions");
+pass(Array.isArray(listBBody) && listBBody.length === 0, "a new account's history starts empty, not filled with samples");
 
 expect(
   (await request(`/api/sessions/${sessionId}`, { method: "DELETE" })).status,
@@ -370,6 +376,82 @@ const relogin = await request("/api/auth/login", {
 expect(relogin.status, 200, "sign back in as account A");
 await relogin.text();
 pass(cookieHeader().includes("vs_session="), "login restores the session cookie");
+
+/* ------------------------------------------------------------------ *
+ * 6b. Business rules — share links, plan limits, read-only samples
+ * ------------------------------------------------------------------ */
+for (const route of ["/pricing", "/privacy", "/terms"]) {
+  expect((await page(route)).status, 200, `GET ${route}`);
+}
+
+// Shared seed reports belong to nobody, so nobody may delete them.
+expect(
+  (await request("/api/sessions/demo", { method: "DELETE" })).status,
+  404,
+  "a sample report cannot be deleted by a user",
+);
+
+// A session longer than the Free ceiling is refused before it is scored.
+const tooLong = await request("/api/sessions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    aggregate: { ...aggregate, durationSec: 60 * 60 },
+    meta: { title: "Too long", mode: "practice" },
+  }),
+});
+const tooLongBody = await tooLong.json().catch(() => ({}));
+expect(tooLong.status, 422, "a session beyond the plan ceiling is refused");
+pass(tooLongBody.code === "session_too_long", "over-length session reports its reason");
+
+// A body above the size ceiling is cut off, not parsed.
+const oversize = await request("/api/sessions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: `{"aggregate":"${"x".repeat(2 * 1024 * 1024 + 64)}"}`,
+});
+expect(oversize.status, 413, "an oversized save body is refused");
+await oversize.text();
+
+// Idempotency: the same browser session saved twice returns the first report.
+const clientSessionId = `smoke-${stamp}-retry`;
+const first = await createSession({ title: "Idempotent save", mode: "practice", clientSessionId });
+expect(first.status, 201, "first save with a client session id");
+const second = await createSession({ title: "Idempotent save", mode: "practice", clientSessionId });
+expect(second.status, 200, "retried save is answered with the original report");
+pass(second.body.id === first.body.id, "retry returns the same report id, not a duplicate");
+
+// Share link: works for an anonymous visitor, revocable, and closed afterwards.
+const shareRes = await request(`/api/sessions/${first.body.id}/share`, { method: "POST" });
+const shareBody = await shareRes.json().catch(() => ({}));
+expect(shareRes.status, 201, "owner can create a share link");
+const shareToken = shareBody.url ? new URL(shareBody.url).searchParams.get("share") : null;
+pass(Boolean(shareToken), "share link carries a token");
+
+const jarA = new Map(jar);
+jar = new Map();
+const sharedView = await page(`/report/${first.body.id}?share=${shareToken}`);
+expect(sharedView.status, 200, "anonymous visitor can read a shared report");
+expect((await page(`/report/${first.body.id}?share=wrong-token-000000000000`)).status, 404, "a wrong share token is refused");
+expect((await page(`/report/${first.body.id}`)).status, 404, "a live report stays private without a token");
+jar = jarA;
+expect((await request(`/api/sessions/${first.body.id}/share`, { method: "DELETE" })).status, 200, "owner can revoke sharing");
+jar = new Map();
+expect((await page(`/report/${first.body.id}?share=${shareToken}`)).status, 404, "a revoked link stops working");
+jar = jarA;
+
+// Quota: Free allows 5 analyses a month; the sixth save is refused with 402.
+const createdIds = [first.body.id];
+for (let i = 0; i < 3; i++) {
+  const extra = await createSession({ title: `Quota filler ${i + 1}`, mode: "practice" });
+  expect(extra.status, 201, `save ${i + 2} of the Free quota`);
+  createdIds.push(extra.body.id);
+}
+const overQuota = await createSession({ title: "Over quota", mode: "practice" });
+expect(overQuota.status, 402, "the save past the monthly quota is refused");
+pass(overQuota.body.code === "quota_exceeded", "the refusal names the quota");
+
+for (const id of createdIds) await request(`/api/sessions/${id}`, { method: "DELETE" });
 
 expect((await request(`/api/sessions/${sessionId}`, { method: "DELETE" })).status, 200, "owner can delete the session");
 expect((await request(`/api/sessions/${sessionId}`)).status, 404, "deleted session is gone");

@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { buildDemoHistory } from "@/lib/analysis/demo";
 import { DATA_DIR, dataFile } from "@/lib/data-dir";
-import type { SessionRecord } from "@/lib/types";
+import type { SessionRecord, ShareLink } from "@/lib/types";
 
 /**
  * Tiny JSON-file store. Chosen over SQLite/Postgres because the platform
@@ -76,14 +77,29 @@ export const isSample = (record: SessionRecord) => record.source === "demo";
 export const visibleTo = (record: SessionRecord, userId: string | null) =>
   isSample(record) || (Boolean(userId) && record.ownerId === userId);
 
-/** Can `userId` modify/delete this record? Samples stay deletable for tidiness. */
+/**
+ * Can `userId` modify/delete this record?
+ *
+ * Samples are read-only: they are shared seed data, so letting one account
+ * delete a sample silently removes it from every other account's history —
+ * and mixing them into someone's own stats would be a lie about their work.
+ */
 export const writableBy = (record: SessionRecord, userId: string | null) =>
-  isSample(record) || (Boolean(userId) && record.ownerId === userId);
+  Boolean(userId) && record.ownerId === userId;
 
-export async function listSessions(userId: string | null): Promise<SessionRecord[]> {
+export interface ListOptions {
+  /** Samples are shared reference material; the dashboard opts out of them. */
+  includeSamples?: boolean;
+}
+
+export async function listSessions(
+  userId: string | null,
+  options: ListOptions = {},
+): Promise<SessionRecord[]> {
+  const { includeSamples = true } = options;
   const records = await serialise(async () => ensureSeed(await readAll()));
   return records
-    .filter((r) => visibleTo(r, userId))
+    .filter((r) => visibleTo(r, userId) && (includeSamples || !isSample(r)))
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
@@ -111,6 +127,74 @@ export async function deleteSession(id: string, userId: string | null): Promise<
     await writeAll(records.filter((r) => r.id !== id));
     return true;
   });
+}
+
+/** Idempotency lookup: the same browser session must never save twice. */
+export async function findByClientSessionId(
+  userId: string,
+  clientSessionId: string,
+): Promise<SessionRecord | null> {
+  const records = await serialise(async () => readAll());
+  return (
+    records.find(
+      (r) => r.ownerId === userId && r.clientSessionId === clientSessionId && !isSample(r),
+    ) ?? null
+  );
+}
+
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
+export const isValidShareToken = (token: unknown): token is string =>
+  typeof token === "string" && SHARE_TOKEN_RE.test(token);
+
+/**
+ * Creates or refreshes the owner's share link for one report.
+ * Returns null when the record is missing or belongs to someone else.
+ */
+export async function createShare(
+  id: string,
+  userId: string,
+  days: number,
+): Promise<ShareLink | null> {
+  if (days <= 0) return null;
+  return serialise(async () => {
+    const records = await readAll();
+    const index = records.findIndex((r) => r.id === id);
+    if (index === -1 || !writableBy(records[index], userId)) return null;
+
+    const now = Date.now();
+    const share: ShareLink = {
+      token: randomBytes(18).toString("base64url"),
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + days * 86_400_000).toISOString(),
+    };
+    records[index] = { ...records[index], share };
+    await writeAll(records);
+    return share;
+  });
+}
+
+/** Removes a share link. True when one was actually revoked. */
+export async function revokeShare(id: string, userId: string): Promise<boolean> {
+  return serialise(async () => {
+    const records = await readAll();
+    const index = records.findIndex((r) => r.id === id);
+    if (index === -1 || !writableBy(records[index], userId) || !records[index].share) return false;
+    const rest = { ...records[index] };
+    delete rest.share;
+    records[index] = rest;
+    await writeAll(records);
+    return true;
+  });
+}
+
+/** Resolves a shared report. Both the id and the token must match and be live. */
+export async function getSharedSession(id: string, token: unknown): Promise<SessionRecord | null> {
+  if (!isValidShareToken(token)) return null;
+  const records = await serialise(async () => readAll());
+  const record = records.find((r) => r.id === id);
+  if (!record?.share || record.share.token !== token) return null;
+  if (record.share.expiresAt <= new Date().toISOString()) return null;
+  return record;
 }
 
 export async function updateSession(

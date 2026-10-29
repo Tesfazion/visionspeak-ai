@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { VisionEngine, type SessionAggregate } from "@/lib/analysis/engine";
-import { recognizerAvailable } from "@/lib/analysis/speech";
+import { recognizerAvailable, type SpeechLanguage, type SpeechSnapshot } from "@/lib/analysis/speech";
 import type { FrameSample, LiveMetrics, Nudge, SessionMode } from "@/lib/types";
 
 export type Phase = "idle" | "requesting" | "loading" | "live" | "paused" | "finished" | "error";
@@ -35,6 +35,7 @@ export function useVisionSession(mode: SessionMode) {
   const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
   const [nudges, setNudges] = useState<Nudge[]>([]);
   const [samples, setSamples] = useState<FrameSample[]>([]);
+  const [speech, setSpeech] = useState<SpeechSnapshot | null>(null);
   // Server snapshot is `false` (no Web Speech on the server) and the client
   // snapshot is the real capability, so hydration matches and no effect is
   // needed to sync it — useSyncExternalStore handles the switch.
@@ -43,6 +44,10 @@ export function useVisionSession(mode: SessionMode) {
     () => recognizerAvailable(),
     () => false,
   );
+
+  const setSpeechLanguage = useCallback((lang: SpeechLanguage) => {
+    engineRef.current?.setSpeechLanguage(lang);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -57,6 +62,7 @@ export function useVisionSession(mode: SessionMode) {
     setNudges([]);
     setSamples([]);
     setMetrics(null);
+    setSpeech(null);
 
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setPhase("error");
@@ -107,6 +113,10 @@ export function useVisionSession(mode: SessionMode) {
           setError(message);
           setPhase("error");
         },
+        // The recogniser is driven by its own callback chain, so polling it on
+        // the engine's metric cadence is the simplest reliable sync: ~5 Hz is
+        // fast enough for a transcript to read as live while batching renders.
+        onTick: () => setSpeech(engine.getSpeech()),
       });
       engineRef.current = engine;
       await engine.start();
@@ -144,6 +154,7 @@ export function useVisionSession(mode: SessionMode) {
     streamRef.current = null;
     if (!engine) return null;
     const aggregate = engine.finish();
+    setSpeech(engine.getSpeech?.() ?? aggregate.speech);
     setPhase("finished");
     return aggregate;
   }, []);
@@ -157,6 +168,7 @@ export function useVisionSession(mode: SessionMode) {
     setMetrics(null);
     setNudges([]);
     setSamples([]);
+    setSpeech(null);
     setError(null);
   }, []);
 
@@ -183,7 +195,9 @@ export function useVisionSession(mode: SessionMode) {
     metrics,
     nudges,
     samples,
+    speech,
     speechSupported,
+    setSpeechLanguage,
     start,
     pause,
     resume,

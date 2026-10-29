@@ -21,16 +21,25 @@ import { SiteFooter } from "@/components/site/footer";
 import { Bar, Pill, ScoreRing, cn, scoreLabel, toneFor } from "@/components/ui";
 import { EMOTION_META } from "@/lib/analysis/emotion";
 import { formatClock, formatDuration } from "@/lib/math";
-import { getSession } from "@/lib/store";
+import { getSession, getSharedSession } from "@/lib/store";
+import { planFor } from "@/lib/plans";
+import { getI18n } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { SessionRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ share?: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
+  const { share } = await searchParams;
   const user = await getCurrentUser();
-  const session = await getSession(id, user?.id ?? null);
+  const session = (await getSession(id, user?.id ?? null)) ?? (await getSharedSession(id, share));
   // `generateMetadata` resolves before the response starts streaming, so
   // notFound() here produces a genuine 404 status. Calling it only from the
   // page body would emit 200 + the not-found UI once streaming had begun.
@@ -38,13 +47,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${session.title} — ${session.report.grade}`,
     description: `${session.speaker} scored ${session.report.overall}/100 (${session.report.gradeLabel}).`,
+    // A shared report is a person's data: never index it, even by accident.
+    robots: { index: session.source === "demo", follow: false },
   };
 }
 
-const fmtDate = (iso: string) =>
-  new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso),
-  );
+const MODE_LABEL_KEY = {
+  practice: "studio.mode.practice",
+  presentation: "studio.mode.presentation",
+  interview: "studio.mode.interview",
+} as const;
 
 function PanelHead({ title, hint, icon: Icon }: { title: string; hint?: string; icon?: typeof Eye }) {
   return (
@@ -75,7 +87,7 @@ function HighlightedTranscript({ session }: { session: SessionRecord }) {
   if (!transcript) {
     return (
       <p className="text-[12px] leading-relaxed text-fog">
-        No transcript was captured for this session. The Web Speech API is only available in Chromium
+        No transcript was captured for this session. Speech recognition is only available in Chromium
         browsers, and the acoustic engine still scored pace and pauses from the raw audio.
       </p>
     );
@@ -103,22 +115,42 @@ function HighlightedTranscript({ session }: { session: SessionRecord }) {
   );
 }
 
-export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ share?: string }>;
+}) {
   const { id } = await params;
+  const { share } = await searchParams;
+  const { t, locale } = await getI18n();
   // Sample reports are public marketing material; a live report belongs to the
-  // account that recorded it. An anonymous visitor sees "not found" rather than
-  // a redirect, so a shared link never leaks whether a report exists.
+  // account that recorded it. A share link — owner-issued, time-boxed and
+  // revocable — is the only other way in. An anonymous visitor sees "not found"
+  // rather than a redirect, so a shared link never leaks whether a report exists.
   const user = await getCurrentUser();
-  const record = await getSession(id, user?.id ?? null);
+  const record =
+    (await getSession(id, user?.id ?? null)) ?? (await getSharedSession(id, share));
   if (!record) {
     notFound();
     throw new Error("unreachable");
   }
 
   const session: SessionRecord = record;
+  const canManage = Boolean(user) && session.ownerId === user?.id;
+  const canExportCsv = Boolean(user) && planFor(user?.plan).csvExport;
 
   const r = session.report;
   const tone = toneFor(r.overall);
+  const fmtDate = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
   const lowest = r.timeline.length
     ? r.timeline.reduce((min, p) => (p.confidence < min.confidence ? p : min), r.timeline[0])
     : null;
@@ -141,17 +173,17 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           href="/dashboard"
           className="inline-flex items-center gap-1.5 text-[12px] text-fog transition-colors hover:text-ink"
         >
-          <ChevronLeft className="size-3.5" /> All sessions
+          <ChevronLeft className="size-3.5" /> {t("report.back")}
         </Link>
-        <ReportActions session={session} />
+        <ReportActions session={session} canManage={canManage} canExportCsv={canExportCsv} />
       </div>
 
       {/* ---------------------------------- hero ---------------------------------- */}
       <section className="panel mt-4 overflow-hidden">
         <div className="flex flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-center lg:gap-8">
           <div className="flex items-center gap-4 sm:gap-5">
-            <ScoreRing value={r.overall} size={128} stroke={9} label="overall" className="sm:hidden" />
-            <ScoreRing value={r.overall} size={148} stroke={10} label="overall" className="max-sm:hidden" />
+            <ScoreRing value={r.overall} size={128} stroke={9} label={t("metric.overall")} className="sm:hidden" />
+            <ScoreRing value={r.overall} size={148} stroke={10} label={t("metric.overall")} className="max-sm:hidden" />
             <div className="lg:hidden">
               <div className="metric-num text-2xl font-medium" style={{ color: tone.hex }}>
                 {r.grade}
@@ -162,10 +194,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="eyebrow">Public speaking analysis</span>
+              <span className="eyebrow">{t("report.eyebrow")}</span>
               <span className="text-fog/30">/</span>
               <Pill tone={session.source === "demo" ? "brand" : "neutral"} className="!py-0.5">
-                {session.source === "demo" ? "sample report" : session.mode}
+                {session.source === "demo" ? t("report.sampleBadge") : t(MODE_LABEL_KEY[session.mode])}
               </Pill>
             </div>
             <h1 className="mt-2 text-balance text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[30px]">
@@ -177,12 +209,12 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                 <Clock className="size-3" /> {fmtDate(session.createdAt)}
               </span>
               <span className="flex items-center gap-1">
-                <Gauge className="size-3" /> {formatDuration(session.durationSec)} analysed
+                <Gauge className="size-3" /> {t("report.analysed", { time: formatDuration(session.durationSec) })}
               </span>
             </div>
             <p className="pretty mt-3 max-w-2xl text-[12.5px] leading-relaxed text-fog">{r.summary}</p>
             <p className="mt-2 text-[10.5px] leading-relaxed text-fog/70">
-              <span className="text-mist">{`${r.rubric?.label ?? session.mode} rubric`}</span>
+              <span className="text-mist">{t("report.rubric", { name: r.rubric?.label ?? session.mode })}</span>
               {r.rubric ? ` — ${r.rubric.summary}` : " — scored on the practice rubric."}
             </p>
           </div>
@@ -210,10 +242,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           )}
         >
           {[
-            { label: "Confidence", value: r.pillars.confidence },
-            { label: "Leadership presence", value: r.pillars.leadership },
-            { label: "Communication", value: r.pillars.communication },
-            { label: "Engagement", value: r.pillars.engagement },
+            { label: t("metric.confidence"), value: r.pillars.confidence },
+            { label: t("metric.leadership"), value: r.pillars.leadership },
+            { label: t("metric.communication"), value: r.pillars.communication },
+            { label: t("metric.engagement"), value: r.pillars.engagement },
           ].map((s) => (
             <div key={s.label} className="px-4 py-3.5 sm:px-5">
               <div className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-fog">{s.label}</div>
@@ -229,15 +261,13 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
       {/* ------------------------------ profile + pillars ------------------------------ */}
       <div className="mt-4 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">        <section className="panel p-5">
-          <PanelHead title="Six-dimension profile" hint="radar" icon={Activity} />
+          <PanelHead title={t("report.profile")} hint={t("report.profileHint")} icon={Activity} />
           <ProfileRadar pillars={r.pillars} />
-          <p className="mt-1 text-center text-[10.5px] text-fog/70">
-            Shape beats averages: a balanced profile reads as composure.
-          </p>
+          <p className="mt-1 text-center text-[10.5px] text-fog/70">{t("report.profileNote")}</p>
         </section>
 
         <section className="panel p-5">
-          <PanelHead title="Pillar breakdown" hint="conf · weights" icon={Gauge} />
+          <PanelHead title={t("report.pillars")} hint={t("report.pillarsHint")} icon={Gauge} />
           <div className="mt-4 space-y-3.5">
             {pillarRows.map((p) => (
               <div key={p.label}>
@@ -268,17 +298,22 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       {/* --------------------------------- timeline --------------------------------- */}
       <section className="panel mt-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <PanelHead title="Session timeline" hint={`${formatClock(session.durationSec)} · per second`} icon={Gauge} />
+          <PanelHead
+            title={t("report.timeline")}
+            hint={t("report.perSecond", { time: formatClock(session.durationSec) })}
+            icon={Gauge}
+          />
           <div className="flex items-center gap-3 text-[10px] text-fog">
             {lowest && (
               <span className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-rose" /> low {lowest.confidence} at {formatClock(lowest.t)}
+                <span className="size-1.5 rounded-full bg-rose" />{" "}
+                {t("report.low", { value: lowest.confidence, time: formatClock(lowest.t) })}
               </span>
             )}
             {highest && (
               <span className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-mint" /> peak {highest.confidence} at{" "}
-                {formatClock(highest.t)}
+                <span className="size-1.5 rounded-full bg-mint" />{" "}
+                {t("report.peak", { value: highest.confidence, time: formatClock(highest.t) })}
               </span>
             )}
           </div>
@@ -295,18 +330,15 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             <span className="grid size-6 place-items-center rounded-md border border-mint/30 bg-mint/10 text-mint">
               <Sparkles className="size-3" />
             </span>
-            <h2 className="text-[13px] font-medium text-ink">What is working</h2>
-            <span className="ml-auto font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">keep</span>
+            <h2 className="text-[13px] font-medium text-ink">{t("report.working")}</h2>
+            <span className="ml-auto font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">{t("report.keep")}</span>
           </div>
           <div className="mt-4 space-y-2.5">
             {r.strengths.length === 0 && (
-              <p className="text-[12px] leading-relaxed text-fog">
-                No pillar cleared the strength threshold this time — start with the drills below and the
-                next report will look different.
-              </p>
+              <p className="text-[12px] leading-relaxed text-fog">{t("report.workingEmpty")}</p>
             )}
-            {r.strengths.map((s) => (
-              <div key={s.title} className="rounded-xl border border-mint/15 bg-mint/[0.045] px-3.5 py-3">
+            {r.strengths.map((s, i) => (
+              <div key={`${s.title}-${i}`} className="rounded-xl border border-mint/15 bg-mint/[0.045] px-3.5 py-3">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[12.5px] font-medium text-ink">{s.title}</span>
                 </div>
@@ -321,14 +353,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             <span className="grid size-6 place-items-center rounded-md border border-amber/30 bg-amber/10 text-amber">
               <TriangleAlert className="size-3" />
             </span>
-            <h2 className="text-[13px] font-medium text-ink">What is costing you</h2>
+            <h2 className="text-[13px] font-medium text-ink">{t("report.costing")}</h2>
             <span className="ml-auto font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
-              fix next
+              {t("report.fixNext")}
             </span>
           </div>
           <div className="mt-4 space-y-2.5">
-            {r.improvements.map((s) => (
-              <div key={s.title} className="rounded-xl border border-amber/15 bg-amber/[0.045] px-3.5 py-3">
+            {r.improvements.map((s, i) => (
+              <div key={`${s.title}-${i}`} className="rounded-xl border border-amber/15 bg-amber/[0.045] px-3.5 py-3">
                 <div className="text-[12.5px] font-medium text-ink">{s.title}</div>
                 <p className="pretty mt-1 text-[11.5px] leading-relaxed text-fog">{s.detail}</p>
               </div>

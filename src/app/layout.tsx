@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { SiteNav } from "@/components/site/nav";
+import { LocaleProvider } from "@/components/site/locale-provider";
 import { ServiceWorkerRegistrar } from "@/components/site/service-worker";
+import { ThemeProvider, themeInitScript } from "@/components/site/theme";
+import { getI18n } from "@/lib/i18n/server";
 import "./globals.css";
 
-// Fonts are self-hosted (src/app/fonts, fetched by scripts/fetch-fonts.mjs) so the build
+// Fonts are self-hosted (src/app/fonts, fetched by scripts/assets/fetch-fonts.mjs) so the build
 // never has to reach fonts.googleapis.com — a blocked or slow CDN there fails the whole
 // render, not just the typography.
 const inter = localFont({
@@ -31,27 +34,27 @@ const instrument = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "VisionSpeak AI — Intelligent public speaking coach",
-    template: "%s · VisionSpeak AI",
+    default: "VisionSpeak — Speak with presence",
+    template: "%s · VisionSpeak",
   },
   description:
-    "VisionSpeak AI analyses eye contact, posture, gestures, voice and expression in real time, then scores confidence, engagement and leadership presence with actionable coaching.",
-  applicationName: "VisionSpeak AI",
+    "VisionSpeak is a speaking coach that measures what an audience actually feels: confidence, warmth and leadership presence, scored honestly and coached in the moment.",
+  applicationName: "VisionSpeak",
   keywords: [
     "public speaking coach",
-    "computer vision",
-    "behavioural analytics",
     "presentation feedback",
+    "speaking practice",
     "leadership presence",
-    "MediaPipe",
+    "communication skills",
+    "interview practice",
   ],
-  authors: [{ name: "VisionSpeak AI" }],
+  authors: [{ name: "VisionSpeak" }],
   // opengraph-image.tsx supplies the image; twitter reuses the same card.
   twitter: {
     card: "summary_large_image",
-    title: "VisionSpeak AI — Intelligent public speaking coach",
+    title: "VisionSpeak — Speak with presence",
     description:
-      "Real-time behavioural analytics for speakers: eye contact, posture, gestures, voice and presence, scored and coached on-device.",
+      "Real-time feedback on eye contact, posture, gestures, voice and expression — scored honestly and coached while you speak.",
   },
   icons: {
     icon: [
@@ -61,17 +64,20 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title: "VisionSpeak AI — Intelligent public speaking coach",
+    title: "VisionSpeak — Speak with presence",
     description:
-      "Real-time behavioural analytics for speakers: eye contact, posture, gestures, voice and presence, scored and coached on-device.",
+      "Real-time feedback on eye contact, posture, gestures, voice and expression — scored honestly and coached while you speak.",
     type: "website",
   },
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06060b",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#06060b" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f7fb" },
+  ],
+  colorScheme: "dark light",
   width: "device-width",
   initialScale: 1,
   // Lets the layout use env(safe-area-inset-*) on notched phones so the docked
@@ -79,19 +85,38 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The language lives in a cookie so the server can render the first paint in
+  // the chosen language. Reading it here is what makes SSR translation possible;
+  // the trade-off is that marketing routes render per request too.
+  const { locale, dir, htmlLang, t } = await getI18n();
+
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable} ${instrument.variable}`}>
+    <html
+      lang={htmlLang}
+      dir={dir}
+      className={`${inter.variable} ${jetbrains.variable} ${instrument.variable}`}
+      data-theme="dark"
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Runs before first paint so a stored light theme never flashes dark. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-dvh font-sans antialiased">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:text-white"
-        >
-          Skip to content
-        </a>
-        <SiteNav />
-        <main id="main">{children}</main>
-        <ServiceWorkerRegistrar />
+        <ThemeProvider>
+          <LocaleProvider initialLocale={locale}>
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+            >
+              {t("a11y.skip")}
+            </a>
+            <SiteNav />
+            <main id="main">{children}</main>
+            <ServiceWorkerRegistrar />
+          </LocaleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

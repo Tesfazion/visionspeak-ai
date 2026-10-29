@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -16,33 +17,34 @@ import {
   TrendingUp,
   TriangleAlert,
 } from "@/components/icons";
+import { FreeUpgrade, ProWorkspace } from "@/components/dashboard/plan-panel";
+import { PILLAR_KEYS, PILLAR_META } from "@/components/dashboard/pillars";
 import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/trends";
 import { SiteFooter } from "@/components/site/footer";
-import { Bar, ButtonLink, Pill, cn, scoreLabel, toneFor } from "@/components/ui";
+import { Bar, ButtonLink, Pill, ScoreRing, cn, scoreLabel, toneFor } from "@/components/ui";
 import { formatDuration } from "@/lib/math";
 import { listSessions } from "@/lib/store";
 import { STORAGE_IS_EPHEMERAL } from "@/lib/data-dir";
 import { getCurrentUser, loginHref } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { planFor, quotaState, visibleHistory } from "@/lib/plans";
+import { getI18n } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Practice history",
-  description: "Session history, trends and pillar averages across every VisionSpeak analysis.",
+  description: "Session history, trends and pillar averages across every speaking analysis.",
 };
 
-const PILLARS = [
-  { key: "eyeContact", label: "Eye contact", icon: Eye, color: "#34d399" },
-  { key: "posture", label: "Posture", icon: Activity, color: "#a78bfa" },
-  { key: "gestures", label: "Gestures", icon: Hand, color: "#22d3ee" },
-  { key: "voice", label: "Voice", icon: Mic, color: "#fbbf24" },
-  { key: "expression", label: "Expression", icon: Smile, color: "#fb7185" },
-] as const;
+const PILLAR_ICONS = {
+  eyeContact: Eye,
+  posture: Activity,
+  gestures: Hand,
+  voice: Mic,
+  expression: Smile,
+} as const;
 
 const dayKey = (iso: string) => iso.slice(0, 10);
-const shortDate = (iso: string) =>
-  new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }).format(new Date(iso));
 
 function computeStreak(dates: string[]) {
   const unique = new Set(dates.map(dayKey));
@@ -62,6 +64,12 @@ function computeStreak(dates: string[]) {
 }
 
 const WEEK_MS = 7 * 86_400_000;
+
+const MODE_LABEL_KEY = {
+  practice: "studio.mode.practice",
+  presentation: "studio.mode.presentation",
+  interview: "studio.mode.interview",
+} as const;
 
 type Summarisable = { createdAt: string; report: { overall: number } };
 
@@ -88,22 +96,48 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect(loginHref("/dashboard"));
 
-  const sessions = await listSessions(user.id);
+  const { t, locale } = await getI18n();
+  const shortDate = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { day: "2-digit", month: "short" }).format(
+      new Date(iso),
+    );
+
+  // Only this account's own analyses count. Seeded samples are reference
+  // material and must never appear as the user's history or inflate a streak.
+  const own = await listSessions(user.id, { includeSamples: false });
+  const sessions = visibleHistory(own, user.id, user.plan);
+  const quota = quotaState(own, user.id, user.plan);
+  const plan = planFor(user.plan);
+  const isPro = plan.id === "pro";
 
   if (sessions.length === 0) {
     return (
       <div className="container-page pt-24">
-        <div className="panel grid place-items-center p-10 text-center sm:p-14">
+        <div className="panel grid place-items-center p-8 text-center sm:p-14">
           <span className="grid size-12 place-items-center rounded-2xl border border-brand/30 bg-brand/10 text-brand-soft">
             <Gauge className="size-5" />
           </span>
-          <h1 className="mt-4 text-[20px] font-medium text-ink">No sessions yet</h1>
+          <h1 className="mt-4 text-[20px] font-medium text-ink">
+            {own.length > 0 ? t("dash.expired.title") : t("dash.empty.title")}
+          </h1>
           <p className="pretty mt-2 max-w-sm text-[12.5px] leading-relaxed text-fog">
-            Run your first analysis and this page becomes a record of every habit you fixed.
+            {own.length > 0 ? t("dash.expired.body") : t("dash.empty.body")}
           </p>
-          <ButtonLink href="/studio" className="mt-5">
-            <Plus className="size-3.5" /> Start a session
-          </ButtonLink>
+          <p className="mt-2 text-[10.5px] text-fog/80">
+            {t("dash.plan.summary", {
+              plan: plan.label,
+              limit: plan.sessionsPerMonth,
+              minutes: plan.maxSessionMinutes,
+            })}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <ButtonLink href="/studio">
+              <Plus className="size-3.5" /> {t("dash.empty.cta")}
+            </ButtonLink>
+            <ButtonLink href="/report/demo" variant="subtle">
+              {t("dash.empty.sample")} <ArrowRight className="size-3.5" />
+            </ButtonLink>
+          </div>
         </div>
       </div>
     );
@@ -126,34 +160,69 @@ export default async function DashboardPage() {
       leadership: s.report.pillars.leadership,
     }));
 
-  const pillarAvg = PILLARS.map((p) => ({
-    ...p,
-    value: Math.round(sessions.reduce((acc, s) => acc + s.report.pillars[p.key], 0) / sessions.length),
+  const pillarAvg = PILLAR_KEYS.map((key) => ({
+    key,
+    label: t(PILLAR_META[key].label),
+    color: PILLAR_META[key].color,
+    icon: PILLAR_ICONS[key],
+    value: Math.round(sessions.reduce((acc, s) => acc + s.report.pillars[key], 0) / sessions.length),
   })).sort((a, b) => b.value - a.value);
 
   const weakest = pillarAvg[pillarAvg.length - 1];
   const strongest = pillarAvg[0];
 
   const stats = [
-    { label: "Sessions analysed", value: sessions.length, unit: "", icon: Gauge, hint: `${weekCount} in the last 7 days` },
-    { label: "Time on the record", value: formatDuration(totalSec), unit: "", icon: Clock, hint: "total speaking analysed" },
-    { label: "Best overall", value: best, unit: "/100", icon: Award, hint: scoreLabel(best) + " delivery" },
-    { label: "7-day average", value: weekAvg, unit: "/100", icon: TrendingUp, hint: `${avgOverall} lifetime` },
+    {
+      label: t("dash.stat.sessions"),
+      value: sessions.length,
+      unit: "",
+      icon: Gauge,
+      accent: "#7c5cff",
+      hint: t("dash.stat.sessionsHint", { count: weekCount }),
+    },
+    {
+      label: t("dash.stat.time"),
+      value: formatDuration(totalSec),
+      unit: "",
+      icon: Clock,
+      accent: "#22d3ee",
+      hint: t("dash.stat.timeHint"),
+    },
+    {
+      label: t("dash.stat.best"),
+      value: best,
+      unit: "/100",
+      icon: Award,
+      accent: toneFor(best).hex,
+      hint: t("dash.stat.bestHint", { label: scoreLabel(best) }),
+    },
+    {
+      label: t("dash.stat.week"),
+      value: weekAvg,
+      unit: "/100",
+      icon: TrendingUp,
+      accent: toneFor(weekAvg).hex,
+      hint: t("dash.stat.weekHint", { value: avgOverall }),
+    },
   ];
+
+  const delta = weekAverage !== null ? weekAvg - avgOverall : 0;
 
   return (
     <div className="container-page pb-10 pt-24">
       <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <div className="eyebrow">Dashboard</div>
+          <div className="eyebrow flex items-center gap-2">
+            <Gauge className="size-3" /> {t("dash.eyebrow")}
+          </div>
           <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-ink sm:text-[32px]">
-            Practice history
+            {t("dash.title")}
           </h1>
           <p className="mt-1.5 text-[12.5px] text-fog sm:text-[13px]">
-            {sessions.length} sessions · {formatDuration(totalSec)} of analysed speaking
+            {t("dash.subtitle", { sessions: sessions.length, time: formatDuration(totalSec) })}
             {streak > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber">
-                <Flame className="size-3" /> {streak}-day streak
+                <Flame className="size-3" /> {t("dash.streak", { days: streak })}
               </span>
             )}
           </p>
@@ -164,21 +233,75 @@ export default async function DashboardPage() {
               <TriangleAlert className="size-3" /> temporary storage
             </Pill>
           )}
-          <Pill tone="brand">
-            <Sparkles className="size-3" /> {scoreLabel(avgOverall)} baseline
+          <Pill tone={isPro ? "good" : "neutral"}>
+            {isPro ? <Sparkles className="size-3" /> : <Crown className="size-3" />}
+            {t("dash.planLabel", { plan: plan.label })}
           </Pill>
           <ButtonLink href="/studio" size="md" className="flex-1 sm:flex-none">
-            <Plus className="size-3.5" /> New session
+            <Plus className="size-3.5" /> {t("dash.newSession")}
           </ButtonLink>
         </div>
       </header>
 
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+      {/* The plan decides what this area is: a coaching summary for Pro, an
+          honest usage limit for Free. Never the same panel in two costumes. */}
+      {isPro ? (
+        <ProWorkspace sessions={sessions} quota={quota} t={t} />
+      ) : (
+        <FreeUpgrade quota={quota} t={t} />
+      )}
+
+      {/* Hero: lifetime average ring + headline stat strip */}
+      <section className="panel mt-4 overflow-hidden">
+        <div className="grid-lines pointer-events-none opacity-30" aria-hidden />
+        <div className="relative flex flex-col items-center gap-6 p-5 sm:flex-row sm:gap-8 sm:p-6">
+          <div className="relative shrink-0">
+            <ScoreRing value={avgOverall} size={148} stroke={10} label={t("dash.lifetimeAvg")} />
+            <span className="absolute inset-0 -z-10 rounded-full bg-brand/10 blur-2xl" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="rounded-full border border-line/70 bg-white/[0.03] px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
+                {t("dash.edge", { label: strongest.label, value: strongest.value })}
+              </span>
+              {streak > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber/30 bg-amber/10 px-2.5 py-1 text-[10px] font-medium text-amber">
+                  <Flame className="size-3" /> {t("dash.streak", { days: streak })}
+                </span>
+              )}
+            </div>
+            <p className="pretty mt-2.5 text-[12.5px] leading-relaxed text-fog sm:max-w-md">
+              {t("dash.heroBody", {
+                avg: avgOverall,
+                count: sessions.length,
+                pillar: weakest.label,
+                value: weakest.value,
+              })}
+              {delta !== 0 && (
+                <>
+                  {" "}
+                  {t("dash.heroDelta", { delta: `${delta > 0 ? "+" : ""}${delta}` })}
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="panel p-4">
+          <div
+            key={s.label}
+            className="panel relative overflow-hidden p-4 transition-colors hover:border-line-bright"
+          >
+            <span
+              className="absolute inset-x-0 top-0 h-[2px]"
+              style={{ background: `linear-gradient(90deg, ${s.accent}, ${s.accent}00)` }}
+              aria-hidden
+            />
             <div className="flex items-center justify-between">
               <span className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-fog">{s.label}</span>
-              <s.icon className="size-3.5 text-fog/60" />
+              <s.icon className="size-3.5" style={{ color: s.accent }} />
             </div>
             <div className="mt-2 flex items-baseline gap-1">
               <span className="metric-num text-[24px] font-medium leading-none text-ink">{s.value}</span>
@@ -191,30 +314,31 @@ export default async function DashboardPage() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
         <section className="panel p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[13px] font-medium text-ink">Score trend</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[13px] font-medium text-ink">{t("dash.trend")}</h2>
             <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
-              last {trend.length} sessions
+              {t("dash.trendLast", { count: trend.length })}
             </span>
           </div>
           <div className="mt-4">
             <SessionTrend data={trend} />
-          </div>          <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-fog">
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-fog">
             <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-brand-soft" /> Overall
+              <span className="size-1.5 rounded-full bg-brand-soft" /> {t("dash.legend.overall")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-aqua" /> Confidence
+              <span className="size-1.5 rounded-full bg-aqua" /> {t("dash.legend.confidence")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-mint" /> Leadership
+              <span className="size-1.5 rounded-full bg-mint" /> {t("dash.legend.leadership")}
             </span>
           </div>
         </section>
 
         <section className="panel p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-[13px] font-medium text-ink">Pillar averages</h2>
+            <h2 className="text-[13px] font-medium text-ink">{t("dash.pillars")}</h2>
             <Crown className="size-3.5 text-fog/60" />
           </div>
           <div className="mt-4 space-y-3">
@@ -233,11 +357,9 @@ export default async function DashboardPage() {
             ))}
           </div>
           <div className="mt-4 rounded-xl border border-line/70 bg-white/[0.015] p-3">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-fog">Focus next</div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-fog">{t("dash.focus")}</div>
             <p className="pretty mt-1 text-[11.5px] leading-relaxed text-mist">
-              <span className="text-ink">{weakest.label}</span> is your softest pillar at {weakest.value}.
-              Your <span className="text-ink">{strongest.label}</span> ({strongest.value}) can carry a lot —
-              fix the weakest and the composite moves fastest.
+              {t("dash.focusBody", { pillar: weakest.label, value: weakest.value })}
             </p>
           </div>
         </section>
@@ -245,18 +367,18 @@ export default async function DashboardPage() {
 
       <section className="panel mt-4 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4">
-          <h2 className="text-[13px] font-medium text-ink">Recent sessions</h2>
+          <h2 className="text-[13px] font-medium text-ink">{t("dash.recent")}</h2>
           <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
-            newest first
+            {t("dash.newest")}
           </span>
         </div>
 
         <div className="hidden grid-cols-[1.8fr_repeat(3,0.5fr)_0.6fr_auto] gap-4 border-y border-line/60 px-5 py-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-fog lg:grid">
-          <span>Session</span>
-          <span className="text-right">Conf.</span>
-          <span className="text-right">Lead.</span>
-          <span className="text-right">Comms</span>
-          <span className="text-right">Grade</span>
+          <span>{t("dash.col.session")}</span>
+          <span className="text-right">{t("dash.col.conf")}</span>
+          <span className="text-right">{t("dash.col.lead")}</span>
+          <span className="text-right">{t("dash.col.comms")}</span>
+          <span className="text-right">{t("dash.col.grade")}</span>
           <span className="w-6" />
         </div>
 
@@ -268,25 +390,27 @@ export default async function DashboardPage() {
                 key={s.id}
                 href={`/report/${s.id}`}
                 className={cn(
-                  "grid gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.02]",
+                  "group grid gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.03]",
                   "lg:grid-cols-[1.8fr_repeat(3,0.5fr)_0.6fr_auto] lg:items-center lg:gap-4",
                 )}
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-[13px] font-medium text-ink">{s.title}</span>
-                    {s.source === "demo" && (
-                      <span className="rounded border border-brand/25 bg-brand/10 px-1.5 py-0.5 text-[8.5px] uppercase tracking-[0.1em] text-brand-soft">
-                        sample
-                      </span>
-                    )}
+                    <span
+                      className="size-1.5 shrink-0 rounded-full"
+                      style={{ background: toneFor(r.overall).hex }}
+                      aria-hidden
+                    />
+                    <span className="truncate text-[13px] font-medium text-ink transition-colors group-hover:text-brand-soft">
+                      {s.title}
+                    </span>
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10.5px] text-fog">
                     <span>{shortDate(s.createdAt)}</span>
                     <span className="text-fog/40">·</span>
                     <span>{s.speaker}</span>
                     <span className="text-fog/40">·</span>
-                    <span className="capitalize">{s.mode}</span>
+                    <span className="capitalize">{t(MODE_LABEL_KEY[s.mode])}</span>
                     <span className="text-fog/40">·</span>
                     <span>{formatDuration(s.durationSec)}</span>
                   </div>
@@ -295,6 +419,7 @@ export default async function DashboardPage() {
                 {[r.pillars.confidence, r.pillars.leadership, r.pillars.communication].map((v, i) => (
                   <div key={i} className="hidden text-right lg:block">
                     <span className="metric-num text-[12px] text-mist">{v}</span>
+                    <Bar value={v} height={2} className="mt-1 opacity-60" />
                   </div>
                 ))}
 
@@ -311,7 +436,7 @@ export default async function DashboardPage() {
                   </span>
                 </div>
 
-                <ArrowRight className="hidden size-3.5 text-fog/50 lg:block" />
+                <ArrowRight className="hidden size-3.5 text-fog/50 transition-all group-hover:translate-x-0.5 group-hover:text-brand-soft lg:block" />
               </Link>
             );
           })}

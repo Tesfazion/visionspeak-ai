@@ -7,13 +7,14 @@ This folder keeps the repository root clean. The project itself lives in `src/`,
 ```
 docs/
 ├── README.md        this file (tracked)
+├── AUDIT.md         business-readiness audit: verified state, gaps, order (tracked)
 ├── notes/           scratch .txt notes: command output, greps, package probes
 ├── logs/            transcripts: dev server, build, typecheck, smoke test
 └── artifacts/       machine-readable reports: fonts, network probes, reseed
 ```
 
-Everything except this README is generated and git-ignored. Deleting a subfolder
-is always safe: the next script run recreates it.
+Everything except `README.md` and `AUDIT.md` is generated and git-ignored. Deleting a
+subfolder is always safe: the next script run recreates it.
 
 ## Why these files exist
 
@@ -41,6 +42,8 @@ the repository root.
 | `scripts/kill-port.cjs` | `logs/kill-port.log` |
 | `scripts/responsive-check.cjs` | `notes/responsive-check.txt` |
 | `scripts/probe-status.cjs` | `notes/probe-status.txt` |
+| `scripts/auth-probe.cjs` | `notes/auth-probe.txt` |
+| `scripts/ci-repro.cjs` | `notes/ci-repro.txt` |
 
 Paths are centralised in `scripts/lib/diagnostics.cjs` — new scripts must use
 `notePath()`, `logPath()` or `artifactPath()` rather than writing to the root.
@@ -54,6 +57,11 @@ command and captures its output to `notes/probe-<name>.txt`, which is how a chec
 Everything in `notes/`, `logs/` and `artifacts/` is generated per machine and listed in
 `.gitignore`. The CI workflow uploads `docs/logs/` as a build artifact instead, so the
 history contains code, never transcripts.
+
+`scripts/run-smoke.cjs` takes a **full origin** (`http://localhost:3111`), not a port: it is
+handed straight to `fetch`, and a bare port crashes before `logs/smoke.txt` is rewritten,
+leaving a stale (green) file behind. Use `node scripts/run-probe.cjs smoke node
+scripts/smoke.mjs http://host:port` when you need the exit code too.
 
 ## Housekeeping
 

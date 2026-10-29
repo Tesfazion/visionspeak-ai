@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Loader2, Lock, Mail, UserRound } from "@/components/icons";
+import { useI18n } from "@/components/site/locale-provider";
 import { Button } from "@/components/ui";
+import { POST_AUTH_PATH } from "@/lib/routes";
 
 type Mode = "login" | "signup";
 
 export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
-  const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,12 +31,20 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Something went wrong. Try again.");
+        // Server messages are English-only today; a translated fallback is
+        // better than leaking a raw JSON string into the form.
+        throw new Error(body.error ?? t("auth.errorGeneric"));
       }
-      router.replace(next);
-      router.refresh();
+      // A full document navigation, deliberately — not router.replace().
+      // The session cookie is set on *this* POST response, and a client-side
+      // transition can be served from the Router Cache that was filled while
+      // signed out (the nav prefetches /studio and /dashboard), which replays
+      // the "not signed in" redirect. The user then sees the login page again
+      // and concludes the password failed. A document load always sends the
+      // new cookie and renders the destination fresh.
+      window.location.assign(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+      setError(err instanceof Error ? err.message : t("auth.errorGeneric"));
       setBusy(false);
     }
   };
@@ -47,13 +56,13 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
     <form onSubmit={submit} className="flex flex-col gap-3">
       {signup && (
         <label className="relative block">
-          <span className="sr-only">Name</span>
+          <span className="sr-only">{t("auth.name")}</span>
           <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fog/60" />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={field}
-            placeholder="Your name"
+            placeholder={t("auth.namePlaceholder")}
             autoComplete="name"
             maxLength={60}
           />
@@ -61,27 +70,29 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       )}
 
       <label className="relative block">
-        <span className="sr-only">Email</span>
+        <span className="sr-only">{t("auth.email")}</span>
         <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fog/60" />
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className={field}
-          placeholder="you@example.com"
+          placeholder={t("auth.emailPlaceholder")}
           type="email"
           autoComplete="email"
+          inputMode="email"
+          autoFocus
           required
         />
       </label>
 
       <label className="relative block">
-        <span className="sr-only">Password</span>
+        <span className="sr-only">{t("auth.password")}</span>
         <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fog/60" />
         <input
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className={field}
-          placeholder={signup ? "At least 8 characters" : "Your password"}
+          placeholder={signup ? t("auth.passwordPlaceholder") : t("auth.passwordCurrent")}
           type="password"
           autoComplete={signup ? "new-password" : "current-password"}
           minLength={8}
@@ -90,24 +101,27 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       </label>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-rose/25 bg-rose/[0.07] px-3 py-2 text-[12px] text-rose">
+        <p
+          aria-live="polite"
+          className="rounded-lg border border-rose/25 bg-rose/[0.07] px-3 py-2 text-[12px] text-rose"
+        >
           {error}
         </p>
       )}
 
       <Button type="submit" size="md" disabled={busy} className="mt-1 w-full">
         {busy && <Loader2 className="size-4 animate-spin" />}
-        {signup ? "Create account" : "Sign in"}
+        {busy ? t("auth.working") : signup ? t("auth.signUpButton") : t("auth.signInButton")}
         {!busy && <ArrowRight className="size-3.5" />}
       </Button>
 
       <p className="mt-1 text-center text-[12px] text-fog">
-        {signup ? "Already have an account? " : "New to VisionSpeak? "}
+        {signup ? `${t("auth.haveAccount")} ` : `${t("auth.noAccount")} `}
         <Link
-          href={`${signup ? "/login" : "/signup"}${next !== "/studio" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          href={`${signup ? "/login" : "/signup"}${next !== POST_AUTH_PATH ? `?next=${encodeURIComponent(next)}` : ""}`}
           className="font-medium text-brand-soft transition-colors hover:text-brand"
         >
-          {signup ? "Sign in" : "Create one"}
+          {signup ? t("auth.signInLink") : t("auth.signUpLink")}
         </Link>
       </p>
     </form>

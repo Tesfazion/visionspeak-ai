@@ -90,6 +90,8 @@ export interface SpeechStats {
   fillerRate: number;
   fillers: { word: string; count: number }[];
   longestPauseSec: number;
+  /** Recogniser language for the session ("en-US" | "am-ET"). Absent on pre-locale records. */
+  language?: string;
 }
 
 export interface TimelinePoint {
@@ -147,6 +149,13 @@ export interface RubricInfo {
   summary: string;
 }
 
+/** A time-boxed, revocable public link to one report. */
+export interface ShareLink {
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface SessionRecord {
   id: string;
   createdAt: string;
@@ -159,6 +168,10 @@ export interface SessionRecord {
   report: ReportData;
   /** Account that created the session. Absent on sample and pre-account records. */
   ownerId?: string;
+  /** Browser-generated id used to make a retried save idempotent. */
+  clientSessionId?: string;
+  /** Present only while the owner has sharing enabled. */
+  share?: ShareLink;
 }
 
 export interface SessionSummaryInput {

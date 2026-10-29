@@ -13,7 +13,7 @@ Every score traces back to a model output. Nothing is mocked, randomised or inve
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19.3-087ea4?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](tsconfig.json)
-[![Tests](https://img.shields.io/badge/tests-52%20unit%20%C2%B7%2085%20e2e-34d399.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-72%20unit%20%C2%B7%20110%20e2e-34d399.svg)](#testing)
 
 ---
 
@@ -83,11 +83,18 @@ npm run dev      # http://localhost:3000
 
 Create an account at **`/signup`**, open **Studio → Enable camera & mic**, and speak for a minute.
 
+> There is no seeded, demo or admin login: `/login` only accepts an account that already exists in
+> `data/users.json`, so a fresh checkout must go through `/signup` once. Signing in lands on
+> `/dashboard` (session history), and `?next=/studio` takes you straight to the camera.
+
 Want to see the output first? **`/report/demo`** is a public, fully scored sample session — no
 sign-in required.
 
 **Requirements:** a Chromium browser (Chrome or Edge), a webcam and a microphone. A GPU is used
 when available; the engine falls back to CPU automatically.
+
+The Free plan allows five analyses a month and ten minutes per session; `/pricing` lists
+what Pro adds. Quotas are enforced server-side, not hidden behind a paywall banner.
 
 ---
 
@@ -96,12 +103,40 @@ when available; the engine falls back to CPU automatically.
 | Route | Access | What it is |
 | --- | --- | --- |
 | `/` | public | Marketing site + live scoring preview |
+| `/pricing` | public | Plan comparison; the numbers here are the numbers the API enforces |
 | `/login` · `/signup` | public | Account access |
 | `/studio` | **required** | Real-time analysis studio — camera, overlays, live coach |
-| `/report/[id]` | owner | Full session report (`/report/demo` is public) |
-| `/dashboard` | **required** | Session history, trends, pillar averages |
+| `/report/[id]` | owner | Full session report (`/report/demo` is public; `?share=<token>` is a link-only view) |
+| `/dashboard` | **required** | Session history, plan usage, trends, pillar averages |
+| `/privacy` · `/terms` | public | Privacy policy and terms of service |
 | `/offline` | public | Service-worker fallback |
-| `/api/health` | public | Liveness + storage-mode probe |
+| `/api/health` | public | Liveness + storage + build probe |
+
+---
+
+## Plans & quotas
+
+The product ships with two commercial plans, defined once in `src/lib/plans.ts` and
+enforced by the API — the pricing page is generated from the same object, so a plan
+cannot advertise a limit it does not apply.
+
+| | Free | Pro |
+| --- | --- | --- |
+| Analyses per calendar month (UTC) | 5 | 200 |
+| Maximum session length | 10 min | 60 min |
+| History retained | 30 days | unlimited |
+| Share links | 7 days | 30 days, revocable |
+| CSV export | — | ✅ |
+| Price | $0 | $12/month or $108/year |
+
+- **Enforcement** — `POST /api/sessions` returns `402` with `code: "quota_exceeded"` once the
+  monthly allowance is spent, and `422` + `code: "session_too_long"` for an over-length
+  session. A session that fails to save never consumes quota.
+- **Idempotency** — the studio sends a `clientSessionId`; a retried save returns the original
+  report instead of creating a duplicate or spending a second unit of quota.
+- **Plan changes** — `setUserPlan()` in `src/lib/auth-core.ts` is the seam a billing webhook
+  calls. There is no fake checkout: set `NEXT_PUBLIC_PRO_CHECKOUT_URL` to a real payment link
+  and `/pricing` sells Pro; leave it unset and the page says billing is not enabled.
 
 ---
 
@@ -232,8 +267,11 @@ All variables are optional for local development. Copy `.env.example` to `.env.l
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `AUTH_SECRET` | production | Signs session cookies. Without it a random secret is generated once into `data/auth-secret` — fine locally, but on a serverless host that means every cold start signs everyone out. |
-| `NEXT_PUBLIC_SITE_URL` | production | Absolute origin for OpenGraph URLs, `robots.txt` and `sitemap.xml`. |
+| `NEXT_PUBLIC_SITE_URL` | production | Absolute origin for OpenGraph URLs, share links, `robots.txt` and `sitemap.xml`. |
 | `VS_DATA_DIR` | optional | Where `sessions.json` / `users.json` are written. Defaults to `<repo>/data` locally and the OS temp dir on serverless. |
+| `NEXT_PUBLIC_PRO_CHECKOUT_URL` | to sell | Checkout link for Pro. Unset ⇒ `/pricing` states that billing is not enabled. |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | production | Contact address on `/privacy` and `/terms`, and for deletion requests. |
+| `NEXT_PUBLIC_LEGAL_ENTITY` · `NEXT_PUBLIC_LEGAL_JURISDICTION` | production | Operator name and governing law shown on the legal pages. |
 
 Generate a secret:
 
@@ -273,6 +311,7 @@ curl -s https://<your-domain>/api/health
 > this state, so it is never a silent surprise.
 >
 > For data that must survive, pick one:
+>
 > - **Set `VS_DATA_DIR`** to a mounted persistent volume (Fly.io, Railway, Render, a VM).
 > - **Back the store with a database.** `src/lib/store.ts` is ~130 lines behind five functions
 >   (`listSessions`, `getSession`, `saveSession`, `deleteSession`, `updateSession`) — swapping in
@@ -323,12 +362,12 @@ npm run dev:https     # self-signed HTTPS origin your browser will accept for lo
 ## Testing
 
 ```bash
-npm test          # 52 unit tests — Node's built-in runner, no extra dependency
+npm test          # 72 unit tests — Node's built-in runner, no extra dependency
 npm run lint      # ESLint flat config: next/core-web-vitals + typescript
 npm run typecheck # tsc --noEmit
 npm run verify    # typecheck → lint → test → build (the CI order)
 
-node scripts/smoke.mjs http://localhost:3000   # 85 end-to-end checks
+node scripts/smoke.mjs http://localhost:3000   # 110 end-to-end checks
 ```
 
 **Unit suite** — covers what is otherwise invisible:
@@ -338,13 +377,18 @@ node scripts/smoke.mjs http://localhost:3000   # 85 end-to-end checks
 | Scoring | the published weights, bounds for extreme input, grade boundaries |
 | Rubrics | interview is stricter on gaze, presentation rewards movement, unknown modes fall back to practice |
 | Reports | complete output for a demo session, valid output for an *empty* session, emotion shares normalise to 100% |
+| Plans | month window, quota counting (own live records only), Free/Pro ceilings, history cutoff |
+| Aggregates | every malformed, over-long, non-finite or over-plan payload is refused; body-size ceiling |
+| Sharing | token round-trip, tampering, expiry, revoke, stranger cannot create, samples are read-only |
 | Auth | scrypt round-trip, duplicate rejection, token tampering/expiry, secret persistence, rate limiter |
 | Store | seed-once, per-owner isolation, foreign delete/update refused, idempotent saves |
 | Storage | Vercel/Lambda/Netlify fall back to temp; `VS_DATA_DIR` overrides and is durable |
 
 **End-to-end suite** — drives a real server through the whole product: security headers, the auth
 gate (`307` + preserved `next=`), signup, saving a session, the generated report, cross-account
-isolation, logout, and the PWA/SEO routes. It exits non-zero on any failure.
+isolation, idempotent retries, share links (create → anonymous read → wrong token → revoke), the
+monthly quota (`402`), body/plan limits (`413`/`422`), read-only samples, logout, and the PWA/SEO
+routes. It exits non-zero on any failure.
 
 **CI** (`.github/workflows/ci.yml`) runs on every push and pull request: install → typecheck →
 lint → unit tests → build, then a second job that boots the production server and runs the smoke
@@ -357,10 +401,19 @@ suite. Logs are uploaded as artifacts.
 - **Camera frames, audio and landmarks never leave the device.** There is no upload path in the
   code. Only the derived aggregate (numbers + transcript text) is sent when you press
   *End & analyse*.
+- **Samples are read-only.** Seeded sample reports are shared reference material, cannot be
+  deleted or edited by an account, and never appear in a user's own history or averages.
+- **Share links are explicit and revocable** — an unguessable token plus the report id, expiring
+  after 7 days (Free) or 30 days (Pro), revocable from the report page. Shared pages are
+  `noindex`.
 - **Passwords** are hashed with `scrypt` and a per-user salt; hashes are never returned by an API.
 - **Sessions** are HMAC-SHA256 signed, expiring tokens in `httpOnly`, `SameSite=Lax`,
   `Secure`-in-production cookies — stateless, so there is no session table to leak.
 - **Login throttling** — 8 attempts per 15 minutes per IP+email, `429` with `Retry-After`.
+  Signup is limited per address (20/hour) and saves are limited per account (30/hour).
+- **Payload limits** — a save body above 2 MB is refused with `413` before it is parsed, and the
+  aggregate is bounds-checked (finite numbers, depth, array length, transcript length, plan
+  duration) rather than cast from JSON.
 - **No account enumeration** — unknown email and wrong password return the same `401`, and unknown
   emails still pay a dummy hash so response timing does not leak.
 - **Route gating** happens in `src/proxy.ts` before rendering, so it is a real `307` rather than a
@@ -398,6 +451,41 @@ The studio opts into a wider variant (up to 1760px) because it is a workspace ra
   labels, and focus is visible everywhere.
 - **Printing** a report produces an A4 document (dedicated `@page` rules), not a screenshot of the
   dark theme.
+
+---
+
+## Internationalisation
+
+The product ships with four languages, chosen so every region gets a familiar script:
+
+| Code | Language | Script | Coverage |
+| --- | --- | --- | --- |
+| `en` | English | Latin | 100% (source of truth) |
+| `am` | Amharic | አማርኛ | partial |
+| `es` | Spanish | Español | partial |
+| `fr` | French | Français | partial |
+
+- **Switcher** — a listbox in the header and mobile drawer, showing each language in its own
+  script (አማርኛ, Español, Français) with a checkmark on the active choice. Keyboard: `Escape` closes,
+  arrow keys move, every row is a 44px target.
+- **Persistence** — the choice is written to a cookie (`vs_locale`, one year, `SameSite=lax`) so the
+  *first* server render is already in the right language, and mirrored to `localStorage` so a stale
+  cookie cannot win over an explicit choice. The server reads the cookie; the client provider
+  refreshes the tree on change, so server-rendered pages (dashboard, report, pricing) switch too.
+- **Fallback** — a missing key degrades to English, never to a blank or a raw key. Coverage is
+  reported per locale by `npm run i18n:coverage`.
+- **Adding a language** — drop a `messages/<code>.ts` file (partial or full copy of `en.ts`) and
+  append an entry to `LOCALES` in `src/lib/i18n/locales.ts`. Nothing else enumerates languages.
+
+---
+
+## User-facing language
+
+The product states outcomes, never implementation. Library, framework and model names appear only
+in `README.md` and `docs/`, where a developer is the reader. In the UI you will see:
+
+- Voice Analysis · Speech Evaluation · Performance Tracking · AI Coaching
+- Communication Insights · Learning Progress · Professional Feedback
 
 ---
 
@@ -444,7 +532,9 @@ and the report states which estimator produced them (`paceSource`).
 
 Shipped so far: per-mode rubrics, accounts with per-account isolation, security headers and CSP,
 installable PWA with an offline shell, generated OpenGraph card, loading and error boundaries, a
-print stylesheet, and a 52-test unit suite plus an 85-check end-to-end suite wired into CI.
+print stylesheet, Free/Pro plans with server-enforced quotas, idempotent saves, on-device draft
+recovery, revocable report share links, legal pages, structured logging, and a 72-test unit suite
+plus a 110-check end-to-end suite wired into CI.
 
 ---
 

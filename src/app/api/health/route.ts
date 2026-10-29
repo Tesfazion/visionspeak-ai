@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { STORAGE_IS_EPHEMERAL, STORAGE_KIND } from "@/lib/data-dir";
+import { BUILD_ID } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export async function GET() {
       ok: true,
       service: "visionspeak-ai",
       version: process.env.npm_package_version ?? "1.0.0",
+      // A deploy you cannot name is a deploy you cannot debug from a dashboard.
+      build: BUILD_ID,
       signedIn: Boolean(user),
       storage: STORAGE_KIND,
       // Ephemeral storage keeps the app usable on serverless previews but the

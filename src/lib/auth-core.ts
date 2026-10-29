@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { DATA_DIR, STORAGE_IS_EPHEMERAL, dataFile } from "./data-dir";
+import { normalisePlan, type PlanId } from "./plans";
 
 /**
  * Password hashing, the user file and the signed session cookie.
@@ -33,6 +34,8 @@ export interface StoredUser {
   passwordHash: string;
   salt: string;
   createdAt: string;
+  /** Commercial plan. Absent on accounts created before plans shipped → Free. */
+  plan?: PlanId;
 }
 
 export interface PublicUser {
@@ -40,6 +43,7 @@ export interface PublicUser {
   email: string;
   name: string;
   createdAt: string;
+  plan: PlanId;
 }
 
 export const toPublicUser = (u: StoredUser): PublicUser => ({
@@ -47,6 +51,7 @@ export const toPublicUser = (u: StoredUser): PublicUser => ({
   email: u.email,
   name: u.name,
   createdAt: u.createdAt,
+  plan: normalisePlan(u.plan),
 });
 
 /* ------------------------------------------------------------------ *
@@ -167,6 +172,7 @@ export async function createUser(input: {
       passwordHash,
       salt,
       createdAt: new Date().toISOString(),
+      plan: "free",
     };
     await writeUsers([...users, user]);
     return { user: toPublicUser(user) } as const;
@@ -182,6 +188,21 @@ export async function authenticate(email: string, password: string): Promise<Pub
     return null;
   }
   return (await verifyPassword(password, user)) ? toPublicUser(user) : null;
+}
+
+/**
+ * Changes an account's plan. This is the seam a billing webhook or an admin
+ * action calls — it is deliberately not reachable from the public API.
+ */
+export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicUser | null> {
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return null;
+    users[index] = { ...users[index], plan: normalisePlan(plan) };
+    await writeUsers(users);
+    return toPublicUser(users[index]);
+  });
 }
 
 /* ------------------------------------------------------------------ *

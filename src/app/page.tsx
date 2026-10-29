@@ -1,31 +1,63 @@
-import Link from "next/link";
-import {
-  ArrowRight,
-  Check,
-  Eye,
-  Gauge,
-  Hand,
-  Mic,
-  Shield,
-  Smile,
-  Sparkles,
-  Target,
-  Video,
-  Waves,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, Check, Eye, Gauge, Hand, Mic, Shield, Smile, Sparkles, Target, Video, Waves, Zap } from "@/components/icons";
 import { buildDemoAggregate } from "@/lib/analysis/demo";
-import { TrendPreview } from "@/components/landing/trend-preview";
 import { Reveal } from "@/components/site/motion";
 import { SiteFooter } from "@/components/site/footer";
 import { Bar, ButtonLink, Pill, ScoreRing, SectionHeading, cn } from "@/components/ui";
+import { TrendPreview } from "@/components/landing/trend-preview";
+import { getI18n } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n";
 
+/**
+ * Public landing page.
+ *
+ * Rules this page follows, and the reason it reads the way it does:
+ *   1. Outcomes only. No library, framework or model name appears here — those
+ *      live in README.md, where a developer is the reader.
+ *   2. Every sentence is translated. Copy comes from `src/lib/i18n`, never from
+ *      a literal in this file.
+ *   3. Nothing claims a capability the product does not have.
+ */
 const demo = buildDemoAggregate();
 const trendData = demo.timeline
   .filter((_, i) => i % 8 === 0)
   .map((p) => ({ t: p.t, confidence: p.confidence, engagement: p.engagement, leadership: p.leadership }));
 
-/* ------------------------------------------------------------------ */
+const SIGNALS: { icon: typeof Eye; title: MessageKey; copy: MessageKey; metric: MessageKey; accent: string }[] = [
+  { icon: Eye, title: "landing.signal.eye.title", copy: "landing.signal.eye.copy", metric: "landing.signal.eye.metric", accent: "#34d399" },
+  { icon: Target, title: "landing.signal.posture.title", copy: "landing.signal.posture.copy", metric: "landing.signal.posture.metric", accent: "#a78bfa" },
+  { icon: Hand, title: "landing.signal.gestures.title", copy: "landing.signal.gestures.copy", metric: "landing.signal.gestures.metric", accent: "#22d3ee" },
+  { icon: Mic, title: "landing.signal.voice.title", copy: "landing.signal.voice.copy", metric: "landing.signal.voice.metric", accent: "#fbbf24" },
+  { icon: Smile, title: "landing.signal.expression.title", copy: "landing.signal.expression.copy", metric: "landing.signal.expression.metric", accent: "#fb7185" },
+  { icon: Waves, title: "landing.signal.presence.title", copy: "landing.signal.presence.copy", metric: "landing.signal.presence.metric", accent: "#7c5cff" },
+];
+
+const STEPS: { n: string; title: MessageKey; copy: MessageKey; icon: typeof Video }[] = [
+  { n: "01", title: "landing.step.one.title", copy: "landing.step.one.copy", icon: Video },
+  { n: "02", title: "landing.step.two.title", copy: "landing.step.two.copy", icon: Gauge },
+  { n: "03", title: "landing.step.three.title", copy: "landing.step.three.copy", icon: Sparkles },
+];
+
+const WEIGHTS: { label: MessageKey; weight: number; color: string }[] = [
+  { label: "metric.eyeContact", weight: 30, color: "#34d399" },
+  { label: "metric.posture", weight: 25, color: "#a78bfa" },
+  { label: "metric.gestures", weight: 20, color: "#22d3ee" },
+  { label: "metric.voice", weight: 15, color: "#fbbf24" },
+  { label: "metric.expression", weight: 10, color: "#fb7185" },
+];
+
+const USE_CASES: { title: MessageKey; copy: MessageKey }[] = [
+  { title: "landing.usecase.one.title", copy: "landing.usecase.one.copy" },
+  { title: "landing.usecase.two.title", copy: "landing.usecase.two.copy" },
+  { title: "landing.usecase.three.title", copy: "landing.usecase.three.copy" },
+  { title: "landing.usecase.four.title", copy: "landing.usecase.four.copy" },
+];
+
+const EVIDENCE: { title: MessageKey; copy: MessageKey }[] = [
+  { title: "landing.evidence.one", copy: "landing.evidence.oneCopy" },
+  { title: "landing.evidence.two", copy: "landing.evidence.twoCopy" },
+  { title: "landing.evidence.three", copy: "landing.evidence.threeCopy" },
+  { title: "landing.evidence.four", copy: "landing.evidence.fourCopy" },
+];
 
 function FaceMeshGlyph() {
   const outer = Array.from({ length: 30 }, (_, i) => {
@@ -64,112 +96,19 @@ function FaceMeshGlyph() {
       {inner.map((p, i) => (
         <circle key={`id${i}`} cx={p.x} cy={p.y} r={1.2} fill="rgba(34,211,238,0.6)" />
       ))}
-      {/* eyes */}
       <ellipse cx="76" cy="104" rx="16" ry="7" fill="none" stroke="rgba(52,211,153,0.85)" strokeWidth="1.4" />
       <ellipse cx="124" cy="104" rx="16" ry="7" fill="none" stroke="rgba(52,211,153,0.85)" strokeWidth="1.4" />
       <circle cx="76" cy="104" r="3.4" fill="#34d399" />
       <circle cx="124" cy="104" r="3.4" fill="#34d399" />
-      {/* mouth */}
       <path d="M82 152c6 5 14 7 18 7s12-2 18-7" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
-      {/* nose */}
       <path d="M100 112v22l-6 6" fill="none" stroke="rgba(167,139,250,0.35)" strokeWidth="0.9" />
     </svg>
   );
 }
 
-const SIGNALS = [
-  {
-    icon: Eye,
-    title: "Eye contact & gaze",
-    copy: "Iris-level tracking knows when you leave the lens — and exactly how long you were gone.",
-    metric: "478 face landmarks",
-    accent: "#34d399",
-  },
-  {
-    icon: Target,
-    title: "Posture & alignment",
-    copy: "Shoulder slope, torso lean and head stack: the geometry audiences read as authority.",
-    metric: "33 pose landmarks",
-    accent: "#a78bfa",
-  },
-  {
-    icon: Hand,
-    title: "Gesture quality",
-    copy: "Count, openness and hand jitter separate expressive beats from nervous fidgeting.",
-    metric: "21 points / hand",
-    accent: "#22d3ee",
-  },
-  {
-    icon: Mic,
-    title: "Vocal delivery",
-    copy: "Loudness, energy, pitch spread and pause structure pulled straight from the audio signal.",
-    metric: "44.1 kHz analysis",
-    accent: "#fbbf24",
-  },
-  {
-    icon: Smile,
-    title: "Facial expression",
-    copy: "52 facial blendshapes mapped to emotional tone, warmth and held tension.",
-    metric: "52 blendshapes",
-    accent: "#fb7185",
-  },
-  {
-    icon: Waves,
-    title: "Presence composite",
-    copy: "Confidence, engagement and leadership presence — derived, weighted and explained.",
-    metric: "9 live scores",
-    accent: "#7c5cff",
-  },
-];
+export default async function LandingPage() {
+  const { t } = await getI18n();
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Enable camera & mic",
-    copy: "Models load once into your browser via WebAssembly. Frames are analysed on-device — nothing is uploaded, ever.",
-    icon: Video,
-  },
-  {
-    n: "02",
-    title: "Speak for a few minutes",
-    copy: "Gaze, posture, hands, voice and expression are sampled 30 times a second while a live coach nudges you in the moment.",
-    icon: Gauge,
-  },
-  {
-    n: "03",
-    title: "Read the honest report",
-    copy: "A scored session with strengths, blind spots, filler-word analysis and a three-drill plan for the next attempt.",
-    icon: Sparkles,
-  },
-];
-
-const WEIGHTS = [
-  { label: "Eye contact", weight: 30, color: "#34d399" },
-  { label: "Posture", weight: 25, color: "#a78bfa" },
-  { label: "Hand gestures", weight: 20, color: "#22d3ee" },
-  { label: "Voice stability", weight: 15, color: "#fbbf24" },
-  { label: "Facial expression", weight: 10, color: "#fb7185" },
-];
-
-const USE_CASES = [
-  { title: "Keynotes & conferences", copy: "Rehearse the talk until the delivery matches the idea." },
-  { title: "Interviews & promotion", copy: "Practice the answers that decide your next role." },
-  { title: "Teaching & training", copy: "Hold attention across a 50-minute session, not five." },
-  { title: "Leadership & boardroom", copy: "Build the presence that makes a room lean in." },
-];
-
-const STACK = [
-  ["MediaPipe Tasks Vision", "WASM face · pose · hand models"],
-  ["Web Audio API", "loudness, pitch, pause structure"],
-  ["Web Speech API", "transcript + filler detection"],
-  ["Next.js 16 / React 19", "app shell & streaming UI"],
-  ["TypeScript", "behavioural scoring engine"],
-  ["Recharts", "session analytics"],
-];
-
-/* ------------------------------------------------------------------ */
-
-export default function LandingPage() {
   return (
     <>
       {/* ============================== HERO ============================== */}
@@ -184,44 +123,42 @@ export default function LandingPage() {
           style={{ background: "radial-gradient(circle, rgba(34,211,238,0.18), transparent 65%)" }}
         />
 
-        <div className="container-page relative grid items-center gap-10 pb-20 pt-24 sm:gap-14 sm:pb-24 sm:pt-28 lg:grid-cols-[1.02fr_0.98fr] lg:gap-10 lg:pt-36 2xl:gap-16">
+        <div className="container-page relative grid items-center gap-10 pb-16 pt-24 sm:gap-14 sm:pb-20 sm:pt-28 lg:grid-cols-[1.02fr_0.98fr] lg:gap-10 lg:pt-32 2xl:gap-16">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] py-1 pl-1 pr-3.5 backdrop-blur">
               <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-soft">
-                New
+                {t("common.new")}
               </span>
-              <span className="text-[12px] text-mist">Real-time behavioural coaching</span>
+              <span className="text-[12px] text-mist">{t("landing.badge")}</span>
             </div>
 
             <h1 className="mt-6 text-balance text-[32px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[52px] sm:leading-[0.99] lg:text-[62px] 2xl:text-[68px]">
-              Deliver like the room is{" "}
+              {t("landing.heroTitleA")}{" "}
               <span className="font-display italic text-transparent [background:linear-gradient(92deg,#a78bfa,#ffffff_45%,#67e8f9)] [-webkit-background-clip:text] [background-clip:text]">
-                yours
+                {t("landing.heroTitleAccent")}
               </span>
-              .
+              {t("landing.heroTitleB")}
             </h1>
 
             <p className="pretty mt-5 max-w-[36rem] text-[14.5px] leading-relaxed text-fog sm:mt-6 sm:text-[16px]">
-              VisionSpeak AI reads your face, eyes, posture, hands and voice in real time — then scores
-              what audiences actually feel. Confidence, warmth and leadership presence, measured
-              honestly and coached immediately.
+              {t("landing.heroCopy")}
             </p>
 
             <div className="mt-7 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <ButtonLink href="/studio" size="lg" className="group w-full sm:w-auto">
-                Start a live session
+                {t("landing.cta.start")}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </ButtonLink>
               <ButtonLink href="/report/demo" size="lg" variant="outline" className="w-full sm:w-auto">
-                See a sample report
+                {t("landing.cta.sample")}
               </ButtonLink>
             </div>
 
             <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-fog sm:mt-8 sm:gap-x-6">
               {[
-                { icon: Shield, label: "Nothing leaves your device" },
-                { icon: Zap, label: "Live scores at 5 Hz" },
-                { icon: Check, label: "Chrome & Edge" },
+                { icon: Shield, label: t("landing.trust.private") },
+                { icon: Zap, label: t("landing.trust.live") },
+                { icon: Check, label: t("landing.trust.browsers") },
               ].map((item) => (
                 <li key={item.label} className="flex items-center gap-1.5">
                   <item.icon className="size-3.5 text-mint/80" />
@@ -244,7 +181,9 @@ export default function LandingPage() {
                     <span className="absolute inset-0 animate-pulse-ring rounded-full bg-rose" />
                     <span className="relative size-2 rounded-full bg-rose" />
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-fog">rec · live</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-fog">
+                    {t("landing.preview.live")}
+                  </span>
                 </div>
                 <span className="metric-num text-[11px] text-mist">04:12</span>
               </div>
@@ -258,7 +197,6 @@ export default function LandingPage() {
                 <div className="absolute inset-0 noise-overlay opacity-[0.05]" />
                 <div className="absolute inset-x-0 top-0 h-24 animate-scan bg-gradient-to-b from-transparent via-aqua/[0.07] to-transparent" />
 
-                {/* corner brackets */}
                 {[
                   "left-4 top-4 border-l border-t",
                   "right-4 top-4 border-r border-t",
@@ -270,19 +208,19 @@ export default function LandingPage() {
 
                 <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-mint/30 bg-mint/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-mint">
                   <span className="size-1 rounded-full bg-mint" />
-                  on lens
+                  {t("landing.preview.onLens")}
                 </div>
 
                 <div className="absolute right-3 top-3 rounded-2xl border border-line bg-base/70 p-2 backdrop-blur">
-                  <ScoreRing value={87} size={92} stroke={7} label="confidence" />
+                  <ScoreRing value={87} size={92} stroke={7} label={t("landing.preview.confidence")} />
                 </div>
 
                 <div className="absolute inset-x-3 bottom-3 grid grid-cols-2 gap-2">
                   {[
-                    { label: "Eye contact", value: 83, color: "#34d399" },
-                    { label: "Posture", value: 91, color: "#a78bfa" },
-                    { label: "Gestures", value: 78, color: "#22d3ee" },
-                    { label: "Voice", value: 84, color: "#fbbf24" },
+                    { label: t("metric.eyeContact"), value: 83, color: "#34d399" },
+                    { label: t("metric.posture"), value: 91, color: "#a78bfa" },
+                    { label: t("metric.gestures"), value: 78, color: "#22d3ee" },
+                    { label: t("metric.voice"), value: 84, color: "#fbbf24" },
                   ].map((m) => (
                     <div
                       key={m.label}
@@ -300,47 +238,47 @@ export default function LandingPage() {
 
               <div className="flex items-center justify-between px-2 pb-1 pt-3">
                 <div className="flex items-center gap-2 text-[10px] text-fog">
-                  <span className="chip !py-1 !text-[9px]">LEADERSHIP 85</span>
-                  <span className="chip !py-1 !text-[9px]">ENGAGEMENT 89</span>
+                  <span className="chip !py-1 !text-[9px]">{t("metric.leadership").toUpperCase()} 85</span>
+                  <span className="chip !py-1 !text-[9px]">{t("metric.engagement").toUpperCase()} 89</span>
                 </div>
                 <span className="font-mono text-[10px] text-fog">152 wpm</span>
               </div>
             </div>
 
             <div className="absolute -left-4 top-28 hidden animate-float rounded-xl border border-line bg-base/85 px-3 py-2 backdrop-blur md:block">
-              <div className="text-[9px] uppercase tracking-[0.16em] text-fog">Posture</div>
-              <div className="text-[12px] font-medium text-mint">Grounded · 3.2° slope</div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-fog">{t("landing.preview.posture")}</div>
+              <div className="text-[12px] font-medium text-mint">{t("landing.preview.grounded")}</div>
             </div>
             <div className="absolute -right-3 bottom-24 hidden animate-float-slow rounded-xl border border-line bg-base/85 px-3 py-2 backdrop-blur md:block">
-              <div className="text-[9px] uppercase tracking-[0.16em] text-fog">Coach note</div>
-              <div className="text-[12px] font-medium text-amber">Land the key line with a pause</div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-fog">{t("landing.preview.coachNote")}</div>
+              <div className="text-[12px] font-medium text-amber">{t("landing.preview.pause")}</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ============================== SIGNALS ============================== */}
-      <section id="signals" className="container-page relative scroll-mt-24 py-16 sm:py-20">
+      <section id="signals" className="container-page relative scroll-mt-24 py-14 sm:py-20">
         <Reveal>
           <SectionHeading
-            eyebrow="Six signals"
+            eyebrow={t("landing.signals.eyebrow")}
             title={
               <>
-                Everything an audience notices,{" "}
-                <span className="font-display italic text-brand-soft">measured</span>.
+                {t("landing.signals.title")}{" "}
+                <span className="font-display italic text-brand-soft">{t("landing.signals.titleAccent")}</span>.
               </>
             }
-            copy="Human judges read six channels at once and remember none of the numbers. VisionSpeak captures all six, continuously, and turns them into something you can act on."
+            copy={t("landing.signals.copy")}
           />
         </Reveal>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
           {SIGNALS.map((s, i) => (
             <Reveal key={s.title} delay={i * 60}>
               <article className="panel panel-hover group h-full p-5">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <span
-                    className="grid size-10 place-items-center rounded-xl border"
+                    className="grid size-10 shrink-0 place-items-center rounded-xl border"
                     style={{
                       borderColor: `${s.accent}33`,
                       background: `linear-gradient(180deg, ${s.accent}1f, transparent)`,
@@ -349,10 +287,12 @@ export default function LandingPage() {
                   >
                     <s.icon className="size-[18px]" />
                   </span>
-                  <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-fog/60">{s.metric}</span>
+                  <span className="text-right font-mono text-[9px] uppercase leading-tight tracking-[0.14em] text-fog/60">
+                    {t(s.metric)}
+                  </span>
                 </div>
-                <h3 className="mt-4 text-[15px] font-medium text-ink">{s.title}</h3>
-                <p className="pretty mt-2 text-[13px] leading-relaxed text-fog">{s.copy}</p>
+                <h3 className="mt-4 text-[15px] font-medium text-ink">{t(s.title)}</h3>
+                <p className="pretty mt-2 text-[13px] leading-relaxed text-fog">{t(s.copy)}</p>
               </article>
             </Reveal>
           ))}
@@ -361,30 +301,30 @@ export default function LandingPage() {
 
       {/* ============================== HOW ============================== */}
       <section id="platform" className="relative scroll-mt-24 border-y border-line/60 bg-white/[0.012]">
-        <div className="container-page py-16 sm:py-20">
+        <div className="container-page py-14 sm:py-20">
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12 2xl:gap-16">
             <Reveal>
               <div>
                 <SectionHeading
                   align="left"
-                  eyebrow="How it works"
+                  eyebrow={t("landing.how.eyebrow")}
                   title={
                     <>
-                      Camera to coaching in{" "}
-                      <span className="font-display italic text-aqua">seconds</span>.
+                      {t("landing.how.titleA")}{" "}
+                      <span className="font-display italic text-aqua">{t("landing.how.titleAccent")}</span>.
                     </>
                   }
-                  copy="No uploads, no waiting, no reviewer. The same models used for on-device vision inference run inside your browser tab while you speak."
+                  copy={t("landing.how.copy")}
                 />
                 <div className="mt-8 flex flex-wrap gap-2">
                   <Pill tone="good">
-                    <Shield className="size-3" /> on-device
+                    <Shield className="size-3" /> {t("landing.how.pillPrivate")}
                   </Pill>
                   <Pill tone="brand">
-                    <Sparkles className="size-3" /> real-time nudges
+                    <Sparkles className="size-3" /> {t("landing.how.pillRealtime")}
                   </Pill>
                   <Pill>
-                    <Eye className="size-3" /> 478-point face mesh
+                    <Eye className="size-3" /> {t("landing.how.pillPrecise")}
                   </Pill>
                 </div>
               </div>
@@ -393,7 +333,7 @@ export default function LandingPage() {
             <div className="space-y-3">
               {STEPS.map((s, i) => (
                 <Reveal key={s.n} delay={i * 80}>
-                  <div className="panel panel-hover flex gap-5 p-5">
+                  <div className="panel panel-hover flex gap-4 p-5 sm:gap-5">
                     <div className="flex flex-col items-center">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-brand/30 bg-brand/10 text-brand-soft">
                         <s.icon className="size-[18px]" />
@@ -403,9 +343,9 @@ export default function LandingPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[10px] tracking-[0.2em] text-fog/60">{s.n}</span>
-                        <h3 className="text-[15px] font-medium text-ink">{s.title}</h3>
+                        <h3 className="text-[15px] font-medium text-ink">{t(s.title)}</h3>
                       </div>
-                      <p className="pretty mt-1.5 text-[13px] leading-relaxed text-fog">{s.copy}</p>
+                      <p className="pretty mt-1.5 text-[13px] leading-relaxed text-fog">{t(s.copy)}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -416,22 +356,22 @@ export default function LandingPage() {
       </section>
 
       {/* ============================== SCORING ============================== */}
-      <section id="scoring" className="container-page relative scroll-mt-24 py-16 sm:py-20">
+      <section id="scoring" className="container-page relative scroll-mt-24 py-14 sm:py-20">
         <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-12 2xl:gap-16">
           <Reveal>
             <div>
               <SectionHeading
                 align="left"
-                eyebrow="The scoring model"
+                eyebrow={t("landing.scoring.eyebrow")}
                 title={
                   <>
-                    A weighted model you can{" "}
-                    <span className="font-display italic text-brand-soft">audit</span>.
+                    {t("landing.scoring.title")}{" "}
+                    <span className="font-display italic text-brand-soft">{t("landing.scoring.titleAccent")}</span>.
                   </>
                 }
-                copy="Confidence is the headline, but it is never a black box. Five measured primitives combine with fixed weights, and every downstream score — engagement, leadership, communication — reconciles to the same numbers."
+                copy={t("landing.scoring.copy")}
               />
-              <div className="mt-7 rounded-xl border border-line/80 bg-base/50 p-4 font-mono text-[11px] leading-relaxed text-fog">
+              <div className="mt-7 overflow-x-auto rounded-xl border border-line/80 bg-base/50 p-4 font-mono text-[11px] leading-relaxed text-fog">
                 <span className="text-brand-soft">confidence</span> ={" "}
                 <span className="text-mint">0.30·eye</span> + <span className="text-mint">0.25·posture</span> +{" "}
                 <span className="text-aqua">0.20·gestures</span> + <span className="text-amber">0.15·voice</span> +{" "}
@@ -441,16 +381,18 @@ export default function LandingPage() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="panel p-6">
+            <div className="panel p-5 sm:p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-[13px] font-medium text-ink">Confidence composition</h3>
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fog">weights</span>
+                <h3 className="text-[13px] font-medium text-ink">{t("landing.scoring.composition")}</h3>
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fog">
+                  {t("landing.scoring.weights")}
+                </span>
               </div>
               <div className="mt-5 space-y-4">
                 {WEIGHTS.map((w) => (
                   <div key={w.label}>
                     <div className="mb-1.5 flex items-baseline justify-between">
-                      <span className="text-[12px] text-mist">{w.label}</span>
+                      <span className="text-[12px] text-mist">{t(w.label)}</span>
                       <span className="metric-num text-[12px] text-fog">{w.weight}%</span>
                     </div>
                     <Bar value={w.weight * 3.33} tone={w.color} height={7} />
@@ -460,9 +402,9 @@ export default function LandingPage() {
               <div className="mt-6 hairline" />
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {[
-                  { label: "0–40", copy: "Low", color: "#fb7185" },
-                  { label: "41–70", copy: "Moderate", color: "#fbbf24" },
-                  { label: "71–100", copy: "High", color: "#34d399" },
+                  { label: "0–40", copy: t("landing.scoring.band.low"), color: "#fb7185" },
+                  { label: "41–70", copy: t("landing.scoring.band.mid"), color: "#fbbf24" },
+                  { label: "71–100", copy: t("landing.scoring.band.high"), color: "#34d399" },
                 ].map((b) => (
                   <div key={b.label} className="rounded-lg border border-line/70 px-2.5 py-2">
                     <div className="metric-num text-[11px]" style={{ color: b.color }}>
@@ -477,111 +419,108 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============================== ANALYTICS ============================== */}
+      {/* ============================== PROGRESS ============================== */}
       <section className="relative border-y border-line/60 bg-white/[0.012]">
-        <div className="container-page grid items-center gap-10 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+        <div className="container-page grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
           <Reveal>
-            <div className="panel overflow-hidden p-5">
-              <div className="flex items-center justify-between pb-4">
-                <div>
-                  <h3 className="text-[13px] font-medium text-ink">Session trend</h3>
-                  <p className="text-[11px] text-fog">10-minute keynote · sampled per second</p>
-                </div>
-                <div className="flex items-center gap-3 text-[10px]">
-                  <span className="flex items-center gap-1.5 text-fog">
-                    <span className="size-1.5 rounded-full bg-brand-soft" /> Confidence
-                  </span>
-                  <span className="flex items-center gap-1.5 text-fog">
-                    <span className="size-1.5 rounded-full bg-aqua" /> Engagement
-                  </span>
-                </div>
-              </div>
-              <TrendPreview data={trendData} />
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber/25 bg-amber/[0.07] px-3 py-2">
-                <span className="size-1.5 shrink-0 rounded-full bg-amber" />
-                <p className="text-[11px] leading-snug text-amber/90">
-                  Confidence dipped 7 points at 03:20 — the transition between sections. Rehearse the
-                  bridge, not the slide.
-                </p>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal delay={100}>
             <div>
               <SectionHeading
                 align="left"
-                eyebrow="Analytics"
+                eyebrow={t("landing.analytics.eyebrow")}
                 title={
                   <>
-                    Watch the session{" "}
-                    <span className="font-display italic text-aqua">breathe</span>.
+                    {t("landing.analytics.title")}{" "}
+                    <span className="font-display italic text-aqua">{t("landing.analytics.titleAccent")}</span>.
                   </>
                 }
-                copy="Every second is retained, so a dip at minute three becomes a specific, repeatable insight rather than a vague feeling that it went badly."
+                copy={t("landing.analytics.copy")}
               />
               <ul className="mt-6 space-y-3">
                 {[
-                  "Per-second timeline for confidence, engagement and leadership",
-                  "Trend lines across every session in your history",
-                  "Emotion distribution and expression variety",
-                  "Filler-word frequency with the exact transcript",
-                ].map((t) => (
-                  <li key={t} className="flex items-start gap-2.5 text-[13px] text-mist">
+                  t("landing.analytics.point1"),
+                  t("landing.analytics.point2"),
+                  t("landing.analytics.point3"),
+                  t("landing.analytics.point4"),
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2.5 text-[13px] text-mist">
                     <Check className="mt-0.5 size-3.5 shrink-0 text-mint" />
-                    {t}
+                    {line}
                   </li>
                 ))}
               </ul>
               <ButtonLink href="/dashboard" variant="outline" size="md" className="mt-7">
-                Explore the dashboard
+                {t("landing.cta.dashboard")}
                 <ArrowRight className="size-3.5" />
               </ButtonLink>
+            </div>
+          </Reveal>
+
+          <Reveal delay={100}>
+            <div className="panel overflow-hidden p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+                <div>
+                  <h3 className="text-[13px] font-medium text-ink">{t("landing.analytics.panelTitle")}</h3>
+                  <p className="text-[11px] text-fog">{t("landing.analytics.panelSub")}</p>
+                </div>
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="flex items-center gap-1.5 text-fog">
+                    <span className="size-1.5 rounded-full bg-brand-soft" /> {t("metric.confidence")}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-fog">
+                    <span className="size-1.5 rounded-full bg-aqua" /> {t("metric.engagement")}
+                  </span>
+                </div>
+              </div>
+              <TrendPreview data={trendData} />
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber/25 bg-amber/[0.07] px-3 py-2">
+                <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-amber" />
+                <p className="text-[11px] leading-snug text-amber/90">{t("landing.analytics.insight")}</p>
+              </div>
             </div>
           </Reveal>
         </div>
       </section>
 
       {/* ============================== REPORT PREVIEW ============================== */}
-      <section className="container-page relative py-16 sm:py-20">
+      <section className="container-page relative py-14 sm:py-20">
         <Reveal>
           <SectionHeading
-            eyebrow="The report"
+            eyebrow={t("landing.report.eyebrow")}
             title={
               <>
-                Then it tells you the <span className="font-display italic text-mint">truth</span>.
+                {t("landing.report.title")}{" "}
+                <span className="font-display italic text-mint">{t("landing.report.titleAccent")}</span>.
               </>
             }
-            copy="A scored session, a ranked list of what is working, what is costing you authority, and three drills to fix it before the real thing."
+            copy={t("landing.report.copy")}
           />
         </Reveal>
 
         <Reveal delay={80}>
-          <div className="mt-12 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="panel flex flex-col items-center justify-center p-8 text-center">
-              <ScoreRing value={85} size={172} stroke={11} label="overall" />
+          <div className="mt-10 grid gap-4 sm:mt-12 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="panel flex flex-col items-center justify-center p-6 text-center sm:p-8">
+              <ScoreRing value={85} size={172} stroke={11} label={t("metric.overall")} />
               <div className="mt-5 flex items-center gap-2">
                 <Pill tone="good">A</Pill>
-                <span className="text-[14px] font-medium text-ink">Excellent Speaker</span>
+                <span className="text-[14px] font-medium text-ink">{t("landing.report.grade")}</span>
               </div>
-              <p className="pretty mt-3 max-w-sm text-[12px] leading-relaxed text-fog">
-                Polished and credible. A few refinements would make it unforgettable — posture and gaze
-                are already doing heavy lifting.
-              </p>
+              <p className="pretty mt-3 max-w-sm text-[12px] leading-relaxed text-fog">{t("landing.report.blurb")}</p>
               <div className="mt-6 grid w-full grid-cols-3 gap-2">
                 {[
-                  { k: "Confidence", v: 84 },
-                  { k: "Leadership", v: 85 },
-                  { k: "Comms", v: 86 },
+                  { k: t("metric.confidence"), v: 84 },
+                  { k: t("metric.leadership"), v: 85 },
+                  { k: t("metric.communication"), v: 86 },
                 ].map((s) => (
                   <div key={s.k} className="rounded-lg border border-line/70 py-2">
                     <div className="metric-num text-[15px] text-ink">{s.v}</div>
-                    <div className="text-[9px] uppercase tracking-[0.12em] text-fog">{s.k}</div>
+                    <div className="mt-0.5 text-[9px] uppercase leading-tight tracking-[0.12em] text-fog">
+                      {s.k}
+                    </div>
                   </div>
                 ))}
               </div>
               <ButtonLink href="/report/demo" size="md" variant="subtle" className="mt-6 w-full">
-                Open the full sample report
+                {t("landing.cta.fullReport")}
                 <ArrowRight className="size-3.5" />
               </ButtonLink>
             </div>
@@ -589,12 +528,12 @@ export default function LandingPage() {
             <div className="space-y-3">
               <div className="panel p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-mint">
-                  <Check className="size-3.5" /> Strengths
+                  <Check className="size-3.5" /> {t("landing.report.strengths")}
                 </div>
                 <div className="mt-3 space-y-3">
                   {[
-                    ["Grounded, authoritative stance", "Shoulders level at 3.2°, upright 80% of the session."],
-                    ["Magnetic eye contact", "Held the lens 79% of the time across just 9 breaks."],
+                    [t("landing.report.strength1"), t("landing.report.strength1Copy")],
+                    [t("landing.report.strength2"), t("landing.report.strength2Copy")],
                   ].map(([title, copy]) => (
                     <div key={title} className="rounded-lg border border-line/70 bg-white/[0.015] px-3 py-2.5">
                       <div className="text-[12.5px] font-medium text-ink">{title}</div>
@@ -605,12 +544,12 @@ export default function LandingPage() {
               </div>
               <div className="panel p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-amber">
-                  <Sparkles className="size-3.5" /> Where to invest next
+                  <Sparkles className="size-3.5" /> {t("landing.report.invest")}
                 </div>
                 <div className="mt-3 space-y-3">
                   {[
-                    ["Gestures stay close to the body", "8 beats per minute against an expressive range of 12–26."],
-                    ["Vocal colour is narrow", "Pitch moved across 4.8 semitones; aim for 9 to sound animated."],
+                    [t("landing.report.invest1"), t("landing.report.invest1Copy")],
+                    [t("landing.report.invest2"), t("landing.report.invest2Copy")],
                   ].map(([title, copy]) => (
                     <div key={title} className="rounded-lg border border-line/70 bg-white/[0.015] px-3 py-2.5">
                       <div className="text-[12.5px] font-medium text-ink">{title}</div>
@@ -619,13 +558,13 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-              <div className="panel flex items-center gap-3 p-4">
-                <span className="grid size-9 place-items-center rounded-lg border border-brand/30 bg-brand/10 text-brand-soft">
+              <div className="panel flex items-start gap-3 p-4">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-brand/30 bg-brand/10 text-brand-soft">
                   <Gauge className="size-4" />
                 </span>
                 <p className="text-[11.5px] leading-snug text-fog">
-                  <span className="text-ink">Next drill:</span> one idea, one gesture — decide the hand
-                  shape before you speak, hold it to the end of the sentence.
+                  <span className="text-ink">{t("landing.report.nextDrill")}</span>{" "}
+                  {t("landing.report.nextDrillCopy")}
                 </p>
               </div>
             </div>
@@ -635,14 +574,15 @@ export default function LandingPage() {
 
       {/* ============================== USE CASES ============================== */}
       <section className="border-y border-line/60 bg-white/[0.012]">
-        <div className="container-page py-16 sm:py-20">
+        <div className="container-page py-14 sm:py-20">
           <Reveal>
             <SectionHeading
-              eyebrow="Who it's for"
+              eyebrow={t("landing.usecases.eyebrow")}
               title={
                 <>
-                  For the moments where delivery{" "}
-                  <span className="font-display italic text-brand-soft">decides</span> the outcome.
+                  {t("landing.usecases.titleA")}{" "}
+                  <span className="font-display italic text-brand-soft">{t("landing.usecases.titleAccent")}</span>{" "}
+                  the outcome.
                 </>
               }
             />
@@ -652,8 +592,8 @@ export default function LandingPage() {
               <Reveal key={u.title} delay={i * 60}>
                 <div className="panel panel-hover h-full p-5">
                   <div className="font-mono text-[10px] tracking-[0.2em] text-brand-soft/70">0{i + 1}</div>
-                  <h3 className="mt-3 text-[14px] font-medium text-ink">{u.title}</h3>
-                  <p className="pretty mt-1.5 text-[12.5px] leading-relaxed text-fog">{u.copy}</p>
+                  <h3 className="mt-3 text-[14px] font-medium text-ink">{t(u.title)}</h3>
+                  <p className="pretty mt-1.5 text-[12.5px] leading-relaxed text-fog">{t(u.copy)}</p>
                 </div>
               </Reveal>
             ))}
@@ -661,27 +601,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============================== STACK ============================== */}
-      <section className="container-page py-16 sm:py-20">
-        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-10">
+      {/* ============================== TRUST ============================== */}
+      <section className="container-page py-14 sm:py-20">
+        <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
           <Reveal>
             <SectionHeading
               align="left"
-              eyebrow="Under the hood"
-              title="No mock data. No theatre."
-              copy="Every number in this product comes from a real model or a real signal. Nothing is randomised to look impressive."
+              eyebrow={t("landing.evidence.eyebrow")}
+              title={t("landing.evidence.title")}
+              copy={t("landing.evidence.copy")}
             />
-            <p className="mt-4 text-[12px] leading-relaxed text-fog/80">
-              Roadmap: a server-side batch pipeline (Whisper + librosa + DeepFace) for uploaded
-              recordings, reusing the identical scoring model.
-            </p>
           </Reveal>
           <Reveal delay={80}>
-            <div className="panel divide-y divide-line/70">
-              {STACK.map(([name, role]) => (
-                <div key={name} className="flex items-center justify-between gap-4 px-5 py-3">
-                  <span className="text-[12.5px] font-medium text-ink">{name}</span>
-                  <span className="text-right font-mono text-[10.5px] text-fog">{role}</span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {EVIDENCE.map((item) => (
+                <div key={item.title} className="panel p-4">
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 shrink-0 text-mint" />
+                    <h3 className="text-[12.5px] font-medium text-ink">{t(item.title)}</h3>
+                  </div>
+                  <p className="pretty mt-1.5 text-[11.5px] leading-relaxed text-fog">{t(item.copy)}</p>
                 </div>
               ))}
             </div>
@@ -699,26 +638,20 @@ export default function LandingPage() {
             />
             <div className="relative flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
               <div className="max-w-xl">
-                <h2 className="text-balance text-[28px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
-                  The camera is already on.{" "}
-                  <span className="font-display italic text-brand-soft">Start measuring.</span>
+                <h2 className="text-balance text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">
+                  {t("landing.final.titleA")}{" "}
+                  <span className="font-display italic text-brand-soft">{t("landing.final.titleAccent")}</span>
                 </h2>
-                <p className="pretty mt-3 text-[14px] leading-relaxed text-fog">
-                  Two minutes is enough to get a baseline. Your first session is free, local and
-                  private — and it will tell you something a mirror never could.
-                </p>
+                <p className="pretty mt-3 text-[14px] leading-relaxed text-fog">{t("landing.final.copy")}</p>
               </div>
-              <div className="flex flex-wrap gap-2.5 sm:gap-3">
+              <div className="flex w-full flex-wrap gap-2.5 sm:w-auto sm:gap-3">
                 <ButtonLink href="/studio" size="lg" className="group w-full sm:w-auto">
-                  Open the studio
+                  {t("landing.cta.openStudio")}
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </ButtonLink>
-                <Link
-                  href="/report/demo"
-                  className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-line px-5 text-[14px] text-mist transition-colors hover:border-line-bright hover:text-ink sm:w-auto"
-                >
-                  Browse a report
-                </Link>
+                <ButtonLink href="/report/demo" size="lg" variant="outline" className="w-full sm:w-auto">
+                  {t("landing.cta.browseReport")}
+                </ButtonLink>
               </div>
             </div>
           </div>

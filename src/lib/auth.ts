@@ -7,6 +7,7 @@ import {
   verifySessionToken,
   type PublicUser,
 } from "./auth-core";
+import { normalisePlan } from "./plans";
 
 /**
  * Server-side glue between the signed cookie and the current user.
@@ -37,7 +38,15 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   const userId = await verifySessionToken(store.get(SESSION_COOKIE)?.value);
   if (!userId) return null;
   const user = await findUserById(userId);
-  return user ? { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt } : null;
+  return user
+    ? {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt,
+        plan: normalisePlan(user.plan),
+      }
+    : null;
 }
 
 /** Where to send someone who followed a protected link while signed out. */

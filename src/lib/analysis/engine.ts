@@ -29,7 +29,7 @@ import {
   scoreVocalEnergy,
   scoreVoice,
 } from "./scoring";
-import { SpeechEngine, type SpeechSnapshot } from "./speech";
+import { SpeechEngine, type SpeechLanguage, type SpeechSnapshot } from "./speech";
 import { VoiceEngine, type VoiceReading } from "./voice";
 
 const WASM_PATH = "/mediapipe/wasm";
@@ -78,6 +78,7 @@ export interface SessionAggregate {
     energy: number;
   };
   speech: SpeechSnapshot;
+  language: SpeechLanguage;
   wpm: number;
   paceSource: "transcript" | "acoustic";
   emotions: Record<EmotionLabel, number>;
@@ -91,6 +92,8 @@ export interface EngineCallbacks {
   onSample?: (s: FrameSample) => void;
   onError?: (message: string) => void;
   onProgress?: (label: string) => void;
+  /** Fired at metric cadence so transcript listeners can pull fresh text. */
+  onTick?: () => void;
 }
 
 class TimeWindow {
@@ -212,10 +215,17 @@ export class VisionEngine {
     private stream: MediaStream,
     private mode: SessionMode,
     private cb: EngineCallbacks = {},
+    private language: SpeechLanguage = "en-US",
   ) {
     // Built here (not as a field initializer) because field initializers run
     // before TypeScript's parameter-property assignments.
     this.coach = createCoach(mode);
+  }
+
+  /** Swap the recogniser language mid-session (e.g. switching to Amharic). */
+  setSpeechLanguage(language: SpeechLanguage) {
+    this.language = language;
+    this.speech.setLanguage(language);
   }
 
   /** What "good" looks like for this session's mode. */
@@ -245,7 +255,7 @@ export class VisionEngine {
 
       this.voice = new VoiceEngine(this.stream);
       await this.voice.start();
-      this.speech.start();
+      this.speech.start(this.language);
 
       this.setStatus("running");
       this.active = true;
@@ -716,6 +726,7 @@ export class VisionEngine {
   }
 
   private emitMetrics() {
+    this.cb.onTick?.();
     if (this.latestMetrics) {
       this.latestMetrics.elapsed = Math.round(this.elapsed);
       this.latestMetrics.wordCount = this.speech.snapshot().words;
@@ -834,6 +845,7 @@ export class VisionEngine {
         energy: voice?.energy ?? 0,
       },
       speech,
+      language: this.language,
       wpm: Number.isFinite(wpm) ? Math.round(wpm) : 0,
       paceSource: transcriptWpm > 0 ? "transcript" : "acoustic",
       emotions,

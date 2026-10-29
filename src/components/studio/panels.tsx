@@ -17,8 +17,10 @@ import {
 } from "@/components/icons";
 import { EMOTION_META } from "@/lib/analysis/emotion";
 import { RUBRICS } from "@/lib/analysis/scoring";
+import { SPEECH_LANGUAGES, type SpeechLanguage } from "@/lib/analysis/speech";
 import type { LiveMetrics, Nudge, SessionMode } from "@/lib/types";
 import { Bar, Pill, ScoreRing, cn, toneFor } from "@/components/ui";
+import type { SpeechSnapshot } from "@/lib/analysis/speech";
 
 const PILLARS = [
   { key: "eyeContact", label: "Eye contact", color: "#34d399" },
@@ -152,6 +154,73 @@ export function SignalGrid({ metrics }: { metrics: LiveMetrics | null }) {
   );
 }
 
+export function TranscriptPanel({
+  speech,
+  phase,
+  speaking,
+}: {
+  speech: SpeechSnapshot | null;
+  phase: string;
+  speaking: boolean;
+}) {
+  const active = phase === "live" || phase === "paused" || phase === "finished";
+  const final = speech?.transcript ?? "";
+  const interim = speech?.interim ?? "";
+  const empty = !final && !interim;
+
+  return (
+    <div className="panel flex flex-col p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
+          <Quote className="size-3.5 text-brand-soft" /> Transcript
+        </h2>
+        <div className="flex items-center gap-1.5">
+          {speaking && phase === "live" && (
+            <span className="flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-[0.14em] text-mint">
+              <span className="size-1.5 animate-blink rounded-full bg-mint" /> listening
+            </span>
+          )}
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fog">
+            {speech ? `${speech.words} words` : "waiting"}
+          </span>
+        </div>
+      </div>
+
+      <div
+        className="mt-3 max-h-[210px] min-h-[110px] overflow-y-auto overscroll-contain-y rounded-xl border border-line/70 bg-base/40 p-3.5"
+        aria-live="polite"
+        aria-label="Live transcript"
+      >
+        {empty ? (
+          <p className="text-[11.5px] leading-relaxed text-fog/70">
+            {active
+              ? "Words appear here as you speak — nothing is recorded or stored until you end the session."
+              : "Start a session and everything you say is transcribed here in real time."}
+          </p>
+        ) : (
+          <p className="text-[12px] leading-relaxed">
+            <span className="text-mist">{final}</span>{" "}
+            {interim && <span className="animate-pulse text-fog/60">{interim}</span>}
+          </p>
+        )}
+      </div>
+
+      {speech && speech.fillers.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {speech.fillers.slice(0, 5).map((f) => (
+            <span
+              key={f.word}
+              className="rounded-md border border-amber/25 bg-amber/10 px-1.5 py-0.5 text-[9.5px] text-amber"
+            >
+              {f.word} × {f.count}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NUDGE_META: Record<
   Nudge["kind"],
   { icon: typeof Eye; color: string; bg: string }
@@ -231,6 +300,8 @@ export function SessionMeta({
   onTitle,
   mode,
   onMode,
+  language,
+  onLanguage,
   disabled,
 }: {
   speaker: string;
@@ -239,6 +310,8 @@ export function SessionMeta({
   onTitle: (v: string) => void;
   mode: SessionMode;
   onMode: (v: SessionMode) => void;
+  language: SpeechLanguage;
+  onLanguage: (v: SpeechLanguage) => void;
   disabled: boolean;
 }) {
   const modes: { id: SessionMode; label: string }[] = [
@@ -246,6 +319,7 @@ export function SessionMeta({
     { id: "presentation", label: "Presentation" },
     { id: "interview", label: "Interview" },
   ];
+  const languages = SPEECH_LANGUAGES;
   const rubric = RUBRICS[mode] ?? RUBRICS.practice;
   return (
     <div className="panel flex flex-col gap-2 px-4 py-3">
@@ -268,8 +342,26 @@ export function SessionMeta({
             className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-white/[0.02] px-2.5 text-[12.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none disabled:opacity-50"
           />
         </div>
-        <div className="flex items-center rounded-lg border border-line bg-white/[0.02] p-0.5">
-          {modes.map((m) => (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border border-line bg-white/[0.02] p-0.5">
+            {languages.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => onLanguage(l.id)}
+                disabled={disabled}
+                title={`Transcribe in ${l.english}`}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-[11.5px] transition-colors disabled:opacity-50",
+                  language === l.id ? "bg-brand/20 text-brand-soft" : "text-fog hover:text-ink",
+                )}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center rounded-lg border border-line bg-white/[0.02] p-0.5">
+            {modes.map((m) => (
             <button
               key={m.id}
               type="button"
@@ -283,6 +375,7 @@ export function SessionMeta({
               {m.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
       <p className="text-[10.5px] leading-relaxed text-fog">

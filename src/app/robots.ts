@@ -7,8 +7,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        // Private surfaces: an account's own data has no business in an index.
+        // The one public report is a marketing page; every other report is a
+        // person's data. Google resolves by most-specific match, so the more
+        // specific allow wins over the `/report/` disallow.
+        allow: ["/", "/report/demo", "/pricing", "/privacy", "/terms"],
         disallow: ["/api/", "/dashboard", "/studio", "/login", "/signup", "/report/"],
       },
     ],
