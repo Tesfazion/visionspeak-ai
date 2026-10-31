@@ -198,6 +198,10 @@ pass(dash.text.includes("Practice history"), "dashboard heading present");
 pass(!dash.text.includes("Q4 Kickoff"), "a fresh dashboard shows no borrowed sample history");
 pass(dash.text.includes("No sessions yet"), "a fresh dashboard shows the empty state");
 pass(dash.text.includes("Free plan"), "the dashboard states the active plan");
+// The product is a room as well as a mirror: a new account must be able to see
+// that and get into it from the page it lands on.
+pass(dash.text.includes("It is a video call, not just a mirror"), "the dashboard offers the live room");
+pass(dash.text.includes('href="/meeting"'), "the dashboard links into a live room");
 pass((await page("/report/demo")).status === 200, "the sample report is still one click away");
 
 const studio = await page("/studio");

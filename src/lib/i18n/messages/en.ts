@@ -368,6 +368,18 @@ export const en = {
   "dash.col.comms": "Comms",
   "dash.col.grade": "Grade",
   "dash.sampleBadge": "sample",
+  "dash.rooms.badge": "Live rooms",
+  "dash.rooms.title": "It is a video call, not just a mirror",
+  "dash.rooms.body":
+    "Open a room, send the link and talk face to face over video with screen share and chat — the way you would in Zoom or Google Meet — while VisionSpeak scores delivery live for everyone in the room. Built for a coach and a small group, not a 200-person webinar.",
+  "dash.rooms.f1": "Video and audio rooms with a link you can send anywhere",
+  "dash.rooms.f2": "Screen share your slides and get feedback on them in real time",
+  "dash.rooms.f3": "Live scores, chat and one shared transcript in the same window",
+  "dash.rooms.cta": "Start a live room",
+  "dash.rooms.ctaSecondary": "Join with a link",
+  "dash.rooms.mockShare": "sharing a slide",
+  "dash.rooms.mockCoach": "Coach",
+  "dash.rooms.mockYou": "You",
 
   /* ----------------------------------------------------------- pro panel */
   "pro.badge": "Pro workspace",

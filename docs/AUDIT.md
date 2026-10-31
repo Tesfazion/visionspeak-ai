@@ -19,6 +19,7 @@ Run on 31 October 2026, in this environment (8 GB RAM, ~0.5–1 GB free — see 
 | Types | `npx tsc --noEmit` | 0 errors |
 | Lint | `npx eslint .` | 0 errors, 0 warnings |
 | Unit + integration | `npm test` | 81 / 81 pass |
+| HTTP smoke | `node scripts/smoke.mjs http://localhost:3115` (prod build) | 112 / 112 pass |
 | Meeting end-to-end | `node scripts/qa/qa-meeting.mjs` | 24 / 24 checks pass (lobby, auth, roster, signaling, chat, end) |
 | Build | `set "NEXT_BUILD_WORKERS=2" && npx next build` | success, 44 routes |
 | Backup → restore | `npm run backup`, then `npm run restore -- <dir>` | 5 files round-trip |
@@ -40,8 +41,14 @@ those until a human runs them.
 > to `fetch`, so it needs a full origin (`http://localhost:3111`), not a port. Given a port
 > it crashes *before writing* `docs/logs/smoke.txt`, and the stale file reads as a green
 > run. Use `node scripts/run-probe.cjs smoke node scripts/smoke.mjs http://host:port`,
-> which waits and records the exit code. The 110/110 smoke result is from the 29 Oct run;
-> it was not re-run in this pass (the meeting QA and the unit suite cover the same routes).
+> which waits and records the exit code. The 112/112 result above is from a prod build
+> served on port 3115; two of those checks are the dashboard's live-room callout.
+>
+> **Trap worth remembering (install):** `npm ci` fails with `EPERM: unlink` on
+> `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node` while any
+> `next dev`/`next start` process is up, and it leaves a half-written `node_modules`
+> behind — no `next/package.json`, no `.package-lock.json`, and every `next/*` import
+> fails in the editor. Stop the servers, then re-run `npm ci`.
 
 ---
 
@@ -85,6 +92,7 @@ those until a human runs them.
 | ✅ UI was English-only | `en/es/fr/am` catalogues behind `useI18n`/`getI18n` and a language switcher. Long-form marketing and legal pages are still English (see #25). |
 | ✅ No structured data for pricing | `Product`/`Offer` JSON-LD generated from the same plan object the API enforces. |
 | ✅ No live co-coaching surface | `/meeting` lobby + `/meeting/[id]` room: roster, chat, presence and an ended state over HTTP long-poll signaling (`src/lib/meeting/`), with a WebRTC mesh (`src/hooks/useWebRtc.ts`, trickle-ICE buffering) for media. Media is unverified here — see §1. |
+| ✅ The dashboard read as a mirror, not a room | Everything above the fold reported on past sessions, so the product looked like a mirror you speak into alone and the meeting surface was unreachable from the page users land on. `src/components/dashboard/meeting-callout.tsx` now sits on both the empty state and the populated dashboard, in all four locales, with two entries into `/meeting`. Smoke asserts the copy and the link. |
 
 ---
 

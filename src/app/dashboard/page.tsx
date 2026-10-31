@@ -15,8 +15,10 @@ import {
   Sparkles,
   TrendingUp,
   TriangleAlert,
+  Video,
 } from "@/components/icons";
 import { FreeUpgrade, ProWorkspace } from "@/components/dashboard/plan-panel";
+import { MeetingCallout } from "@/components/dashboard/meeting-callout";
 import { PILLAR_KEYS, PILLAR_META } from "@/components/dashboard/pillars";
 import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/trends";
 import { SiteFooter } from "@/components/site/footer";
@@ -141,8 +143,15 @@ export default async function DashboardPage() {
             <ButtonLink href="/report/demo" variant="subtle">
               {t("dash.empty.sample")} <ArrowRight className="size-3.5" />
             </ButtonLink>
+            <ButtonLink href="/meeting" variant="subtle">
+              <Video className="size-3.5" /> {t("dash.rooms.cta")}
+            </ButtonLink>
           </div>
         </div>
+
+        {/* Empty state is the one place a new account cannot tell what the
+            product is for, so the room lives here too. */}
+        <MeetingCallout t={t} />
       </div>
     );
   }
@@ -257,6 +266,10 @@ export default async function DashboardPage() {
       ) : (
         <FreeUpgrade quota={quota} t={t} />
       )}
+
+      {/* The rest of this page reports on the past; this is the part that runs
+          now — a meeting room, not another chart. */}
+      <MeetingCallout t={t} />
 
       {/* Hero: lifetime average ring + headline stat strip */}
       <section className="panel mt-4 overflow-hidden">
