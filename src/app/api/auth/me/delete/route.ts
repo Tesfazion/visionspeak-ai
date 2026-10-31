@@ -40,7 +40,7 @@ export async function DELETE(request: Request) {
     if (!deleted) {
       return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
-    await clearSessionCookie();
+    await clearSessionCookie(request);
     logEvent("info", "auth.account_deleted", { requestId, userId: user.id });
     return NextResponse.json({ ok: true });
   } catch (err) {

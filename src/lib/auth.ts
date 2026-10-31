@@ -4,6 +4,7 @@ import {
   SESSION_TTL_MS,
   createSessionToken,
   findUserById,
+  isSecureRequest,
   verifySessionToken,
   type PublicUser,
 } from "./auth-core";
@@ -14,22 +15,25 @@ import { normalisePlan } from "./plans";
  * Only importable from Server Components and Route Handlers.
  */
 
-export const cookieOptions = {
+const baseCookieOptions = {
   httpOnly: true,
   sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
   path: "/",
   maxAge: Math.floor(SESSION_TTL_MS / 1000),
 } as const;
 
-export async function setSessionCookie(userId: string) {
-  const store = await cookies();
-  store.set(SESSION_COOKIE, await createSessionToken(userId), cookieOptions);
+export function cookieOptionsFor(request: Request) {
+  return { ...baseCookieOptions, secure: isSecureRequest(request) };
 }
 
-export async function clearSessionCookie() {
+export async function setSessionCookie(userId: string, request: Request) {
   const store = await cookies();
-  store.set(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });
+  store.set(SESSION_COOKIE, await createSessionToken(userId), cookieOptionsFor(request));
+}
+
+export async function clearSessionCookie(request: Request) {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, "", { ...cookieOptionsFor(request), maxAge: 0 });
 }
 
 /** The signed-in user, or null. Safe to call from any server component. */

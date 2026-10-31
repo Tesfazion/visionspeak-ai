@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * this browser holds. A fresh cookie is then issued for this device, which is what
  * keeps the person who pressed the button signed in.
  */
-export async function POST() {
+export async function POST(request: Request) {
   const requestId = newRequestId();
   const user = await getCurrentUser();
   if (!user) {
@@ -23,10 +23,10 @@ export async function POST() {
   try {
     const revoked = await revokeOtherSessions(user.id);
     if (!revoked) {
-      await clearSessionCookie();
+      await clearSessionCookie(request);
       return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
-    await setSessionCookie(user.id);
+    await setSessionCookie(user.id, request);
     logEvent("info", "auth.sessions_revoked", { requestId, userId: user.id });
     return NextResponse.json({ ok: true });
   } catch (err) {

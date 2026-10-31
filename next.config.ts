@@ -1,6 +1,26 @@
+import { networkInterfaces } from "node:os";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * `next dev` answers 403 to its own dev resources (`/_next/hmr`, dev chunks)
+ * when the page was opened from a host it does not know, and it only knows
+ * `localhost`. Open the "Network" URL the server prints — the LAN address you
+ * would use from a phone on the same Wi-Fi — and the page never hydrates: the
+ * login form's button is a plain native submit, so pressing it just reloads the
+ * page and the dashboard never opens.
+ *
+ * Allowing this machine's LAN addresses makes that URL behave like localhost.
+ * The list is derived at config load, so it is right on any machine, and
+ * development-only: production has no such restriction.
+ */
+function lanHosts(): string[] {
+  return Object.values(networkInterfaces())
+    .flat()
+    .filter((entry) => entry && entry.family === "IPv4" && !entry.internal)
+    .map((entry) => entry!.address);
+}
 
 /**
  * Content-Security-Policy.
@@ -59,6 +79,8 @@ const buildWorkers = Number(process.env.NEXT_BUILD_WORKERS);
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Development only: let the LAN URL Next prints reach the dev client.
+  ...(isDev ? { allowedDevOrigins: [...new Set(["localhost", "127.0.0.1", ...lanHosts()])] } : {}),
   // MediaPipe ships WASM assets that must not be bundled by webpack/turbopack.
   serverExternalPackages: [],
   experimental: {

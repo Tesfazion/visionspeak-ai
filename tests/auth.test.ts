@@ -20,6 +20,7 @@ const {
   createUser,
   findUserByEmail,
   hashPassword,
+  isSecureRequest,
   normaliseEmail,
   revokeOtherSessions,
   validateCredentials,
@@ -186,4 +187,32 @@ test("a corrupt users file degrades to empty instead of throwing", async () => {
   await writeFile(path.join(sandbox, "users.json"), "{not json", "utf8");
   assert.equal(await countUsers(), 0);
   assert.equal(await findUserByEmail("first@example.com"), null);
+});
+
+test("the session cookie is only marked Secure when the request arrived over TLS", async () => {
+  const req = (url: string, headers: Record<string, string> = {}) =>
+    new Request(url, { headers });
+
+  // A production build served over plain HTTP (the "Network" URL `next start`
+  // prints) must not send a Secure cookie: the browser would drop it and the
+  // user would bounce from /login straight back to /login.
+  assert.equal(isSecureRequest(req("http://192.168.1.20:3000/api/auth/login")), false);
+  assert.equal(isSecureRequest(req("https://visionspeak.example/api/auth/login")), true);
+
+  // Behind a TLS-terminating proxy the scheme is in the header, not the URL.
+  assert.equal(
+    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "https" })),
+    true,
+  );
+  assert.equal(
+    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "https, http" })),
+    true,
+  );
+  assert.equal(
+    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "http" })),
+    false,
+  );
+
+  // A URL that cannot be parsed must not silently opt into Secure (nor throw).
+  assert.equal(isSecureRequest({ headers: new Headers(), url: "not a url" } as unknown as Request), false);
 });

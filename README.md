@@ -424,11 +424,13 @@ suite. Logs are uploaded as artifacts.
   after 7 days (Free) or 30 days (Pro), revocable from the report page. Shared pages are
   `noindex`.
 - **Passwords** are hashed with `scrypt` and a per-user salt; hashes are never returned by an API.
-- **Sessions** are HMAC-SHA256 signed, expiring tokens in `httpOnly`, `SameSite=Lax`,
-  `Secure`-in-production cookies — stateless, so there is no session table to leak. Each token
-  carries its issue time, and *sign out everywhere* stores a per-account cut-off, so a copied
-  cookie stops working instead of living out its 30 days. Logout revokes the token, not just the
-  cookie.
+- **Sessions** are HMAC-SHA256 signed, expiring tokens in `httpOnly`, `SameSite=Lax` cookies -
+  stateless, so there is no session table to leak. The cookie is marked `Secure` only when the
+  request actually arrived over TLS (`x-forwarded-proto`, otherwise the request URL), so a
+  production server reached over plain HTTP still signs people in instead of handing back a
+  cookie the browser throws away. Each token carries its issue time, and *sign out everywhere*
+  stores a per-account cut-off, so a copied cookie stops working instead of living out its 30
+  days. Logout revokes the token, not just the cookie.
 - **Report integrity** — the server stores a hash of the inputs a report was built from and
   re-computes it for the badge. It makes edited stored inputs visible; it does **not** make
   client-computed scores trustworthy, which is why nothing here claims to be certified.
@@ -572,7 +574,7 @@ print stylesheet, Free/Pro plans with server-enforced quotas, idempotent saves, 
 recovery, revocable report share links, legal pages, structured logging, password reset, email
 verification, account deletion, "sign out everywhere", server-rendered PDF export, SMTP delivery,
 a billing webhook seam, a rate-limited crash sink, paginated history, `en/es/fr/am` UI catalogues,
-accessible chart tables, co-coaching meeting rooms, and an 81-test unit suite plus a 110-check
+accessible chart tables, co-coaching meeting rooms, and an 82-test unit suite plus a 110-check
 end-to-end suite and a 24-check meeting suite wired into CI.
 
 ---

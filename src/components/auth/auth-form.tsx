@@ -1,13 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { ArrowRight, Loader2, Lock, Mail, UserRound } from "@/components/icons";
 import { useI18n } from "@/components/site/locale-provider";
 import { Button } from "@/components/ui";
 import { POST_AUTH_PATH } from "@/lib/routes";
 
 type Mode = "login" | "signup";
+
+/** Nothing to subscribe to: the only thing that changes is "are we past hydration". */
+const noSubscription = () => () => {};
+
+/**
+ * False while rendering on the server, true once React owns the DOM.
+ *
+ * `onSubmit` only exists after hydration. Before it, the submit button is a
+ * plain native submit that reloads the page and silently discards what was
+ * typed — on a slow or partly-blocked dev server that is indistinguishable from
+ * "sign-in does nothing". Disabling it until this flips means a click can never
+ * produce that dead reload.
+ */
+const useInteractive = () => useSyncExternalStore(noSubscription, () => true, () => false);
 
 export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   const { t } = useI18n();
@@ -16,6 +30,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const interactive = useInteractive();
 
   const signup = mode === "signup";
 
@@ -109,7 +124,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
         </p>
       )}
 
-      <Button type="submit" size="md" disabled={busy} className="mt-1 w-full">
+      <Button type="submit" size="md" disabled={busy || !interactive} className="mt-1 w-full">
         {busy && <Loader2 className="size-4 animate-spin" />}
         {busy ? t("auth.working") : signup ? t("auth.signUpButton") : t("auth.signInButton")}
         {!busy && <ArrowRight className="size-3.5" />}

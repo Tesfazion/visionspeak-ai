@@ -448,6 +448,31 @@ export async function isEmailVerified(user: StoredUser) {
  * Signed session cookie
  * ------------------------------------------------------------------ */
 
+/**
+ * Did this request reach us over TLS?
+ *
+ * The session cookie has to be `Secure` on HTTPS and must NOT be on plain HTTP:
+ * a browser silently discards a `Secure` cookie that arrives over an insecure
+ * origin, so the login POST returns 200, the cookie never lands, and the very
+ * next `/dashboard` request bounces back to `/login`. That is what a production
+ * build served over `http://` looks like — the "Network" URL `next start` prints
+ * (a LAN address), a box with no TLS in front of it — and it reads to the user
+ * as "my password is accepted but the dashboard never opens".
+ *
+ * `NODE_ENV` is the wrong signal: it says how the app was built, not how this
+ * request arrived. Behind a TLS-terminating proxy (Vercel, nginx) the scheme is
+ * in `x-forwarded-proto`; with no proxy in front, the request URL is the truth.
+ */
+export function isSecureRequest(request: Request): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwarded) return forwarded === "https";
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 let cachedSecret: string | null = null;
 let warnedEphemeralSecret = false;
 

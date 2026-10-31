@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
-    await setSessionCookie(result.user.id);
+    await setSessionCookie(result.user.id, request);
     // Send email verification link
     const token = await createToken("verify", result.user.id, VERIFY_TTL_MS);
     const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

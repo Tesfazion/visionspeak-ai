@@ -5,11 +5,11 @@ import { SESSION_COOKIE, revokeSessionToken } from "@/lib/auth-core";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: Request) {
   // Clearing the cookie only removes it from this browser: the token itself is
   // stateless and would keep working for anyone who copied it. Revoke it first.
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (token) await revokeSessionToken(token).catch(() => false);
-  await clearSessionCookie();
+  await clearSessionCookie(request);
   return NextResponse.json({ ok: true });
 }

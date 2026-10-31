@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
     limiter.reset(key);
-    await setSessionCookie(user.id);
+    await setSessionCookie(user.id, request);
     return NextResponse.json({ user });
   } catch (err) {
     console.error("[auth] login failed", err);
