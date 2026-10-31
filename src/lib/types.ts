@@ -172,6 +172,9 @@ export interface SessionRecord {
   clientSessionId?: string;
   /** Present only while the owner has sharing enabled. */
   share?: ShareLink;
+  /** SHA-256 of the canonical aggregate the report was built from. Absent on
+   *  records saved before verification shipped — those read as "unverified". */
+  aggregateHash?: string;
 }
 
 export interface SessionSummaryInput {

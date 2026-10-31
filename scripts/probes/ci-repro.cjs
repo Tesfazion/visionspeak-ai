@@ -1,4 +1,4 @@
-// Reproduces the GitHub Actions job locally, from a clean checkout.
+﻿// Reproduces the GitHub Actions job locally, from a clean checkout.
 //
 // CI failed three times at the "Unit tests" step while the same suite passed
 // here, because the working tree contains generated folders (docs/logs,
@@ -9,12 +9,12 @@
 // This script clones the pushed branch into a temp directory and runs the exact
 // CI sequence, writing a verdict to docs/notes/ci-repro.txt.
 //
-// Usage: node scripts/ci-repro.cjs [remoteUrl] [branch]
+// Usage: node scripts/probes/ci-repro.cjs [remoteUrl] [branch]
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { notePath } = require("./lib/diagnostics.cjs");
+const { notePath } = require("../lib/diagnostics.cjs");
 
 const remote = process.argv[2] ?? "https://github.com/Tesfazion/visionspeak-ai.git";
 const branch = process.argv[3] ?? "main";
@@ -82,7 +82,7 @@ const run = (label, command, args, cwd, timeout = 900_000) => {
     }
 
     if (failed) {
-      out.push("", `VERDICT: FAIL — ${failed}`);
+      out.push("", `VERDICT: FAIL â€” ${failed}`);
     } else {
       // Record the numbers CI would report.
       const testLog = path.join(clone, "docs", "logs", "test.log");
@@ -93,19 +93,19 @@ const run = (label, command, args, cwd, timeout = 900_000) => {
           .filter((l) => /^. (tests|pass|fail) /.test(l));
         out.push("", "unit totals:", ...totals);
       }
-      out.push("", "VERDICT: PASS — a clean checkout builds and passes CI");
+      out.push("", "VERDICT: PASS â€” a clean checkout builds and passes CI");
     }
   } catch (err) {
-    out.push("", `VERDICT: ERROR — ${err.message}`);
+    out.push("", `VERDICT: ERROR â€” ${err.message}`);
   } finally {
     // Cleanup is best-effort. On Windows a build worker or the antivirus can
     // still hold a handle inside the tree, and a throwing rm here used to
-    // reject the whole script *after* the verdict was computed — the run then
+    // reject the whole script *after* the verdict was computed â€” the run then
     // exited 1 with no note at all, which reads exactly like a CI failure.
     try {
       fs.rmSync(workdir, { recursive: true, force: true });
     } catch (err) {
-      out.push("", `cleanup: could not remove ${workdir} (${err.message}) — delete it manually`);
+      out.push("", `cleanup: could not remove ${workdir} (${err.message}) â€” delete it manually`);
     }
   }
 

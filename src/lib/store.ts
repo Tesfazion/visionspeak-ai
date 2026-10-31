@@ -4,6 +4,22 @@ import { buildDemoHistory } from "@/lib/analysis/demo";
 import { DATA_DIR, dataFile } from "@/lib/data-dir";
 import type { SessionRecord, ShareLink } from "@/lib/types";
 
+const SCHEMA_VERSION = 2;
+
+function migrateSessionRecords(records: Record<string, unknown>[], fromVersion: number, toVersion: number): SessionRecord[] {
+  if (fromVersion >= toVersion) return records.map((r) => r as unknown as SessionRecord);
+  let migrated = records;
+  // version 1 → 2 adds clientSessionId and notes fields with defaults
+  if (fromVersion < 2 && toVersion >= 2) {
+    migrated = migrated.map((r) => ({
+      ...r,
+      notes: r.notes !== undefined ? r.notes : "",
+      clientSessionId: r.clientSessionId !== undefined ? r.clientSessionId : undefined,
+    }));
+  }
+  return migrated.map((r) => r as unknown as SessionRecord);
+}
+
 /**
  * Tiny JSON-file store. Chosen over SQLite/Postgres because the platform
  * self-hosts as a single Node process: zero native dependencies, zero services
@@ -32,6 +48,21 @@ async function readAll(): Promise<SessionRecord[]> {
   try {
     const raw = await fs.readFile(FILE, "utf8");
     const parsed = JSON.parse(raw);
+    // Handle both old format (array) and new format (object with version)
+    if (Array.isArray(parsed)) {
+      // version 1 format
+      const migrated = migrateSessionRecords(parsed, 1, SCHEMA_VERSION);
+      return migrated;
+    } else if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray((parsed as { records?: unknown }).records)
+    ) {
+      const envelope = parsed as { records: Record<string, unknown>[]; version?: number };
+      const version = envelope.version || 1;
+      const migrated = migrateSessionRecords(envelope.records, version, SCHEMA_VERSION);
+      return migrated;
+    }
     return Array.isArray(parsed) ? (parsed as SessionRecord[]) : [];
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
@@ -43,7 +74,8 @@ async function readAll(): Promise<SessionRecord[]> {
 async function writeAll(records: SessionRecord[]) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   const tmp = `${FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(records, null, 2), "utf8");
+  const data = { schemaVersion: SCHEMA_VERSION, version: SCHEMA_VERSION, records };
+  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
   // On Windows a rename over a file that another handle has open (an editor,
   // antivirus, a concurrent reader) fails with EPERM/EACCES/EBUSY rather than
   // queuing. The handles are short-lived, so retry briefly before giving up.

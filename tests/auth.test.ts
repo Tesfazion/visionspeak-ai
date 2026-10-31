@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -20,6 +21,7 @@ const {
   findUserByEmail,
   hashPassword,
   normaliseEmail,
+  revokeOtherSessions,
   validateCredentials,
   verifyPassword,
   verifySessionToken,
@@ -67,8 +69,9 @@ test("createUser stores the account and rejects duplicates", async () => {
 
   assert.equal(await countUsers(), 1);
   const raw = JSON.parse(await readFile(path.join(sandbox, "users.json"), "utf8"));
-  assert.equal(raw.length, 1);
-  assert.ok(raw[0].passwordHash && !raw[0].password);
+  const records = Array.isArray(raw) ? raw : raw.records;
+  assert.equal(records.length, 1);
+  assert.ok(records[0].passwordHash && !records[0].password);
 });
 
 test("authenticate accepts the right password only", async () => {
@@ -85,19 +88,55 @@ test("session tokens are signed, expire and reject tampering", async () => {
   const token = await createSessionToken("u_abc", 60_000);
   assert.equal(await verifySessionToken(token), "u_abc");
 
-  // Signature tampering.
   const parts = token.split(".");
-  assert.equal(await verifySessionToken(`${parts[0]}.${parts[1]}.deadbeef`), null);
+  assert.equal(parts.length, 4, "userId.issuedAt.expiry.signature");
+
+  // Signature tampering.
+  assert.equal(await verifySessionToken(`${parts.slice(0, -1).join(".")}.deadbeef`), null);
   // Payload tampering (swap the user id, keep the old signature).
-  assert.equal(await verifySessionToken(`u_evil.${parts[1]}.${parts[2]}`), null);
-  // Malformed.
+  assert.equal(await verifySessionToken(`u_evil.${parts.slice(1).join(".")}`), null);
+  // Malformed, and a pre-`issuedAt` three-part token with a broken signature.
   assert.equal(await verifySessionToken("nonsense"), null);
   assert.equal(await verifySessionToken(""), null);
   assert.equal(await verifySessionToken(undefined), null);
+  assert.equal(await verifySessionToken(`u_abc.${parts[2]}.deadbeef`), null);
 
   // Already expired.
   const expired = await createSessionToken("u_abc", -1000);
   assert.equal(await verifySessionToken(expired), null);
+});
+
+test("signing out everywhere invalidates earlier tokens but keeps the new one", async () => {
+  const created = await createUser({ email: "revoke@example.com", password: "longenough", name: "Revoke" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+  const userId = created.user.id;
+
+  const before = await createSessionToken(userId, 60_000);
+  assert.equal(await verifySessionToken(before), userId);
+
+  assert.equal(await revokeOtherSessions(userId), true);
+  assert.equal(await verifySessionToken(before), null, "a token issued before the cut-off must die");
+
+  const after = await createSessionToken(userId, 60_000);
+  assert.equal(await verifySessionToken(after), userId, "the device that pressed the button stays signed in");
+});
+
+test("a pre-issuedAt token is honoured until a cut-off is set", async () => {
+  const created = await createUser({ email: "legacy@example.com", password: "longenough", name: "Legacy" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+  const userId = created.user.id;
+
+  // Exactly what the previous token format produced: no issuedAt segment.
+  const secret = (await readFile(path.join(sandbox, "auth-secret"), "utf8")).trim();
+  const expiry = Date.now() + 60_000;
+  const payload = `${userId}.${expiry}`;
+  const legacy = `${payload}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
+
+  assert.equal(await verifySessionToken(legacy), userId);
+  await revokeOtherSessions(userId);
+  assert.equal(await verifySessionToken(legacy), null, "a cut-off invalidates legacy tokens too");
 });
 
 test("the signing secret is persisted so restarts keep sessions valid", async () => {

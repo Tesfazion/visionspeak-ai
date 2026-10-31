@@ -26,12 +26,16 @@ export interface Plan {
   sessionsPerMonth: number;
   /** Hard ceiling on one analysed session, enforced by the API. */
   maxSessionMinutes: number;
+  /** Monthly ceiling on total analysed minutes (across all sessions). */
+  maxMinutesPerMonth: number;
   /** How far back the dashboard reads. `null` = the whole history. */
   historyDays: number | null;
   /** Lifetime of a report share link. 0 disables sharing. */
   shareLinkDays: number;
   /** CSV history export. */
   csvExport: boolean;
+  /** PDF report export. */
+  pdfExport: boolean;
   seats: number;
   support: string;
   features: string[];
@@ -46,9 +50,11 @@ export const PLANS: Record<PlanId, Plan> = {
     priceYearlyUsd: 0,
     sessionsPerMonth: 5,
     maxSessionMinutes: 10,
+    maxMinutesPerMonth: 60,
     historyDays: 30,
     shareLinkDays: 7,
     csvExport: false,
+    pdfExport: false,
     seats: 1,
     support: "Community",
     features: [
@@ -68,9 +74,11 @@ export const PLANS: Record<PlanId, Plan> = {
     priceYearlyUsd: 108,
     sessionsPerMonth: 200,
     maxSessionMinutes: 60,
+    maxMinutesPerMonth: 2000,
     historyDays: null,
     shareLinkDays: 30,
     csvExport: true,
+    pdfExport: true,
     seats: 1,
     support: "Email, 1 business day",
     features: [
@@ -79,6 +87,7 @@ export const PLANS: Record<PlanId, Plan> = {
       "Unlimited history and pillar trends",
       "30-day share links with revoke",
       "CSV export for coaches and spreadsheets",
+      "Server-rendered PDF report download",
       "Custom session titles and notes",
     ],
   },
@@ -123,8 +132,18 @@ export interface QuotaState {
   remaining: number;
   resetsAt: string;
   maxSessionSec: number;
+  durationSec: number;
+  durationLimitSec: number;
+  minutesRemaining: number;
   canStart: boolean;
   reason: "ok" | "quota_exhausted";
+}
+
+export function usedDurationThisMonth(records: SessionRecord[], userId: string, now: Date = new Date()) {
+  const { startIso, endIso } = monthWindow(now);
+  return records
+    .filter((r) => isMetered(r, userId) && r.createdAt >= startIso && r.createdAt < endIso)
+    .reduce((acc, r) => acc + (r.durationSec || 0), 0);
 }
 
 export function quotaState(
@@ -135,6 +154,8 @@ export function quotaState(
 ): QuotaState {
   const plan = planFor(planValue);
   const used = usedThisMonth(records, userId, now);
+  const durationSec = usedDurationThisMonth(records, userId, now);
+  const minutesRemaining = Math.max(0, plan.maxMinutesPerMonth - Math.floor(durationSec / 60));
   const remaining = Math.max(0, plan.sessionsPerMonth - used);
   return {
     plan: plan.id,
@@ -144,8 +165,11 @@ export function quotaState(
     remaining,
     resetsAt: monthWindow(now).resetsAt,
     maxSessionSec: plan.maxSessionMinutes * 60,
-    canStart: remaining > 0,
-    reason: remaining > 0 ? "ok" : "quota_exhausted",
+    durationSec,
+    durationLimitSec: plan.maxSessionMinutes * 60 * plan.sessionsPerMonth,
+    minutesRemaining,
+    canStart: remaining > 0 && minutesRemaining > 0,
+    reason: remaining > 0 && minutesRemaining > 0 ? "ok" : "quota_exhausted",
   };
 }
 

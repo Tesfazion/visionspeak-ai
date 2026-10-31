@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { buildReport } from "@/lib/analysis/report";
 import { getCurrentUser } from "@/lib/auth";
 import { createRateLimiter } from "@/lib/auth-core";
-import { readClientSessionId, parseAggregate, readJsonLimited } from "@/lib/api-guard";
+import { readClientSessionId, parseAggregate, readJsonLimited, reportIntegrityHash } from "@/lib/api-guard";
 import { logEvent, newRequestId } from "@/lib/log";
 import { uid } from "@/lib/math";
-import { planFor, quotaState } from "@/lib/plans";
+import { planFor, quotaState, visibleHistory } from "@/lib/plans";
 import { findByClientSessionId, listSessions, saveSession } from "@/lib/store";
 import type { SessionMode, SessionRecord } from "@/lib/types";
 
@@ -38,12 +38,16 @@ export async function GET(request: Request) {
 
   try {
     const sessions = await listSessions(user.id, { includeSamples });
-    const page = sessions.slice(offset, offset + limit);
+    // Keep page offsets aligned with the dashboard: without `samples=1`, the
+    // page is the plan-visible history (retention window applied), not every
+    // record the account has ever written.
+    const visible = includeSamples ? sessions : visibleHistory(sessions, user.id, user.plan);
+    const page = visible.slice(offset, offset + limit);
     return NextResponse.json(page, {
       headers: {
         "Cache-Control": "no-store",
         // Total lets a client page without fetching everything first.
-        "X-Total-Count": String(sessions.length),
+        "X-Total-Count": String(visible.length),
         "X-Page-Limit": String(limit),
         "X-Page-Offset": String(offset),
       },
@@ -135,6 +139,11 @@ export async function POST(request: Request) {
       notes,
       report,
       ownerId: user.id,
+      aggregateHash: reportIntegrityHash({
+        durationSec: Math.round(aggregate.durationSec),
+        mode,
+        timeline: report.timeline,
+      }),
       ...(clientSessionId ? { clientSessionId } : {}),
     };
     await saveSession(record);

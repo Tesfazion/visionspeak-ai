@@ -1,14 +1,14 @@
-// Filters a log file for error-ish lines and writes the unique matches plus a short
+﻿// Filters a log file for error-ish lines and writes the unique matches plus a short
 // tail to dev-errors.txt. External command output cannot be captured in this
 // environment, so all log inspection happens in-process.
 const fs = require("node:fs");
-const { notePath, logPath } = require("./lib/diagnostics.cjs");
+const { notePath, logPath } = require("../lib/diagnostics.cjs");
 
 const file = process.argv[2] ?? logPath("dev-run.log");
 const raw = fs.readFileSync(file, "utf8").replace(/\u001b\[[0-9;]*m/g, "");
 const lines = raw.split(/\r?\n/);
 
-const needles = ["Error:", "Module not found", "Failed to download", "⨯", "warn", "Warning:", "GET /", "POST /", "exit"];
+const needles = ["Error:", "Module not found", "Failed to download", "â¨¯", "warn", "Warning:", "GET /", "POST /", "exit"];
 const hits = [];
 const seen = new Map();
 for (const line of lines) {

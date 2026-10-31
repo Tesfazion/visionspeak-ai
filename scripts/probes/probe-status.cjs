@@ -1,7 +1,7 @@
-// Diagnoses status-code handling for the auth gate and notFound().
-// Usage: node scripts/probe-status.cjs [baseUrl]
+﻿// Diagnoses status-code handling for the auth gate and notFound().
+// Usage: node scripts/probes/probe-status.cjs [baseUrl]
 const { writeFileSync } = require("node:fs");
-const { notePath } = require("./lib/diagnostics.cjs");
+const { notePath } = require("../lib/diagnostics.cjs");
 
 const base = process.argv[2] ?? "http://localhost:3112";
 const out = [];

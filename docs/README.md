@@ -31,26 +31,54 @@ the repository root.
 | `scripts/run-tsc.cjs` | `logs/tsc-report.log` |
 | `scripts/run-smoke.cjs` | `logs/smoke-run.log` + `logs/smoke.txt` |
 | `scripts/test.mjs` | `logs/test.log` |
-| `scripts/http-probe.cjs` | `logs/http-probe.log` |
+| `scripts/probes/http-probe.cjs` | `logs/http-probe.log` |
 | `scripts/run-probe.cjs` | `notes/probe-<name>.txt` |
-| `scripts/grep.cjs` | `notes/grep.txt` |
-| `scripts/log-filter.cjs` | `notes/dev-errors.txt` |
-| `scripts/net-probe.cjs` | `artifacts/net-probe.json` |
-| `scripts/reseed.cjs` | `artifacts/reseed-report.json` |
+| `scripts/probes/grep.cjs` | `notes/grep.txt` |
+| `scripts/probes/log-filter.cjs` | `notes/dev-errors.txt` |
+| `scripts/probes/net-probe.cjs` | `artifacts/net-probe.json` |
+| `scripts/probes/reseed.cjs` | `artifacts/reseed-report.json` |
 | `scripts/fetch-fonts.mjs` | `artifacts/fonts-report.json` |
 | `scripts/make-icons.mjs` | `artifacts/icons-report.json` |
-| `scripts/kill-port.cjs` | `logs/kill-port.log` |
-| `scripts/responsive-check.cjs` | `notes/responsive-check.txt` |
-| `scripts/probe-status.cjs` | `notes/probe-status.txt` |
-| `scripts/auth-probe.cjs` | `notes/auth-probe.txt` |
-| `scripts/ci-repro.cjs` | `notes/ci-repro.txt` |
+| `scripts/probes/kill-port.cjs` | `logs/kill-port.log` |
+| `scripts/probes/responsive-check.cjs` | `notes/responsive-check.txt` |
+| `scripts/probes/probe-status.cjs` | `notes/probe-status.txt` |
+| `scripts/probes/auth-probe.cjs` | `notes/auth-probe.txt` |
+| `scripts/probes/ci-repro.cjs` | `notes/ci-repro.txt` |
+| `scripts/probes/memcheck.cjs` | `notes/memcheck.txt` |
 
 Paths are centralised in `scripts/lib/diagnostics.cjs` — new scripts must use
 `notePath()`, `logPath()` or `artifactPath()` rather than writing to the root.
 
+`scripts/` holds only the entrypoints wired into npm, CI or the documented
+run-* wrappers. One-off diagnostics are grouped by purpose:
+
+| Folder | Contents |
+| --- | --- |
+| `scripts/qa/` | browser QA drivers (`qa-browser.mjs` is the maintained suite; `qa-meeting.mjs` covers the meeting lobby, signaling and chat; the `qa-cam`, `qa-live`, `qa-studio*`, `qa-overlay*` files are the single-scenario steps it replaced) |
+| `scripts/probes/` | one-shot network, auth, PDF, memory and store probes |
+| `scripts/lib/` | shared helpers imported by the above |
+
 `scripts/run-probe.cjs <name> <command…>` is the general-purpose wrapper: it runs any
 command and captures its output to `notes/probe-<name>.txt`, which is how a check like
 `npm run verify` or `npx eslint .` can be read in this environment.
+
+`npm run backup` and `npm run restore -- <dir>` are the one pair that does **not** write
+here: they copy `data/` to `backups/<timestamp>/` (git-ignored) and back, so a restore
+never lands in the diagnostics tree.
+
+## Building on a memory-constrained machine
+
+`next build` forks one static-generation worker per CPU minus one, and each worker loads
+the whole app. On this box (≈0.5–1 GB free of 8 GB) seven workers exhaust RAM and the
+native allocator aborts the build — `exit 3221226505`, stderr `memory allocation of 39116
+bytes failed`, no stack trace, no failing route. The worker count is overridable for that
+case:
+
+```bash
+set "NEXT_BUILD_WORKERS=2" && npx next build
+```
+
+CI and normal machines leave it unset and keep the default (`next.config.ts`).
 
 ## Logs are ignored by git
 

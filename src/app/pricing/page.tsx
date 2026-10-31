@@ -41,8 +41,44 @@ const Cell = ({ value }: { value: string | boolean }) => {
 };
 
 export default function PricingPage() {
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
+  const pricingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "VisionSpeak",
+    description:
+      "On-device speaking coach that measures eye contact, posture, gestures, voice and expression with real-time feedback and actionable drills.",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Free",
+        price: "0",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        url: `${base}/pricing`,
+      },
+      {
+        "@type": "Offer",
+        name: "Pro",
+        price: String(PLANS.pro.priceMonthlyUsd),
+        priceCurrency: "USD",
+        availability: checkoutUrl ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+        url: checkoutUrl || `${base}/pricing`,
+        priceSpecification: {
+          "@type": "PriceSpecification",
+          price: String(PLANS.pro.priceMonthlyUsd),
+          priceCurrency: "USD",
+          billingDuration: "P1M",
+        },
+      },
+    ],
+  };
   return (
     <div className="container-page pb-10 pt-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
+      />
       <header className="mx-auto max-w-2xl text-center">
         <div className="eyebrow">Pricing</div>
         <h1 className="mt-2 text-balance text-[26px] font-semibold tracking-[-0.02em] text-ink sm:text-[38px]">

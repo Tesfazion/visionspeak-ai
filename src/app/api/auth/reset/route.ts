@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requestPasswordReset } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
 import { createRateLimiter } from "@/lib/auth-core";
+import { sendEmail, emailConfigured } from "@/lib/email";
 import { logEvent, newRequestId } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +37,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const exists = await requestPasswordReset(email);
+    const token = await requestPasswordReset(email);
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const resetLink = token ? `${base}/reset-password/${token}` : null;
+    if (emailConfigured() && resetLink) {
+      await sendEmail({
+        to: email,
+        subject: "VisionSpeak — Reset your password",
+        text: `Click this link to reset your password: ${resetLink}\n\nIf you did not request this, you can ignore this email.`,
+        html: `<p>Click <a href="${resetLink}">this link</a> to reset your password.</p><p>If you did not request this, you can ignore this email.</p>`,
+      });
+    }
     // Always answer "we sent it" so the endpoint cannot be used to enumerate accounts.
-    logEvent("info", "auth.reset_requested", { requestId, email, exists });
+    logEvent("info", "auth.reset_requested", { requestId, email, exists: !!token, emailConfigured: emailConfigured() });
     return NextResponse.json({
       ok: true,
       message: "If that account exists, a reset link is on its way.",

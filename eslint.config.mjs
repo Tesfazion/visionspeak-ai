@@ -7,6 +7,9 @@ export default [
   {
     ignores: [
       ".next/**",
+      // A sibling agent's git worktree; its generated `.next` output is not ours
+      // to lint and otherwise floods the report with framework errors.
+      ".kilo/**",
       "node_modules/**",
       "docs/**",
       "public/**",

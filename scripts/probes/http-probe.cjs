@@ -1,7 +1,7 @@
-// Fetches a URL and writes the status, headers and first slice of the body to http-probe.log.
-// Usage: node scripts/http-probe.cjs http://localhost:3111/ [bytes]
+﻿// Fetches a URL and writes the status, headers and first slice of the body to http-probe.log.
+// Usage: node scripts/probes/http-probe.cjs http://localhost:3111/ [bytes]
 const { writeFileSync } = require("node:fs");
-const { logPath } = require("./lib/diagnostics.cjs");
+const { logPath } = require("../lib/diagnostics.cjs");
 
 const url = process.argv[2] ?? "http://localhost:3111/";
 const limit = Number(process.argv[3] ?? 4000);

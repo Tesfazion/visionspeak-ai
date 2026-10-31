@@ -17,7 +17,9 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "fonts": "node scripts/fetch-fonts.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "postinstall": "node scripts/setup-assets.mjs"
+    "postinstall": "node scripts/setup-assets.mjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.21",

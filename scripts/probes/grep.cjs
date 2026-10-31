@@ -1,14 +1,14 @@
-// Minimal ripgrep stand-in: searches files for a literal/regex pattern and writes
+﻿// Minimal ripgrep stand-in: searches files for a literal/regex pattern and writes
 // matches to grep.txt. Needed because external process output is not captured here.
-// Usage: node scripts/grep.cjs "<pattern>" <file-or-dir> [...]
+// Usage: node scripts/probes/grep.cjs "<pattern>" <file-or-dir> [...]
 const fs = require("node:fs");
 const path = require("node:path");
-const { notePath } = require("./lib/diagnostics.cjs");
+const { notePath } = require("../lib/diagnostics.cjs");
 
 const [pattern, ...targets] = process.argv.slice(2);
 const outFile = notePath("grep.txt");
 if (!pattern || targets.length === 0) {
-  fs.writeFileSync(outFile, "usage: node scripts/grep.cjs <pattern> <path...>", "utf8");
+  fs.writeFileSync(outFile, "usage: node scripts/probes/grep.cjs <pattern> <path...>", "utf8");
   process.exit(0);
 }
 

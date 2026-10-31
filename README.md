@@ -105,12 +105,21 @@ what Pro adds. Quotas are enforced server-side, not hidden behind a paywall bann
 | `/` | public | Marketing site + live scoring preview |
 | `/pricing` | public | Plan comparison; the numbers here are the numbers the API enforces |
 | `/login` · `/signup` | public | Account access |
+| `/forgot-password` · `/reset-password/[token]` | public | Password reset, one-hour single-use token |
+| `/verify-email/[token]` | public | Confirms address ownership after signup |
+| `/account` | **required** | Profile, plan/billing status, "sign out everywhere" |
 | `/studio` | **required** | Real-time analysis studio — camera, overlays, live coach |
 | `/report/[id]` | owner | Full session report (`/report/demo` is public; `?share=<token>` is a link-only view) |
-| `/dashboard` | **required** | Session history, plan usage, trends, pillar averages |
+| `/dashboard` | **required** | Session history, plan usage, trends, pillar averages (paginated) |
+| `/meeting` · `/meeting/[id]` | **required** | Co-coaching lobby and room: roster, chat, presence, WebRTC media |
 | `/privacy` · `/terms` | public | Privacy policy and terms of service |
 | `/offline` | public | Service-worker fallback |
 | `/api/health` | public | Liveness + storage + build probe |
+| `/api/sessions/[id]/pdf` | owner, Pro | Server-rendered PDF report |
+| `/api/sessions/[id]/verify` | owner | Re-hashes the stored inputs; the report badge is computed server-side |
+| `/api/report/[id]/email` | owner | Emails a report (or a download link) when SMTP is configured |
+| `/api/billing/webhook` | provider | The only writer of `plan`; `410` unless `BILLING_WEBHOOK_SECRET` is set |
+| `/api/errors` | public | Rate-limited crash sink for the client error boundary |
 
 ---
 
@@ -123,10 +132,12 @@ cannot advertise a limit it does not apply.
 | | Free | Pro |
 | --- | --- | --- |
 | Analyses per calendar month (UTC) | 5 | 200 |
+| Minutes analysed per month | 60 | 2 000 |
 | Maximum session length | 10 min | 60 min |
 | History retained | 30 days | unlimited |
 | Share links | 7 days | 30 days, revocable |
 | CSV export | — | ✅ |
+| PDF report download | — | ✅ |
 | Price | $0 | $12/month or $108/year |
 
 - **Enforcement** — `POST /api/sessions` returns `402` with `code: "quota_exceeded"` once the
@@ -134,9 +145,9 @@ cannot advertise a limit it does not apply.
   session. A session that fails to save never consumes quota.
 - **Idempotency** — the studio sends a `clientSessionId`; a retried save returns the original
   report instead of creating a duplicate or spending a second unit of quota.
-- **Plan changes** — `setUserPlan()` in `src/lib/auth-core.ts` is the seam a billing webhook
-  calls. There is no fake checkout: set `NEXT_PUBLIC_PRO_CHECKOUT_URL` to a real payment link
-  and `/pricing` sells Pro; leave it unset and the page says billing is not enabled.
+- **Plan changes** — `POST /api/billing/webhook` is the only writer of `plan` (constant-time
+  secret compare, `410` when unconfigured). Set `NEXT_PUBLIC_PRO_CHECKOUT_URL` to a real payment
+  link and `/pricing` sells Pro; leave it unset and the page says billing is not enabled.
 
 ---
 
@@ -270,6 +281,9 @@ All variables are optional for local development. Copy `.env.example` to `.env.l
 | `NEXT_PUBLIC_SITE_URL` | production | Absolute origin for OpenGraph URLs, share links, `robots.txt` and `sitemap.xml`. |
 | `VS_DATA_DIR` | optional | Where `sessions.json` / `users.json` are written. Defaults to `<repo>/data` locally and the OS temp dir on serverless. |
 | `NEXT_PUBLIC_PRO_CHECKOUT_URL` | to sell | Checkout link for Pro. Unset ⇒ `/pricing` states that billing is not enabled. |
+| `BILLING_WEBHOOK_SECRET` | to sell | Shared secret the provider sends as `x-billing-signature` to `POST /api/billing/webhook`. Unset ⇒ that route answers `410`. |
+| `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` · `SMTP_PASS` · `SMTP_FROM` | to email | Sends verification, reset and report emails. Port 587 upgrades with STARTTLS; port 465 (or `SMTP_SECURE=1`) uses implicit TLS. Without these nothing is sent and the UI says so. |
+| `NEXT_PUBLIC_BRAND_NAME` · `NEXT_PUBLIC_BRAND_TAGLINE` | optional | White-label the product name and tagline. |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | production | Contact address on `/privacy` and `/terms`, and for deletion requests. |
 | `NEXT_PUBLIC_LEGAL_ENTITY` · `NEXT_PUBLIC_LEGAL_JURISDICTION` | production | Operator name and governing law shown on the legal pages. |
 
@@ -362,12 +376,13 @@ npm run dev:https     # self-signed HTTPS origin your browser will accept for lo
 ## Testing
 
 ```bash
-npm test          # 72 unit tests — Node's built-in runner, no extra dependency
+npm test          # 81 unit/integration tests — Node's built-in runner, no extra dependency
 npm run lint      # ESLint flat config: next/core-web-vitals + typescript
 npm run typecheck # tsc --noEmit
 npm run verify    # typecheck → lint → test → build (the CI order)
 
-node scripts/smoke.mjs http://localhost:3000   # 110 end-to-end checks
+node scripts/smoke.mjs http://localhost:3000   # 110 end-to-end checks, against a running server
+node scripts/qa/qa-meeting.mjs                 # 24 checks: lobby, auth, roster, signaling, chat, end
 ```
 
 **Unit suite** — covers what is otherwise invisible:
@@ -380,7 +395,9 @@ node scripts/smoke.mjs http://localhost:3000   # 110 end-to-end checks
 | Plans | month window, quota counting (own live records only), Free/Pro ceilings, history cutoff |
 | Aggregates | every malformed, over-long, non-finite or over-plan payload is refused; body-size ceiling |
 | Sharing | token round-trip, tampering, expiry, revoke, stranger cannot create, samples are read-only |
-| Auth | scrypt round-trip, duplicate rejection, token tampering/expiry, secret persistence, rate limiter |
+| Auth | scrypt round-trip, duplicate rejection, token tampering/expiry, secret persistence, rate limiter, sign-out-everywhere cut-off |
+| Integrity | the saved report re-hashes to its stored digest; one edited sample fails it; key order does not change it |
+| Meetings | signaling auth, roster, chat isolation, ended-state `410`, long-poll cursor |
 | Store | seed-once, per-owner isolation, foreign delete/update refused, idempotent saves |
 | Storage | Vercel/Lambda/Netlify fall back to temp; `VS_DATA_DIR` overrides and is durable |
 
@@ -408,7 +425,16 @@ suite. Logs are uploaded as artifacts.
   `noindex`.
 - **Passwords** are hashed with `scrypt` and a per-user salt; hashes are never returned by an API.
 - **Sessions** are HMAC-SHA256 signed, expiring tokens in `httpOnly`, `SameSite=Lax`,
-  `Secure`-in-production cookies — stateless, so there is no session table to leak.
+  `Secure`-in-production cookies — stateless, so there is no session table to leak. Each token
+  carries its issue time, and *sign out everywhere* stores a per-account cut-off, so a copied
+  cookie stops working instead of living out its 30 days. Logout revokes the token, not just the
+  cookie.
+- **Report integrity** — the server stores a hash of the inputs a report was built from and
+  re-computes it for the badge. It makes edited stored inputs visible; it does **not** make
+  client-computed scores trustworthy, which is why nothing here claims to be certified.
+- **Email** — SMTP is plain Node, and a server that offers neither implicit TLS nor STARTTLS
+  never receives a password. Billing webhooks are compared in constant time, and `/api/errors`
+  is rate-limited because it writes attacker-supplied text into the ops log.
 - **Login throttling** — 8 attempts per 15 minutes per IP+email, `429` with `Retry-After`.
   Signup is limited per address (20/hour) and saves are limited per account (30/hour).
 - **Payload limits** — a save body above 2 MB is refused with `413` before it is parsed, and the
@@ -502,10 +528,20 @@ in `README.md` and `docs/`, where a developer is the reader. In the UI you will 
 | `npm run verify` | typecheck + lint + test + build |
 | `npm run fonts` | re-download the self-hosted webfonts |
 | `npm run icons` | re-rasterise the PWA icons from `public/icons/mark.svg` |
+| `npm run backup` | copy `data/` into `backups/<timestamp>/`, keeping the last 30 |
+| `npm run restore -- <dir>` | copy a backup back into the data dir (files absent from the backup are left alone) |
 
 Diagnostic wrappers (`scripts/run-*.cjs`, `smoke`, `test`) write their transcripts to
 `docs/logs`, `docs/notes` and `docs/artifacts` — never the repository root. See
 [`docs/README.md`](docs/README.md).
+
+On a memory-constrained machine `next build` can die mid-render with
+`memory allocation of N bytes failed` (one static worker per CPU). Limit the workers:
+
+```bash
+set "NEXT_BUILD_WORKERS=2" && npm run build     # Windows
+export NEXT_BUILD_WORKERS=2 && npm run build    # POSIX
+```
 
 ---
 
@@ -526,20 +562,23 @@ and the report states which estimator produced them (`paceSource`).
 ## Roadmap
 
 - **Phase 2** — uploaded-recording batch analysis (Whisper + librosa + DeepFace) reusing the same
-  scoring model; team and cohort comparisons; server-rendered PDF export.
+  scoring model; team and cohort comparisons.
 - **Phase 3** — mobile capture, multi-language transcription, personalised coaching plans,
   longitudinal improvement roadmaps.
 
 Shipped so far: per-mode rubrics, accounts with per-account isolation, security headers and CSP,
 installable PWA with an offline shell, generated OpenGraph card, loading and error boundaries, a
 print stylesheet, Free/Pro plans with server-enforced quotas, idempotent saves, on-device draft
-recovery, revocable report share links, legal pages, structured logging, and a 72-test unit suite
-plus a 110-check end-to-end suite wired into CI.
+recovery, revocable report share links, legal pages, structured logging, password reset, email
+verification, account deletion, "sign out everywhere", server-rendered PDF export, SMTP delivery,
+a billing webhook seam, a rate-limited crash sink, paginated history, `en/es/fr/am` UI catalogues,
+accessible chart tables, co-coaching meeting rooms, and an 81-test unit suite plus a 110-check
+end-to-end suite and a 24-check meeting suite wired into CI.
 
 ---
 
 ## License
 
-[MIT](LICENSE) © 2026 Tesfazion
+[MIT](LICENSE) © 2026 Tesfatseyon Merkineh
 
 Built as a real product, not a demo: every score in the UI traces back to a model output.

@@ -17,7 +17,9 @@ export const fr = {
   "nav.signOut": "Se déconnecter",
   "nav.menu": "Ouvrir le menu",
   "nav.closeMenu": "Fermer le menu",
-  "nav.language": "Langue",
+  "nav.themeLight": "Passer en mode clair",
+  "nav.themeDark": "Passer en mode sombre",
+  "nav.account": "Compte",
 
   "common.loading": "Chargement…",
   "common.cancel": "Annuler",
@@ -32,6 +34,11 @@ export const fr = {
   "common.free": "Gratuit",
   "common.pro": "Pro",
   "common.new": "Nouveau",
+  "common.learnMore": "En savoir plus",
+  "common.notFound": "Introuvable",
+  "common.notFoundTitle": "Page introuvable",
+  "common.notFoundBody": "Le lien est peut-être cassé ou la page a été déplacée. Le tableau de bord est le meilleur point de départ.",
+  "common.home": "Retour à l'accueil",
 
   "metric.overall": "Global",
   "metric.eyeContact": "Contact visuel",
@@ -82,6 +89,26 @@ export const fr = {
   "auth.security": "Les mots de passe sont hachés et jamais affichés. Votre session est un cookie privé signé.",
   "auth.passwordCurrent": "Votre mot de passe",
 
+  /* --------------------------------------------------- password reset */
+  "auth.forgot.eyebrow": "Réinitialiser le mot de passe",
+  "auth.forgot.title": "Mot de passe oublié ?",
+  "auth.forgot.body": "Entrez votre email et nous vous enverrons un lien pour le réinitialiser. Le lien expire après une heure.",
+  "auth.forgot.submit": "Envoyer le lien",
+  "auth.forgot.back": "Retour à la connexion",
+
+  "auth.reset.eyebrow": "Nouveau mot de passe",
+  "auth.reset.title": "Choisissez un nouveau mot de passe",
+  "auth.reset.body": "Choisissez quelque chose dont vous vous souviendrez et que personne d'autre ne devinera.",
+  "auth.reset.submit": "Définir le nouveau mot de passe",
+  "auth.reset.resend": "Besoin d'un nouveau lien ? Demandez-en un depuis la page de connexion.",
+
+  /* --------------------------------------------------- email verification */
+  "auth.verify.eyebrow": "Email vérifié",
+  "auth.verify.title": "Votre adresse est confirmée",
+  "auth.verify.body": "Merci d'avoir confirmé votre email. Votre compte est maintenant entièrement configuré.",
+  "auth.verify.cta": "Ouvrir le studio",
+  "auth.verify.dashboard": "Ou aller au tableau de bord",
+
   "footer.tagline":
     "Un coach d’art oratoire qui mesure ce que le public ressent vraiment — et vous le dit à temps pour agir.",
   "footer.chip.private": "Privé par défaut",
@@ -106,7 +133,24 @@ export const fr = {
   "footer.rights": "© {year} VisionSpeak. Pour celles et ceux qui veulent la vérité.",
   "footer.note": "Transformer la prise de parole par l’IA.",
 
-  "dash.eyebrow": "Tableau de bord",
+  /* ----------------------------------------------------------- account */
+  "account.eyebrow": "Compte",
+  "account.title": "Paramètres du compte",
+  "account.profile": "Votre profil",
+  "account.name": "Nom",
+  "account.email": "Email",
+  "account.editNote": "La modification du nom et de l'email n'est pas encore disponible. Contactez le support pour les changer.",
+  "account.revoke.title": "Révoquer les autres sessions",
+  "account.revoke.body": "Tous les cookies de session émis par ce compte cessent immédiatement de fonctionner — sauf celui que vous utilisez maintenant, qui est remplacé par un nouveau. Un cookie volé devient inutilisable.",
+  "account.revoke.confirm": "Tapez votre email pour confirmer",
+  "account.revoke.submit": "Révoquer les autres sessions",
+  "account.revoke.done": "Autres sessions révoquées. Cet appareil reste connecté.",
+  "account.back": "Retour au tableau de bord",
+
+  /* ------------------------------------------------------------- billing */
+  "billing.free.body": "Vous êtes sur le plan gratuit. Passez à Pro pour des sessions plus longues, un historique illimité et l'export CSV.",
+  "billing.free.cta": "Passer à Pro",
+  "billing.pro.active": "Votre plan Pro est actif. Merci de soutenir VisionSpeak.",
   "dash.title": "Historique d’entraînement",
   "dash.subtitle": "{sessions} séances · {time} de parole analysée",
   "dash.streak": "Série de {days} jours",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, LayoutDashboard, Loader2, LogOut, Menu, Moon, Play, Sun, X } from "@/components/icons";
+import { ArrowRight, LayoutDashboard, Loader2, LogOut, Menu, Moon, Play, Sun, UserRound, X } from "@/components/icons";
 import { Logo } from "./brand";
 import { buttonClass, cn } from "@/components/ui";
 import { useTheme } from "./theme";
@@ -30,6 +30,7 @@ const MARKETING_LINKS: { href: string; key: MessageKey }[] = [
 
 const APP_LINKS: { href: string; key: MessageKey }[] = [
   { href: "/studio", key: "nav.openStudio" },
+  { href: "/meeting", key: "nav.meetings" },
   { href: "/dashboard", key: "nav.history" },
   { href: "/pricing", key: "nav.pricing" },
 ];
@@ -194,6 +195,14 @@ export function SiteNav() {
                       {account?.plan === "pro" ? t("common.pro") : t("common.free")}
                     </span>
                   </span>
+                </Link>
+                <Link
+                  href="/account"
+                  className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-white/5 hover:text-ink"
+                  aria-label={t("nav.account")}
+                  title={t("nav.account")}
+                >
+                  <UserRound className="size-4" />
                 </Link>
                 <button
                   type="button"

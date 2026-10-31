@@ -1,8 +1,8 @@
-// Verifies that the responsive design-system classes actually reach the browser.
+﻿// Verifies that the responsive design-system classes actually reach the browser.
 // Prints which utilities exist in the served CSS for each breakpoint rule.
-// Usage: node scripts/responsive-check.cjs [baseUrl]
+// Usage: node scripts/probes/responsive-check.cjs [baseUrl]
 const { writeFileSync } = require("node:fs");
-const { notePath } = require("./lib/diagnostics.cjs");
+const { notePath } = require("../lib/diagnostics.cjs");
 
 const base = process.argv[2] ?? "http://localhost:3111";
 

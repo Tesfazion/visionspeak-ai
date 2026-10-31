@@ -19,7 +19,18 @@ const scrypt = promisify(scryptCb) as (
   keylen: number,
 ) => Promise<Buffer>;
 
-export const DATA_PATH = DATA_DIR;
+const SCHEMA_VERSION = 2;
+
+function migrateUserRecords(records: Record<string, unknown>[], fromVersion: number, toVersion: number): StoredUser[] {
+  if (fromVersion >= toVersion) return records.map((r) => r as unknown as StoredUser);
+  let migrated = records;
+  if (fromVersion < 2 && toVersion >= 2) {
+    migrated = migrated.map((r) => ({
+      ...r,
+    }));
+  }
+  return migrated.map((r) => r as unknown as StoredUser);
+}
 
 const USERS_FILE = dataFile("users.json");
 const SECRET_FILE = dataFile("auth-secret");
@@ -44,6 +55,18 @@ export interface StoredUser {
   emailVerifiedAt?: string;
   /** When the account was deleted, for GDPR erasure. */
   deletedAt?: string;
+  /** Hashes of session tokens that have been revoked, oldest first. */
+  revokedSessionHashes?: string[];
+  /**
+   * "Sign out everywhere": a token issued at or before this instant is refused.
+   * Set by `revokeOtherSessions`, which then re-issues the current device's
+   * cookie — stateless tokens carry no session table to delete.
+   */
+  sessionsValidAfter?: string;
+  /** Team/organisation this account belongs to (empty = solo). */
+  teamId?: string;
+  /** Role within the team: owner | member. Absent on solo accounts. */
+  teamRole?: "owner" | "member";
 }
 
 export interface PublicUser {
@@ -52,6 +75,8 @@ export interface PublicUser {
   name: string;
   createdAt: string;
   plan: PlanId;
+  teamId?: string;
+  teamRole?: "owner" | "member";
 }
 
 export const toPublicUser = (u: StoredUser): PublicUser => ({
@@ -60,6 +85,8 @@ export const toPublicUser = (u: StoredUser): PublicUser => ({
   name: u.name,
   createdAt: u.createdAt,
   plan: normalisePlan(u.plan),
+  teamId: u.teamId,
+  teamRole: u.teamRole,
 });
 
 /* ------------------------------------------------------------------ *
@@ -115,7 +142,21 @@ const serialise = <T,>(fn: () => Promise<T>): Promise<T> => {
 
 async function readUsers(): Promise<StoredUser[]> {
   try {
-    const parsed = JSON.parse(await fs.readFile(USERS_FILE, "utf8"));
+    const raw = await fs.readFile(USERS_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const migrated = migrateUserRecords(parsed, 1, SCHEMA_VERSION);
+      return migrated;
+    } else if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray((parsed as { records?: unknown }).records)
+    ) {
+      const envelope = parsed as { records: Record<string, unknown>[]; version?: number };
+      const version = envelope.version || 1;
+      const migrated = migrateUserRecords(envelope.records, version, SCHEMA_VERSION);
+      return migrated;
+    }
     return Array.isArray(parsed) ? (parsed as StoredUser[]) : [];
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
@@ -127,7 +168,8 @@ async function readUsers(): Promise<StoredUser[]> {
 async function writeUsers(users: StoredUser[]) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   const tmp = `${USERS_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(users, null, 2), "utf8");
+  const data = { schemaVersion: SCHEMA_VERSION, version: SCHEMA_VERSION, records: users };
+  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
   for (let attempt = 0; ; attempt++) {
     try {
       await fs.rename(tmp, USERS_FILE);
@@ -195,6 +237,11 @@ export async function authenticate(email: string, password: string): Promise<Pub
     await hashPassword(password, "00000000000000000000000000000000");
     return null;
   }
+  if (!isEmailVerified(user)) {
+    // Don't leak the fact that the email is unverified; make it look like a bad password
+    await hashPassword(password, "00000000000000000000000000000000");
+    return null;
+  }
   return (await verifyPassword(password, user)) ? toPublicUser(user) : null;
 }
 
@@ -222,7 +269,7 @@ export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicU
 
 export type TokenKind = "reset" | "verify";
 
-interface TokenRecord {
+export interface TokenRecord {
   kind: TokenKind;
   userId: string;
   tokenHash: string;
@@ -352,12 +399,11 @@ export async function deleteAccount(userId: string): Promise<boolean> {
  * Public helpers used by route handlers
  * ------------------------------------------------------------------ */
 
-/** Request a password-reset token. Returns true if the account exists. */
-export async function requestPasswordReset(email: string) {
+/** Request a password-reset token. Returns the raw token if the account exists. */
+export async function requestPasswordReset(email: string): Promise<string | null> {
   const user = await findUserByEmail(email);
-  if (!user) return false; // don't reveal whether the address is registered
-  await createToken("reset", user.id, RESET_TTL_MS);
-  return true;
+  if (!user) return null; // don't reveal whether the address is registered
+  return createToken("reset", user.id, RESET_TTL_MS);
 }
 
 /** Consume a reset token and set a new password. */
@@ -447,25 +493,86 @@ async function getSecret(): Promise<string> {
 const sign = async (payload: string) =>
   createHmac("sha256", await getSecret()).update(payload).digest("base64url");
 
-/** `userId.expiry.signature` — stateless, so no session table to leak. */
+/** `userId.issuedAt.expiry.signature` — stateless, so no session table to leak. */
 export async function createSessionToken(userId: string, ttlMs = SESSION_TTL_MS) {
-  const expiry = Date.now() + ttlMs;
-  const payload = `${userId}.${expiry}`;
+  const issuedAt = Date.now();
+  const expiry = issuedAt + ttlMs;
+  const payload = `${userId}.${issuedAt}.${expiry}`;
   return `${payload}.${await sign(payload)}`;
 }
 
 export async function verifySessionToken(token: string | undefined | null): Promise<string | null> {
   if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [userId, expiryRaw, signature] = parts;
+  // Tokens minted before "sign out everywhere" shipped have no issuedAt. They
+  // stay valid (they expire within 30 days) unless the account has a cut-off.
+  const legacy = parts.length === 3;
+  if (!legacy && parts.length !== 4) return null;
+  const [userId, issuedRaw, expiryRaw, signature] = legacy
+    ? [parts[0], "", parts[1], parts[2]]
+    : parts;
   const expiry = Number(expiryRaw);
   if (!userId || !Number.isFinite(expiry) || expiry < Date.now()) return null;
-  const expected = await sign(`${userId}.${expiryRaw}`);
+  const payload = issuedRaw ? `${userId}.${issuedRaw}.${expiryRaw}` : `${userId}.${expiryRaw}`;
+  const expected = await sign(payload);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  // Revocation check: the user row carries a list of revoked token hashes.
+  const user = await findUserById(userId);
+  if (user?.revokedSessionHashes?.some((h) => h === createHmac("sha256", token).digest("hex"))) {
+    return null;
+  }
+  // "Sign out everywhere" cut-off. A legacy token has no issuedAt, so `0` —
+  // which is exactly the intent: the cut-off invalidates all of them. The
+  // comparison is "<" so the fresh cookie this device re-issues right after the
+  // cut-off, in the same millisecond, is not refused by its own cut-off.
+  const cutoff = user?.sessionsValidAfter ? Date.parse(user.sessionsValidAfter) : 0;
+  if (cutoff > 0 && Number(issuedRaw) < cutoff) return null;
   return userId;
+}
+
+/** Revoke a session token. Idempotent — revoking twice is fine. */
+export async function revokeSessionToken(token: string): Promise<boolean> {
+  const hash = createHmac("sha256", token).digest("hex");
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) =>
+      (u.revokedSessionHashes ?? []).some((h) => h === hash),
+    );
+    if (index !== -1) return true; // already revoked
+    // Find the user this token belongs to by verifying it.
+    const userId = await verifySessionToken(token);
+    if (!userId) return false;
+    const userIndex = users.findIndex((u) => u.id === userId);
+    if (userIndex === -1) return false;
+    const existing = users[userIndex].revokedSessionHashes ?? [];
+    // Cap the list so a long-lived account cannot grow it without bound.
+    const updated = [...existing, hash].slice(-200);
+    users[userIndex] = { ...users[userIndex], revokedSessionHashes: updated };
+    await writeUsers(users);
+    return true;
+  });
+}
+
+/**
+ * Invalidates every session token this account has issued so far — the "sign out
+ * everywhere" control. The caller re-issues a cookie for the current device
+ * straight afterwards, so that device stays signed in and every other copy of a
+ * cookie (a leaked one, an old laptop) stops working on its next request.
+ *
+ * Stateless signed tokens cannot be enumerated, so the user row carries the
+ * cut-off instant and `verifySessionToken` compares each token's `issuedAt` to it.
+ */
+export async function revokeOtherSessions(userId: string): Promise<boolean> {
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return false;
+    users[index] = { ...users[index], sessionsValidAfter: new Date().toISOString() };
+    await writeUsers(users);
+    return true;
+  });
 }
 
 /* ------------------------------------------------------------------ *

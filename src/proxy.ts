@@ -14,7 +14,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * signature is verified and the user loaded in the route itself, so a forged
  * cookie still cannot read anything — it just reaches the page-level check.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/studio"];
+const PROTECTED_PREFIXES = ["/dashboard", "/studio", "/meeting"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,5 +32,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/studio/:path*"],
+  matcher: ["/dashboard/:path*", "/studio/:path*", "/meeting/:path*"],
 };

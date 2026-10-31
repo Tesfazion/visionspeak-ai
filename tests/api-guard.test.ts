@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { buildDemoAggregate } from "@/lib/analysis/demo";
+import { buildReport } from "@/lib/analysis/report";
 import {
   MAX_TIMELINE_POINTS,
+  aggregateHash,
   parseAggregate,
   readClientSessionId,
   readJsonLimited,
+  reportIntegrityHash,
 } from "@/lib/api-guard";
 
 const limits = { maxDurationSec: 3600 };
@@ -101,4 +104,33 @@ test("the idempotency key is validated, not trusted", () => {
   assert.equal(readClientSessionId("has spaces in it"), null);
   assert.equal(readClientSessionId(undefined), null);
   assert.equal(readClientSessionId(42), null);
+});
+
+// Regression: the save path used to hash the raw aggregate while the verifier
+// re-hashed {durationSec, mode, timeline}, so every report rendered "Unverified".
+// Both sides must hash the subset that is actually persisted.
+test("a saved report verifies against the record it produced", () => {
+  const aggregate = buildDemoAggregate();
+  const report = buildReport(aggregate, "practice");
+  const record = {
+    durationSec: Math.round(aggregate.durationSec),
+    mode: "practice",
+    timeline: report.timeline,
+  };
+
+  const stored = reportIntegrityHash(record);
+  assert.equal(reportIntegrityHash({ ...record }), stored);
+
+  // Hashing the raw aggregate — the old bug — can never match the stored record.
+  assert.notEqual(aggregateHash(aggregate), stored);
+
+  // One edited sample is enough to fail the check.
+  const tampered = report.timeline.map((sample, i) =>
+    i === 0 ? { ...sample, eyeContact: sample.eyeContact + 5 } : sample,
+  );
+  assert.notEqual(reportIntegrityHash({ ...record, timeline: tampered }), stored);
+
+  // Key order and JSON round-tripping must not change the digest.
+  const roundTripped = JSON.parse(JSON.stringify(record)) as typeof record;
+  assert.equal(reportIntegrityHash(roundTripped), stored);
 });

@@ -1,7 +1,7 @@
-// Probes outbound connectivity to the hosts this project depends on at build time.
+﻿// Probes outbound connectivity to the hosts this project depends on at build time.
 // Writes results to net-probe.json (stdout is not captured by the agent shell here).
 const { writeFileSync } = require("node:fs");
-const { artifactPath } = require("./lib/diagnostics.cjs");
+const { artifactPath } = require("../lib/diagnostics.cjs");
 
 const targets = [
   "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap",

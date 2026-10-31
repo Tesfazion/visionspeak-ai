@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/components/ui";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export function LogoMark({ size = 30, className }: { size?: number; className?: string }) {
   return (
@@ -35,15 +36,15 @@ export function LogoMark({ size = 30, className }: { size?: number; className?: 
 
 export function Logo({ className, subtitle = true }: { className?: string; subtitle?: boolean }) {
   return (
-    <Link href="/" className={cn("group inline-flex items-center gap-2.5", className)} aria-label="VisionSpeak AI home">
+    <Link href="/" className={cn("group inline-flex items-center gap-2.5", className)} aria-label={`${BRAND_NAME} home`}>
       <LogoMark size={30} className="transition-transform duration-500 group-hover:rotate-6" />
       <span className="flex flex-col leading-none">
         <span className="text-[15px] font-semibold tracking-[-0.01em] text-ink">
-          VisionSpeak<span className="text-brand-soft"> AI</span>
+          {BRAND_NAME}
         </span>
         {subtitle && (
           <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.22em] text-fog/70">
-            Speaking intelligence
+            {BRAND_TAGLINE}
           </span>
         )}
       </span>

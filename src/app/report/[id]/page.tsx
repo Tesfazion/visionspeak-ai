@@ -16,10 +16,12 @@ import {
   TriangleAlert,
 } from "@/components/icons";
 import { ReportActions } from "@/components/report/actions";
+import { ReportVerify } from "@/components/report/verify-badge";
 import { ProfileRadar, TimelineChart } from "@/components/report/charts";
 import { SiteFooter } from "@/components/site/footer";
 import { Bar, Pill, ScoreRing, cn, scoreLabel, toneFor } from "@/components/ui";
 import { EMOTION_META } from "@/lib/analysis/emotion";
+import { reportIntegrityHash } from "@/lib/api-guard";
 import { formatClock, formatDuration } from "@/lib/math";
 import { getSession, getSharedSession } from "@/lib/store";
 import { planFor } from "@/lib/plans";
@@ -140,6 +142,19 @@ export default async function ReportPage({
   const session: SessionRecord = record;
   const canManage = Boolean(user) && session.ownerId === user?.id;
   const canExportCsv = Boolean(user) && planFor(user?.plan).csvExport;
+  const canExportPdf = Boolean(user) && planFor(user?.plan).pdfExport;
+  // Same hash function the save path used, so this answer is the API's answer —
+  // computed here as well because a shared report's reader is anonymous and a
+  // client fetch would 401 into a false "unverified".
+  const integrity = !session.aggregateHash
+    ? "unchecked"
+    : reportIntegrityHash({
+          durationSec: session.durationSec,
+          mode: session.mode,
+          timeline: session.report.timeline,
+        }) === session.aggregateHash
+      ? "verified"
+      : "unverified";
 
   const r = session.report;
   const tone = toneFor(r.overall);
@@ -175,7 +190,12 @@ export default async function ReportPage({
         >
           <ChevronLeft className="size-3.5" /> {t("report.back")}
         </Link>
-        <ReportActions session={session} canManage={canManage} canExportCsv={canExportCsv} />
+        <ReportActions
+          session={session}
+          canManage={canManage}
+          canExportCsv={canExportCsv}
+          canExportPdf={canExportPdf}
+        />
       </div>
 
       {/* ---------------------------------- hero ---------------------------------- */}
@@ -199,6 +219,7 @@ export default async function ReportPage({
               <Pill tone={session.source === "demo" ? "brand" : "neutral"} className="!py-0.5">
                 {session.source === "demo" ? t("report.sampleBadge") : t(MODE_LABEL_KEY[session.mode])}
               </Pill>
+              {session.source !== "demo" && <ReportVerify state={integrity} />}
             </div>
             <h1 className="mt-2 text-balance text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[30px]">
               {session.title}

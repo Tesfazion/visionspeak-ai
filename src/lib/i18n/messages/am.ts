@@ -23,7 +23,9 @@ export const am = {
   "nav.signOut": "ይውጡ",
   "nav.menu": "ምናሌ ክፈት",
   "nav.closeMenu": "ምናሌ ዝጋ",
-  "nav.language": "ቋንቋ",
+  "nav.themeLight": "ወደ ብርሃን መልክ አቀይር",
+  "nav.themeDark": "ወደ ጨለማ መልክ አቀይር",
+  "nav.account": "መለያ",
 
   "common.loading": "በመጫን ላይ…",
   "common.cancel": "ሰርዝ",
@@ -38,6 +40,11 @@ export const am = {
   "common.free": "ነጻ",
   "common.pro": "ፕሮ",
   "common.new": "አዲስ",
+  "common.learnMore": "ተጨማሪ መረዳት",
+  "common.notFound": "አልተገኘም",
+  "common.notFoundTitle": "ገጽ አልተገኘም",
+  "common.notFoundBody": "አገናኝ የተሰበረ ወይም ገጽቱ ተንቀልፏል ነው ይሆናል። ዳሽቦርድ በመጀመሪያ ማስጀመር ይችላል።",
+  "common.home": "ወደ መነሻ ተመለስ",
 
   "metric.overall": "አጠቃላይ",
   "metric.eyeContact": "የዓይን ግንኙነት",
@@ -86,6 +93,26 @@ export const am = {
   "auth.security": "የይለፍ ቃላት ይመሰጠራሉ እና አይታዩም። ክፍለ ጊዜዎ የተፈረመ ግላዊ ኩኪ ነው።",
   "auth.passwordCurrent": "የይለፍ ቃልዎ",
 
+  /* --------------------------------------------------- password reset */
+  "auth.forgot.eyebrow": "የይለፍ ቃል እንደገና ማስጀመር",
+  "auth.forgot.title": "የይለፍ ቃልዎን ረስተዋል?",
+  "auth.forgot.body": "ኢሜይልዎን ያስገቡ እና አገናኝ እንልክልዎታለን። አገናኙ ከአንድ ሰዓት በኋላ ጊዜው ያልፋል።",
+  "auth.forgot.submit": "የመጀመሪያ አገናኝ ላክ",
+  "auth.forgot.back": "ወደ መግቢያ ተመለስ",
+
+  "auth.reset.eyebrow": "አዲስ የይለፍ ቃል",
+  "auth.reset.title": "አዲስ የይለፍ ቃል ይምረጡ",
+  "auth.reset.body": "ሊያስታውሱት የሚችሉ እና ሌላ ሰው ሊገምተው የማይችለው ነገር ይምረጡ።",
+  "auth.reset.submit": "አዲስ የይለፍ ቃል አዘጋጅ",
+  "auth.reset.resend": "አዲስ አገናኝ ያስፈልግዎታል? ከመግቢያ ገጽ ይጠይቁ።",
+
+  /* --------------------------------------------------- email verification */
+  "auth.verify.eyebrow": "ኢሜይል ተረጋግጧል",
+  "auth.verify.title": "አድራሻዎ ተረጋግጧል",
+  "auth.verify.body": "ኢሜይልዎን ስለረጋገጡ እናመሰግናለን። መለያዎ አሁን ሙሉ ለሙሉ ተዘጋጅቷል።",
+  "auth.verify.cta": "ስቱዲዮ ይክፈቱ",
+  "auth.verify.dashboard": "ወይም ወደ ዳሽቦርድ ይሂዱ",
+
   "footer.tagline":
     "ተመልካቾች በትክክል የሚሰማቸውን የሚለካ የንግግር አሰልጣኝ።",
   "footer.chip.private": "በነባሪ ግላዊ",
@@ -108,7 +135,24 @@ export const am = {
   "footer.contact": "ያግኙን",
   "footer.security": "መረጃና ደህንነት",
   "footer.rights": "© {year} VisionSpeak። እውነቱን ለሚፈልጉ ተናጋሪዎች።",
-  "footer.note": "በAI ንግግርን እናሻሽላለን።",
+  /* ----------------------------------------------------------- account */
+  "account.eyebrow": "መለያ",
+  "account.title": "የመለያ ቅንብሮች",
+  "account.profile": "መገለጫዎ",
+  "account.name": "ስም",
+  "account.email": "ኢሜይል",
+  "account.editNote": "ስም እና ኢሜይል ማስተካከል አሁን አልተቻለም አልተፈቀደም። ለመቀየር ድጋፍን ያነጋግሩ።",
+  "account.revoke.title": "ሌሎች ክፍለ ጊዜዎችን ሰርዝ",
+  "account.revoke.body": "ለዚህ መለያ የተሰጡ ሁሉም የክፍለ ጊዜ ኩኪዎች ወዲያውኑ አይሰሩም — አሁን እየተጠቀሙበት ያለው በስተቀር፤ እሱ በአዲስ ይተካል። የተሰረቀ ኩኪ ከዚህ በኋላ አይሰራም።",
+  "account.revoke.confirm": "ለማረጋገጥ ኢሜይልዎን ይጻፉ",
+  "account.revoke.submit": "ሌሎች ክፍለ ጊዜዎችን ሰርዝ",
+  "account.revoke.done": "ሌሎች ክፍለ ጊዜዎች ተሰርዘዋል። ይህ መሣሪያ ገብቶ ይቆያል።",
+  "account.back": "ወደ ዳሽቦርድ ተመለስ",
+
+  /* ------------------------------------------------------------- billing */
+  "billing.free.body": "በነጻ ዕቅድ ላይ ነዎት። ለረዥም ክፍለ ጊዜዎች፣ ያልተገደበ ታሪክ እና CSV ማውጣት ያሻሽሉ።",
+  "billing.free.cta": "ወደ Pro አሻሽል",
+  "billing.pro.active": "የPro ዕቅድዎ ንቁ ነው። VisionSpeakን ስለደገፉ እናመሰግናለን።",
 
   "dash.eyebrow": "ዳሽቦርድ",
   "dash.title": "የልምምድ ታሪክ",

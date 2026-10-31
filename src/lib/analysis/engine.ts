@@ -125,6 +125,7 @@ class TimeWindow {
 
 export class VisionEngine {
   private face?: FaceLandmarker;
+  private faceFailures = 0;
   private pose?: PoseLandmarker;
   private hand?: HandLandmarker;
   private voice: VoiceEngine | null = null;
@@ -225,7 +226,9 @@ export class VisionEngine {
   /** Swap the recogniser language mid-session (e.g. switching to Amharic). */
   setSpeechLanguage(language: SpeechLanguage) {
     this.language = language;
-    this.speech.setLanguage(language);
+    // SpeechEngine ignores a no-op switch, but always forwarding is the safest
+    // way to guarantee the recogniser's lang matches the picker.
+    if (language !== this.speech.getLanguage()) this.speech.setLanguage(language);
   }
 
   /** What "good" looks like for this session's mode. */
@@ -390,14 +393,26 @@ export class VisionEngine {
     const ts = this.mediaTs;
 
     let faceRes: FaceLandmarkerResult | null = null;
+    // After 20 consecutive landmark failures the vision runtime is deemed
+    // broken on this device; keep looping audio metrics only.
+    if (this.faceFailures < 20) {
+      try {
+        faceRes = this.face?.detectForVideo(this.video, ts) ?? null;
+        if (this.faceFailures > 0) this.faceFailures = 0;
+      } catch {
+        /* transient frame errors are expected while the stream warms up */
+        if (++this.faceFailures === 20) {
+          this.face = undefined;
+          console.warn(
+            "VisionSpeak: face landmarking keeps failing on this device; continuing with audio-only metrics.",
+          );
+        }
+      }
+    }
+
     let poseRes: PoseLandmarkerResult | null = null;
     let handRes: HandLandmarkerResult | null = null;
 
-    try {
-      faceRes = this.face?.detectForVideo(this.video, ts) ?? null;
-    } catch {
-      /* transient frame errors are expected while the stream warms up */
-    }
     if (this.frameIndex % 2 === 0) {
       try {
         poseRes = this.pose?.detectForVideo(this.video, ts) ?? null;

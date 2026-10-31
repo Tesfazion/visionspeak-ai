@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   Activity,
@@ -21,13 +20,14 @@ import { FreeUpgrade, ProWorkspace } from "@/components/dashboard/plan-panel";
 import { PILLAR_KEYS, PILLAR_META } from "@/components/dashboard/pillars";
 import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/trends";
 import { SiteFooter } from "@/components/site/footer";
-import { Bar, ButtonLink, Pill, ScoreRing, cn, scoreLabel, toneFor } from "@/components/ui";
+import { Bar, ButtonLink, Pill, ScoreRing, scoreLabel, toneFor } from "@/components/ui";
 import { formatDuration } from "@/lib/math";
 import { listSessions } from "@/lib/store";
 import { STORAGE_IS_EPHEMERAL } from "@/lib/data-dir";
 import { getCurrentUser, loginHref } from "@/lib/auth";
 import { planFor, quotaState, visibleHistory } from "@/lib/plans";
 import { getI18n } from "@/lib/i18n/server";
+import { LoadMore } from "@/components/dashboard/load-more";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +65,6 @@ function computeStreak(dates: string[]) {
 
 const WEEK_MS = 7 * 86_400_000;
 
-const MODE_LABEL_KEY = {
-  practice: "studio.mode.practice",
-  presentation: "studio.mode.presentation",
-  interview: "studio.mode.interview",
-} as const;
-
 type Summarisable = { createdAt: string; report: { overall: number } };
 
 /**
@@ -105,9 +99,19 @@ export default async function DashboardPage() {
   // Only this account's own analyses count. Seeded samples are reference
   // material and must never appear as the user's history or inflate a streak.
   const own = await listSessions(user.id, { includeSamples: false });
-  const sessions = visibleHistory(own, user.id, user.plan);
-  const quota = quotaState(own, user.id, user.plan);
   const plan = planFor(user.plan);
+  const quota = quotaState(own, user.id, user.plan);
+
+  // Plan-visible history, newest first. `own` is already scoped to the account
+  // and excludes samples; `visibleHistory` applies the plan's retention window.
+  const visible = visibleHistory(own, user.id, user.plan);
+  const total = visible.length;
+  // The first page is sliced locally. A server component must not fetch its own
+  // API route: that needs a live absolute origin and breaks whenever the server
+  // runs on a port other than the one baked into the env. Paging past 50 rows is
+  // handled client-side by `LoadMore`.
+  const firstPage = visible.slice(0, 50);
+  const sessions = firstPage;
   const isPro = plan.id === "pro";
 
   if (sessions.length === 0) {
@@ -237,6 +241,9 @@ export default async function DashboardPage() {
             {isPro ? <Sparkles className="size-3" /> : <Crown className="size-3" />}
             {t("dash.planLabel", { plan: plan.label })}
           </Pill>
+          <span className="text-[11px] text-fog">
+            {Math.round(quota.durationSec / 60)} minutes analysed this month
+          </span>
           <ButtonLink href="/studio" size="md" className="flex-1 sm:flex-none">
             <Plus className="size-3.5" /> {t("dash.newSession")}
           </ButtonLink>
@@ -365,83 +372,7 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      <section className="panel mt-4 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4">
-          <h2 className="text-[13px] font-medium text-ink">{t("dash.recent")}</h2>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
-            {t("dash.newest")}
-          </span>
-        </div>
-
-        <div className="hidden grid-cols-[1.8fr_repeat(3,0.5fr)_0.6fr_auto] gap-4 border-y border-line/60 px-5 py-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-fog lg:grid">
-          <span>{t("dash.col.session")}</span>
-          <span className="text-right">{t("dash.col.conf")}</span>
-          <span className="text-right">{t("dash.col.lead")}</span>
-          <span className="text-right">{t("dash.col.comms")}</span>
-          <span className="text-right">{t("dash.col.grade")}</span>
-          <span className="w-6" />
-        </div>
-
-        <div className="divide-y divide-line/50">
-          {sessions.map((s) => {
-            const r = s.report;
-            return (
-              <Link
-                key={s.id}
-                href={`/report/${s.id}`}
-                className={cn(
-                  "group grid gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.03]",
-                  "lg:grid-cols-[1.8fr_repeat(3,0.5fr)_0.6fr_auto] lg:items-center lg:gap-4",
-                )}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="size-1.5 shrink-0 rounded-full"
-                      style={{ background: toneFor(r.overall).hex }}
-                      aria-hidden
-                    />
-                    <span className="truncate text-[13px] font-medium text-ink transition-colors group-hover:text-brand-soft">
-                      {s.title}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10.5px] text-fog">
-                    <span>{shortDate(s.createdAt)}</span>
-                    <span className="text-fog/40">·</span>
-                    <span>{s.speaker}</span>
-                    <span className="text-fog/40">·</span>
-                    <span className="capitalize">{t(MODE_LABEL_KEY[s.mode])}</span>
-                    <span className="text-fog/40">·</span>
-                    <span>{formatDuration(s.durationSec)}</span>
-                  </div>
-                </div>
-
-                {[r.pillars.confidence, r.pillars.leadership, r.pillars.communication].map((v, i) => (
-                  <div key={i} className="hidden text-right lg:block">
-                    <span className="metric-num text-[12px] text-mist">{v}</span>
-                    <Bar value={v} height={2} className="mt-1 opacity-60" />
-                  </div>
-                ))}
-
-                <div className="flex items-center gap-2 lg:justify-end">
-                  <span
-                    className="metric-num rounded-md border px-1.5 py-0.5 text-[10.5px]"
-                    style={{
-                      color: toneFor(r.overall).hex,
-                      borderColor: `${toneFor(r.overall).hex}44`,
-                      background: `${toneFor(r.overall).hex}12`,
-                    }}
-                  >
-                    {r.grade} {r.overall}
-                  </span>
-                </div>
-
-                <ArrowRight className="hidden size-3.5 text-fog/50 transition-all group-hover:translate-x-0.5 group-hover:text-brand-soft lg:block" />
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      <LoadMore initialSessions={firstPage} total={total} pageSize={50} />
 
       <SiteFooter />
     </div>

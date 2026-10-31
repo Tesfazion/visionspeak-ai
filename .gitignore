@@ -15,12 +15,13 @@ tsconfig.tsbuildinfo
 .env*.local
 !.env.example
 
-# Local data — accounts, signed-session secret and recorded sessions.
-# These are per-machine state, never source.
-data/sessions.json
-data/sessions.pre-reseed.json
-data/users.json
-data/auth-secret
+# Local data — accounts, signed-session secret, recorded sessions, meeting
+# rooms, one-shot auth/verification tokens and probe output. Every file here is
+# per-machine state, never source, so the directory is ignored as a whole.
+data/
+
+# `npm run backup` writes timestamped copies here; never commit account data.
+backups/
 
 # Downloaded/copied model runtime — both are restored by `npm install`
 # (scripts/setup-assets.mjs copies the WASM out of node_modules and fetches

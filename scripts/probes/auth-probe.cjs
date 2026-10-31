@@ -1,4 +1,4 @@
-// End-to-end probe of the auth gate: signed-out redirect, signup, login,
+﻿// End-to-end probe of the auth gate: signed-out redirect, signup, login,
 // cookie persistence, the protected pages and logout.
 //
 // Written because "login does nothing / dashboard never opens" has several
@@ -7,9 +7,9 @@
 // This distinguishes them by replaying the exact HTTP conversation a browser
 // has, and records every status/location so the failing hop is obvious.
 //
-// Usage: node scripts/auth-probe.cjs [baseUrl]
+// Usage: node scripts/probes/auth-probe.cjs [baseUrl]
 const { writeFileSync } = require("node:fs");
-const { notePath } = require("./lib/diagnostics.cjs");
+const { notePath } = require("../lib/diagnostics.cjs");
 
 const base = (process.argv[2] ?? "http://localhost:3210").replace(/\/$/, "");
 const out = [`base=${base}`, `when=${new Date().toISOString()}`, ""];
@@ -78,7 +78,7 @@ const get = (path, cookie) =>
     const setCookie = login.headers.getSetCookie?.() ?? [];
     const session = setCookie.find((c) => c.startsWith("vs_session="));
     if (!session) {
-      out.push("VERDICT: FAIL — login returned no vs_session cookie; the browser");
+      out.push("VERDICT: FAIL â€” login returned no vs_session cookie; the browser");
       out.push("         therefore stays signed out and bounces back to /login.");
       return;
     }
@@ -116,7 +116,7 @@ const get = (path, cookie) =>
         : "logout did NOT clear the cookie: FAIL",
     );
   } catch (err) {
-    out.push(`VERDICT: ERROR — ${err.message}`);
+    out.push(`VERDICT: ERROR â€” ${err.message}`);
     out.push("(is the server running on this base URL?)");
   }
 

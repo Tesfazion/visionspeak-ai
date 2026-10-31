@@ -1,9 +1,9 @@
-// Kills whatever is listening on a TCP port (Windows).
-// Usage: node scripts/kill-port.cjs 3111
+﻿// Kills whatever is listening on a TCP port (Windows).
+// Usage: node scripts/probes/kill-port.cjs 3111
 // Needed because a `next dev` child outlives the wrapper process when the agent shell exits.
 const { execSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
-const { logPath } = require("./lib/diagnostics.cjs");
+const { logPath } = require("../lib/diagnostics.cjs");
 
 const port = process.argv[2] ?? "3111";
 
@@ -23,7 +23,7 @@ for (const line of rawLines) {
   if (/^\d+$/.test(pid) && pid !== "0") pids.add(pid);
 }
 
-// netstat is missing or its output could not be read — ask the TCP table via PowerShell.
+// netstat is missing or its output could not be read â€” ask the TCP table via PowerShell.
 if (pids.size === 0) {
   const ps = run("powershell", [
     "-NoProfile",

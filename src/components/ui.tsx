@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import Link from "next/link";
+import * as React from "react";
 import type { ReactNode } from "react";
 
 export const cn = (...parts: (string | false | null | undefined)[]) => clsx(parts);
@@ -378,6 +379,18 @@ export function Card({
   );
 }
 
+/** A glass panel — same surface language as `.panel`, exposed as a component
+ * so meeting-room layouts can compose it without reaching for a class string. */
+export function Panel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("panel", className)}>{children}</div>;
+}
+
 export function Field({
   children,
   className,
@@ -407,21 +420,20 @@ export function Label({
   );
 }
 
-export function Input({
-  className,
-  ...rest
-}: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
+export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...rest }, ref) => (
     <input
       {...rest}
+      ref={ref}
       className={cn(
         "w-full rounded-lg border border-line bg-base/60 px-3 py-2 text-[13px] text-ink placeholder:text-fog/50",
         "transition-colors focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/20",
         className,
       )}
     />
-  );
-}
+  ),
+);
+Input.displayName = "Input";
 
 export function Textarea({
   className,

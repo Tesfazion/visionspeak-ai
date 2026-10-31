@@ -1,3 +1,4 @@
+import React from "react";
 import { ArrowRight, Check, Eye, Gauge, Hand, Mic, Shield, Smile, Sparkles, Target, Video, Waves, Zap } from "@/components/icons";
 import { buildDemoAggregate } from "@/lib/analysis/demo";
 import { Reveal } from "@/components/site/motion";

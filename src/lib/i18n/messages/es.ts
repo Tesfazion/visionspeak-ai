@@ -17,7 +17,9 @@ export const es = {
   "nav.signOut": "Cerrar sesión",
   "nav.menu": "Abrir menú",
   "nav.closeMenu": "Cerrar menú",
-  "nav.language": "Idioma",
+  "nav.themeLight": "Cambiar a modo claro",
+  "nav.themeDark": "Cambiar a modo oscuro",
+  "nav.account": "Cuenta",
 
   "common.loading": "Cargando…",
   "common.cancel": "Cancelar",
@@ -32,6 +34,11 @@ export const es = {
   "common.free": "Gratis",
   "common.pro": "Pro",
   "common.new": "Nuevo",
+  "common.learnMore": "Más información",
+  "common.notFound": "No encontrado",
+  "common.notFoundTitle": "Página no encontrada",
+  "common.notFoundBody": "El enlace puede estar roto o la página se ha movido. El panel es el lugar más seguro para empezar.",
+  "common.home": "Volver al inicio",
 
   "metric.overall": "General",
   "metric.eyeContact": "Contacto visual",
@@ -86,7 +93,24 @@ export const es = {
   "footer.rights": "© {year} VisionSpeak. Para quienes quieren la verdad.",
   "footer.note": "Transformamos la oratoria con IA.",
 
-  "dash.eyebrow": "Panel",
+  /* ----------------------------------------------------------- account */
+  "account.eyebrow": "Cuenta",
+  "account.title": "Configuración de la cuenta",
+  "account.profile": "Tu perfil",
+  "account.name": "Nombre",
+  "account.email": "Correo",
+  "account.editNote": "Aún no es posible editar el nombre y el correo. Contacta al soporte para cambiarlos.",
+  "account.revoke.title": "Revocar otras sesiones",
+  "account.revoke.body": "Todas las cookies de sesión emitidas por esta cuenta dejan de funcionar de inmediato — salvo la que estás usando ahora, que se sustituye por una nueva. Una cookie robada queda invalidada.",
+  "account.revoke.confirm": "Escribe tu correo para confirmar",
+  "account.revoke.submit": "Revocar otras sesiones",
+  "account.revoke.done": "Otras sesiones revocadas. Este dispositivo sigue conectado.",
+  "account.back": "Volver al panel",
+
+  /* ------------------------------------------------------------- billing */
+  "billing.free.body": "Estás en el plan gratuito. Mejora para sesiones más largas, historial ilimitado y exportación CSV.",
+  "billing.free.cta": "Mejorar a Pro",
+  "billing.pro.active": "Tu plan Pro está activo. Gracias por apoyar a VisionSpeak.",
   "dash.title": "Historial de práctica",
   "dash.subtitle": "{sessions} sesiones · {time} de oratoria analizada",
   "dash.streak": "Racha de {days} días",

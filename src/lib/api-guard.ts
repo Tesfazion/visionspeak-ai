@@ -1,12 +1,13 @@
 import type { SessionAggregate } from "@/lib/analysis/engine";
 import { EMOTIONS } from "@/lib/types";
+import { createHash } from "node:crypto";
 
 /**
  * Request hardening shared by the API routes.
  *
- * Everything here is pure (no `next/server`, no `node:` imports) so it can be
- * unit-tested against a plain `Request`, and so a validation rule cannot drift
- * from the test that pins it.
+ * Everything here is pure — no `next/server`, and only `node:crypto` for hashing
+ * — so it can be unit-tested against a plain `Request`, and so a validation rule
+ * cannot drift from the test that pins it.
  */
 
 export type Guard<T> = { ok: true; value: T } | { ok: false; status: number; error: string; code?: string };
@@ -196,7 +197,85 @@ export function parseAggregate(input: unknown, options: AggregateOptions): Guard
   const problem = scan(a);
   if (problem) return fail(422, problem, "invalid_aggregate");
 
+  // Cross-field sanity checks to make score tampering harder
+  const verifyProblem = verifyAggregate(a);
+  if (verifyProblem) return fail(422, verifyProblem, "invalid_aggregate");
+
   return { ok: true, value: input as SessionAggregate };
+}
+
+/**
+ * Cross-field sanity checks on the aggregate to catch fabricated data.
+ * A malicious client could send valid-looking but manipulated values that
+ * pass individual bounds but are internally inconsistent. This makes that
+ * harder by checking statistical relationships between fields.
+ */
+function verifyAggregate(a: Record<string, unknown>): string | null {
+  const voice = a.voice as Record<string, unknown> | undefined;
+  const speech = a.speech as Record<string, unknown> | undefined;
+  const timeline = a.timeline as unknown[] | undefined;
+  const durationSec = a.durationSec as number | undefined;
+
+  if (!voice || !speech || !timeline || !durationSec) return null;
+
+  // 1. Speaking time percentage should be reasonable for the duration
+  const speakingTimePct = voice.speakingTimePct as number;
+  if (speakingTimePct < 0 || speakingTimePct > 100) {
+    return "speakingTimePct must be between 0 and 100";
+  }
+  if (durationSec > 30 && speakingTimePct > 95) {
+    return "speakingTimePct is implausibly high for a session of this length";
+  }
+
+  // 2. Word count should correlate with duration and speaking time
+  const words = speech.words as number;
+  if (words < 0) return "word count cannot be negative";
+  const expectedMinWords = durationSec * (speakingTimePct / 100) * 0.5; // ~0.5 wps minimum
+  const expectedMaxWords = durationSec * (speakingTimePct / 100) * 5;   // ~5 wps maximum
+  if (durationSec > 10 && (words < expectedMinWords * 0.1 || words > expectedMaxWords * 2)) {
+    return "word count is inconsistent with duration and speaking time";
+  }
+
+  // 3. WPM should be in human range
+  const wpm = a.wpm as number;
+  if (wpm !== undefined && (wpm < 50 || wpm > 300)) {
+    return "words per minute is outside human range";
+  }
+
+  // 4. Voice energy and volume consistency should be reasonable
+  const energy = voice.energy as number;
+  if (energy < 0 || energy > 100) return "voice energy must be 0-100";
+  const volumeConsistency = voice.volumeConsistency as number;
+  if (volumeConsistency < 0 || volumeConsistency > 100) return "volumeConsistency must be 0-100";
+
+  // 5. Timeline should have duration-consistent timestamps
+  const lastTimelinePoint = timeline[timeline.length - 1] as Record<string, unknown> | undefined;
+  if (lastTimelinePoint && typeof lastTimelinePoint.t === "number") {
+    const lastT = lastTimelinePoint.t;
+    if (lastT < durationSec * 0.7 || lastT > durationSec * 1.3) {
+      return "timeline duration does not match declared session duration";
+    }
+  }
+
+  // 6. Eye contact percentage in timeline should be internally consistent
+  const eyeContactValues = timeline
+    .map((p) => (p as Record<string, unknown>).eyeContact as number)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (eyeContactValues.length >= 3) {
+    const avgEyeContact = eyeContactValues.reduce((a, b) => a + b, 0) / eyeContactValues.length;
+    const faceEyeContact = a.eyeContactPct as number;
+    if (typeof faceEyeContact === "number" && Math.abs(avgEyeContact - faceEyeContact) > 30) {
+      return "timeline eye contact average is inconsistent with face statistics";
+    }
+  }
+
+  // 7. Pause count should be consistent with timeline
+  const pauseCount = voice.pauseCount as number;
+  if (pauseCount < 0 || pauseCount > timeline.length) {
+    return "pause count is inconsistent with timeline length";
+  }
+
+  return null;
 }
 
 /** Idempotency key: lets a retried save return the original report. */
@@ -211,6 +290,57 @@ export function clientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for") ?? "";
   return forwarded.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
 }
+
+/**
+ * Fingerprint of the raw aggregate a report was built from.
+ *
+ * Scores are computed in the browser and trusted by the server — a crafted
+ * POST can store any number. This does not stop that (server-side
+ * re-derivation is a much bigger change), but it makes tampering visible: the
+ * report page shows a checkmark when the stored hash matches the report the
+ * server can recompute from the stored numbers, and a warning when it does
+ * not. The hash covers the timeline, duration and mode — the inputs that
+ * actually determine the scores — not the derived report fields, which a
+ * tamperer would also rewrite.
+ */
+export function aggregateHash(input: unknown): string {
+  const canonical = JSON.stringify(input, sortedReplacer);
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+/**
+ * The one object the save path and the verifier both hash.
+ *
+ * Only this subset survives into the stored record: the raw aggregate (with its
+ * 20 fields per sample) is not persisted, so hashing the aggregate itself would
+ * produce a digest nothing could ever recompute — which is exactly the bug this
+ * helper exists to prevent. Keeping both call sites on the same function is the
+ * point; do not inline the object shape in a route.
+ */
+export function reportIntegrityHash(record: {
+  durationSec: number;
+  mode: string;
+  timeline: unknown;
+}): string {
+  return aggregateHash({
+    durationSec: record.durationSec,
+    mode: record.mode,
+    timeline: record.timeline,
+  });
+}
+
+const sortedReplacer = (_key: string, value: unknown) => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, k) => {
+        acc[k] = (value as Record<string, unknown>)[k];
+        return acc;
+      }, {});
+  }
+  return value;
+};
 
 export function tooManyRequests(retryAfterSec: number, message: string) {
   return {

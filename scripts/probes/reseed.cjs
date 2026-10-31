@@ -1,4 +1,4 @@
-// Re-seeds data/sessions.json without losing real (non-sample) sessions.
+﻿// Re-seeds data/sessions.json without losing real (non-sample) sessions.
 //
 // The store only seeds when the file is empty, so a store seeded before the demo
 // history included the flagship sample can never gain it. This script:
@@ -7,12 +7,12 @@
 //   3. triggers a fresh seed through the running server,
 //   4. merges the kept records back in (newest first).
 //
-// Usage: node scripts/reseed.cjs [baseUrl]
+// Usage: node scripts/probes/reseed.cjs [baseUrl]
 const fs = require("node:fs");
 const path = require("node:path");
-const { artifactPath } = require("./lib/diagnostics.cjs");
+const { artifactPath } = require("../lib/diagnostics.cjs");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "..", "..");
 const file = path.join(root, "data", "sessions.json");
 const aside = path.join(root, "data", "sessions.pre-reseed.json");
 const base = process.argv[2] ?? "http://localhost:3111";

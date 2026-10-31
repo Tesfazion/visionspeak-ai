@@ -9,6 +9,7 @@ import { useVisionSession } from "@/hooks/useVisionSession";
 import { CoachFeed, LiveScorePanel, SessionMeta, SignalGrid, TranscriptPanel } from "@/components/studio/panels";
 import { ControlBar, Stage, TimelineStrip, VoiceMeter } from "@/components/studio/stage";
 import { Button, Pill, cn } from "@/components/ui";
+import { useI18n } from "@/components/site/locale-provider";
 import { ArrowRight, Eye, RotateCcw, ScanFace, Shield, Sparkles, TriangleAlert, Zap } from "@/components/icons";
 
 const MODE_LABEL: Record<SessionMode, string> = {
@@ -65,6 +66,7 @@ function writeDraft(draft: Draft | null) {
 
 export default function StudioPage() {
   const router = useRouter();
+  const { locale } = useI18n();
   const [mode, setMode] = useState<SessionMode>("practice");
   const [language, setLanguage] = useState<SpeechLanguage>("en-US");
   const [speaker, setSpeaker] = useState("");
@@ -74,8 +76,6 @@ export default function StudioPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const hydrated = useRef(false);
 
-  const live = useVisionSession(mode);
-  const { phase, metrics, samples, nudges } = live;
   const clientSessionId = useRef<string>(newClientSessionId());
   const [draft, setDraft] = useState<{ at: number; title: string } | null>(null);
 
@@ -103,24 +103,15 @@ export default function StudioPage() {
     }
   }, [speaker]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("visionspeak:lang", language);
+    } catch {
+      /* ignore */
+    }
+  }, [language]);
+
   // Offer to recover a session that never reached the server.
-  useEffect(() => {
-    const saved = readDraft();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- post-hydration restore
-    if (saved) setDraft({ at: saved.at, title: saved.meta.title || "Untitled session" });
-  }, []);
-
-  useEffect(() => {
-    if (phase !== "live" && phase !== "paused") return;
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [phase]);
-
-  const busy = saving || phase === "loading" || phase === "requesting";
 
   const postSession = useCallback(
     async (aggregate: unknown, meta: Record<string, unknown>, clientId: string) => {
@@ -135,6 +126,49 @@ export default function StudioPage() {
     },
     [],
   );
+
+  const live = useVisionSession(mode, {
+    // Aggregates produced while the connection is down are queued by the hook;
+    // this callback replays them the moment the client comes back. It wraps
+    // postSession so the hook only sees the aggregate.
+    onFlush: async (aggregate) => {
+      await postSession(
+        aggregate,
+        { speaker: "Speaker", title: "Offline session", mode, notes: "" },
+        newClientSessionId(),
+      );
+    },
+  });
+  const { phase, metrics, samples, nudges, audioOnly, offline, offlineQueue, flushOfflineQueue } = live;
+
+  // Restore the saved transcript language now that `live` exists. Referencing it
+  // above the hook call read the binding before it was declared (the lint rule
+  // could not tell that the effect ran later, and the closure was stale).
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("visionspeak:lang");
+      if (stored === "am-ET" || stored === "en-US") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- post-hydration restore
+        setLanguage(stored);
+        live.setSpeechLanguage(stored);
+      }
+    } catch {
+      /* private mode */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "live" && phase !== "paused") return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [phase]);
+
+  const busy = saving || phase === "loading" || phase === "requesting";
 
   const handleEnd = useCallback(async () => {
     const aggregate = live.stop();
@@ -156,10 +190,16 @@ export default function StudioPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const id = await postSession(aggregate, meta, clientSessionId.current);
+      if (offline) {
+        live.queueOffline(aggregate);
+        setNotice("You're offline — the session is queued and will sync when you're back.");
+        setSaving(false);
+        return;
+      }
+      await postSession(aggregate, meta, clientSessionId.current);
       writeDraft(null);
       setDraft(null);
-      router.push(`/report/${id}`);
+      router.push(`/dashboard`);
     } catch (err) {
       // Keep the analysis on this device so "Retry save" is a real retry, not
       // a second, empty attempt against a stopped engine.
@@ -172,7 +212,7 @@ export default function StudioPage() {
       );
       setSaving(false);
     }
-  }, [live, mode, postSession, router, speaker, title]);
+  }, [live, mode, offline, postSession, router, speaker, title]);
 
   const retrySave = useCallback(async () => {
     const saved = readDraft();
@@ -288,8 +328,30 @@ export default function StudioPage() {
           setLanguage(l);
           live.setSpeechLanguage(l);
         }}
-        disabled={phase === "live" || phase === "paused" || saving}
-      />
+disabled={phase === "live" || phase === "paused" || saving}
+        />
+
+      {offline && offlineQueue.length > 0 && (
+        <div className="panel mt-4 flex flex-col gap-3 border-rose/25 bg-rose/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-rose" />
+            <div>
+              <div className="text-[12px] font-medium text-ink">
+                You&apos;re offline — {offlineQueue.length} session{offlineQueue.length === 1 ? "" : "s"} queued
+              </div>
+              <p className="pretty mt-0.5 text-[11px] leading-relaxed text-fog">
+                Sessions end while the connection is down are kept on this device and synced
+                automatically when you&apos;re back.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button size="sm" onClick={async () => { await flushOfflineQueue(); }}>
+              Sync now
+            </Button>
+          </div>
+        </div>
+      )}
 
       {draft && !saving && (
         <div className="panel mt-4 flex flex-col gap-3 border-amber/25 bg-amber/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -298,7 +360,7 @@ export default function StudioPage() {
             <div>
               <div className="text-[12px] font-medium text-ink">
                 Unsaved session from{" "}
-                {new Date(draft.at).toLocaleString("en-GB", {
+                {new Date(draft.at).toLocaleString(locale === "en" ? "en-GB" : locale, {
                   day: "2-digit",
                   month: "short",
                   hour: "2-digit",
@@ -394,6 +456,14 @@ export default function StudioPage() {
               </p>
             </div>
           )}
+          {audioOnly && (
+            <div className="panel flex items-start gap-2.5 px-4 py-3 border-amber/25 bg-amber/[0.05]">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber" />
+              <p className="text-[11.5px] leading-relaxed text-fog">
+                <span className="text-mist">Running in audio-only mode.</span> Camera access was denied or unavailable — only voice/acoustic analysis is active. Face, pose, and gesture scores are unavailable.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -454,6 +524,22 @@ export default function StudioPage() {
                     }}
                   >
                     <RotateCcw className="size-3.5" /> Start a new session
+                  </Button>
+                </div>
+              </>
+            ) : live.phase === "error" && live.error ? (
+              <>
+                <span className="grid size-11 place-items-center rounded-xl border border-rose/30 bg-rose/10 text-rose">
+                  <TriangleAlert className="size-5" />
+                </span>
+                <h2 className="mt-4 text-[16px] font-medium text-ink">Camera/Microphone issue</h2>
+                <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">{live.error}</p>
+                <div className="mt-5 flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => live.reset()}>
+                    Dismiss
+                  </Button>
+                  <Button size="sm" onClick={() => live.start()}>
+                    Retry permission <ArrowRight className="size-3.5" />
                   </Button>
                 </div>
               </>

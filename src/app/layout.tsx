@@ -1,5 +1,7 @@
+import React from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { ClientProviders } from "@/components/layout/client-providers";
 import { SiteNav } from "@/components/site/nav";
 import { LocaleProvider } from "@/components/site/locale-provider";
 import { ServiceWorkerRegistrar } from "@/components/site/service-worker";
@@ -91,6 +93,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // the trade-off is that marketing routes render per request too.
   const { locale, dir, htmlLang, t } = await getI18n();
 
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "VisionSpeak",
+    url: base,
+    description:
+      "VisionSpeak is a speaking coach that measures what an audience actually feels: confidence, warmth and leadership presence, scored honestly and coached in the moment.",
+  };
+  const softwareAppJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "VisionSpeak",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "On-device speaking coach that measures eye contact, posture, gestures, voice and expression with real-time feedback and actionable drills.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <html
       lang={htmlLang}
@@ -102,19 +128,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {/* Runs before first paint so a stored light theme never flashes dark. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+        />
       </head>
       <body className="min-h-dvh font-sans antialiased">
         <ThemeProvider>
           <LocaleProvider initialLocale={locale}>
-            <a
-              href="#main"
-              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:text-white"
-            >
-              {t("a11y.skip")}
-            </a>
-            <SiteNav />
-            <main id="main">{children}</main>
-            <ServiceWorkerRegistrar />
+            <ClientProviders>
+              <a
+                href="#main"
+                className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+              >
+                {t("a11y.skip")}
+              </a>
+              <SiteNav />
+              <main id="main">{children}</main>
+              <ServiceWorkerRegistrar />
+            </ClientProviders>
           </LocaleProvider>
         </ThemeProvider>
       </body>

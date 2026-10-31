@@ -23,7 +23,13 @@ function explainMediaError(err: unknown): string {
   return "The camera could not start. Check permissions and reload the page.";
 }
 
-export function useVisionSession(mode: SessionMode) {
+export function useVisionSession(
+  mode: SessionMode,
+  options: {
+    onFlush?: (aggregate: SessionAggregate) => Promise<void>;
+  } = {},
+) {
+  const onFlush = options.onFlush;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -36,6 +42,10 @@ export function useVisionSession(mode: SessionMode) {
   const [nudges, setNudges] = useState<Nudge[]>([]);
   const [samples, setSamples] = useState<FrameSample[]>([]);
   const [speech, setSpeech] = useState<SpeechSnapshot | null>(null);
+  // Exposed so a caller (the meeting room) can render the same camera stream in
+  // its own tile instead of asking for a second getUserMedia permission.
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [audioOnly, setAudioOnly] = useState(false);
   // Server snapshot is `false` (no Web Speech on the server) and the client
   // snapshot is the real capability, so hydration matches and no effect is
   // needed to sync it — useSyncExternalStore handles the switch.
@@ -45,7 +55,12 @@ export function useVisionSession(mode: SessionMode) {
     () => false,
   );
 
+  const speechLanguageRef = useRef<SpeechLanguage>("en-US");
+
   const setSpeechLanguage = useCallback((lang: SpeechLanguage) => {
+    // Remember the choice even before the engine exists, so a language picked
+    // on the pre-session screen is the one the recogniser actually boots with.
+    speechLanguageRef.current = lang;
     engineRef.current?.setSpeechLanguage(lang);
   }, []);
 
@@ -58,11 +73,13 @@ export function useVisionSession(mode: SessionMode) {
 
   const start = useCallback(async () => {
     if (engineRef.current) return;
+    if (typeof window === "undefined") return;
     setError(null);
     setNudges([]);
     setSamples([]);
     setMetrics(null);
     setSpeech(null);
+    setAudioOnly(false);
 
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setPhase("error");
@@ -73,13 +90,33 @@ export function useVisionSession(mode: SessionMode) {
     }
 
     setPhase("requesting");
-    setProgress("Requesting camera & microphone");
+    setProgress("Requesting microphone");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user", frameRate: { ideal: 30 } },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      // First request audio only. If that succeeds, then request video.
+      // If video fails, fall back to audio-only mode.
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      } catch (audioErr) {
+        throw audioErr;
+      }
+
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user", frameRate: { ideal: 30 } },
+        });
+        // Combine audio + video
+        videoStream.getVideoTracks().forEach((t) => stream!.addTrack(t));
+      } catch {
+        // Fall back to audio-only mode if video fails
+        setAudioOnly(true);
+      }
+
+      if (!stream) throw new Error("stream-failed");
       streamRef.current = stream;
+      setStream(stream);
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -118,6 +155,8 @@ export function useVisionSession(mode: SessionMode) {
         // fast enough for a transcript to read as live while batching renders.
         onTick: () => setSpeech(engine.getSpeech()),
       });
+      // Boot the recogniser in whatever language the user already picked.
+      engine.setSpeechLanguage(speechLanguageRef.current);
       engineRef.current = engine;
       await engine.start();
     } catch (err) {
@@ -129,6 +168,7 @@ export function useVisionSession(mode: SessionMode) {
       setPhase("error");
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      setStream(null);
     }
   }, [mode]);
 
@@ -136,6 +176,48 @@ export function useVisionSession(mode: SessionMode) {
     engineRef.current?.pause();
     setPhase("paused");
   }, []);
+
+  // Offline awareness: aggregates produced while the connection is down are
+  // queued so they can replay the moment the client comes back. The queue is
+  // part of the hook's state so it survives a component unmount only as long
+  // as the tab is open — a refresh loses it, which is the right trade-off.
+  const [offline, setOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false,
+  );
+  const [offlineQueue, setOfflineQueue] = useState<SessionAggregate[]>([]);
+
+  useEffect(() => {
+    const onOffline = () => setOffline(true);
+    const onOnline = () => setOffline(false);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
+  const queueOffline = useCallback((aggregate: SessionAggregate) => {
+    setOfflineQueue((prev) => [...prev, aggregate]);
+  }, []);
+
+  const flushOfflineQueue = useCallback(async () => {
+    if (!offlineQueue.length) return 0;
+    const queue = offlineQueue;
+    setOfflineQueue([]);
+    let flushed = 0;
+    for (const aggregate of queue) {
+      try {
+        await onFlush?.(aggregate);
+        flushed++;
+      } catch {
+        // Put it back at the head so the next flush retries first.
+        setOfflineQueue((prev) => [aggregate, ...prev]);
+        break;
+      }
+    }
+    return flushed;
+  }, [offlineQueue, onFlush]);
 
   const resume = useCallback(() => {
     engineRef.current?.resume();
@@ -152,6 +234,7 @@ export function useVisionSession(mode: SessionMode) {
     engineRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    setStream(null);
     if (!engine) return null;
     const aggregate = engine.finish();
     setSpeech(engine.getSpeech?.() ?? aggregate.speech);
@@ -164,12 +247,14 @@ export function useVisionSession(mode: SessionMode) {
     engineRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    setStream(null);
     setPhase("idle");
     setMetrics(null);
     setNudges([]);
     setSamples([]);
     setSpeech(null);
     setError(null);
+    setAudioOnly(false);
   }, []);
 
   // Keyboard: space = pause/resume, escape = end + reset.
@@ -197,6 +282,12 @@ export function useVisionSession(mode: SessionMode) {
     samples,
     speech,
     speechSupported,
+    stream,
+    audioOnly,
+    offline,
+    offlineQueue,
+    queueOffline,
+    flushOfflineQueue,
     setSpeechLanguage,
     start,
     pause,
