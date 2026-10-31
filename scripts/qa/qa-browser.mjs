@@ -11,6 +11,7 @@
 // captured in this environment.
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import diagnostics from "../lib/diagnostics.cjs";
@@ -110,9 +111,26 @@ function makeY4m(width = 320, height = 240, frames = 24, fps = 15) {
 
 const FAKE_VIDEO_FILE = process.env.QA_NO_Y4M ? null : makeY4m();
 
+/** Let the OS pick a free port: random ports in a fixed range can collide. */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
 async function launchChrome(label) {
-  const port = 9600 + Math.floor(Math.random() * 2000);
+  const port = await freePort();
   const profile = mkdtempSync(path.join(tmpdir(), `vs-qa-${label}-`));
+  // Keep Chrome's own output: when a launch fails on a memory-starved machine
+  // the reason ("out of memory", a crashed renderer) is only on stderr.
+  const chromeLog = [];
+  let chromeExit = null;
   const child = spawn(
     CHROME,
     [
@@ -131,12 +149,24 @@ async function launchChrome(label) {
       "--window-size=1440,900",
       "about:blank",
     ],
-    { stdio: "ignore", windowsHide: true },
+    { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
   );
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.on("data", (buf) => {
+      chromeLog.push(buf.toString());
+      if (chromeLog.length > 200) chromeLog.shift();
+    });
+  }
+  child.on("exit", (code, signal) => {
+    chromeExit = `code=${code} signal=${signal}`;
+  });
 
+  // A fresh profile on a loaded machine can take well over 15s to boot, so poll
+  // for a minute and bail out early if the process is already gone.
   let version = null;
-  for (let i = 0; i < 60 && !version; i++) {
-    await sleep(250);
+  for (let i = 0; i < 120 && !version; i++) {
+    if (chromeExit) break;
+    await sleep(500);
     try {
       const res = await fetch(`http://127.0.0.1:${port}/json/version`);
       if (res.ok) version = await res.json();
@@ -144,7 +174,13 @@ async function launchChrome(label) {
       /* not up yet */
     }
   }
-  if (!version) throw new Error(`chrome (${label}) did not expose CDP on ${port}`);
+  if (!version) {
+    const detail = chromeLog.join("").trim().slice(-600) || "(chrome produced no output)";
+    throw new Error(
+      `chrome (${label}) did not expose CDP on ${port}` +
+        `${chromeExit ? ` (exited ${chromeExit})` : ""}: ${detail}`,
+    );
+  }
 
   const browser = await Cdp.connect(version.webSocketDebuggerUrl);
   const target = await browser.send("Target.createTarget", { url: "about:blank" });

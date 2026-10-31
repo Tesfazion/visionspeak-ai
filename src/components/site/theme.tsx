@@ -60,3 +60,82 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function useTheme() {
   return useContext(ThemeContext);
 }
+
+/* ------------------------------------------------------------------ *
+ * Chart palette
+ *
+ * Recharts takes colours as props rather than classes, so this is the one
+ * place the theme is read in JavaScript. The values mirror globals.css: the
+ * vivid dark set, and darker, higher-contrast equivalents for paper — a
+ * #34d399 line on white is barely visible, #0f766e is not.
+ * ------------------------------------------------------------------ */
+
+export interface ChartTheme {
+  grid: string;
+  polarGrid: string;
+  axis: string;
+  cursor: string;
+  tooltip: React.CSSProperties;
+  /** A series that has been toggled off. */
+  idle: string;
+  /**
+   * One entry per series hue. Charts map their own lines onto these, because
+   * the same metric is not always the same colour across the product (the
+   * dashboard trend draws confidence in cyan, the report radar in violet).
+   */
+  hue: { violet: string; cyan: string; emerald: string; amber: string; rose: string; blue: string };
+}
+
+const darkChart: ChartTheme = {
+  grid: "rgba(255,255,255,0.05)",
+  polarGrid: "rgba(255,255,255,0.09)",
+  axis: "#7a7a92",
+  cursor: "rgba(255,255,255,0.16)",
+  idle: "#3f3f52",
+  hue: {
+    violet: "#a78bfa",
+    cyan: "#22d3ee",
+    emerald: "#34d399",
+    amber: "#fbbf24",
+    rose: "#fb7185",
+    blue: "#60a5fa",
+  },
+  tooltip: {
+    background: "rgba(12,12,20,0.95)",
+    border: "1px solid #24243a",
+    borderRadius: 12,
+    padding: "8px 10px",
+    fontSize: 11,
+    color: "#f4f4f9",
+    boxShadow: "0 20px 40px -20px rgba(0,0,0,0.9)",
+  },
+};
+
+const lightChart: ChartTheme = {
+  grid: "rgba(20,18,30,0.08)",
+  polarGrid: "rgba(20,18,30,0.12)",
+  axis: "#6b6a83",
+  cursor: "rgba(20,18,30,0.2)",
+  idle: "#c2c2d4",
+  hue: {
+    violet: "#7c5cff",
+    cyan: "#0e7490",
+    emerald: "#0f766e",
+    amber: "#b45309",
+    rose: "#be123c",
+    blue: "#2563eb",
+  },
+  tooltip: {
+    background: "rgba(255,255,255,0.98)",
+    border: "1px solid #e2e2ef",
+    borderRadius: 12,
+    padding: "8px 10px",
+    fontSize: 11,
+    color: "#14121e",
+    boxShadow: "0 18px 36px -22px rgba(31,25,74,0.35)",
+  },
+};
+
+export function useChartTheme() {
+  return useContext(ThemeContext).theme === "light" ? lightChart : darkChart;
+}

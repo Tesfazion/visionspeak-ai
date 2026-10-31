@@ -24,12 +24,12 @@ const trendData = demo.timeline
   .map((p) => ({ t: p.t, confidence: p.confidence, engagement: p.engagement, leadership: p.leadership }));
 
 const SIGNALS: { icon: typeof Eye; title: MessageKey; copy: MessageKey; metric: MessageKey; accent: string }[] = [
-  { icon: Eye, title: "landing.signal.eye.title", copy: "landing.signal.eye.copy", metric: "landing.signal.eye.metric", accent: "#34d399" },
-  { icon: Target, title: "landing.signal.posture.title", copy: "landing.signal.posture.copy", metric: "landing.signal.posture.metric", accent: "#a78bfa" },
-  { icon: Hand, title: "landing.signal.gestures.title", copy: "landing.signal.gestures.copy", metric: "landing.signal.gestures.metric", accent: "#22d3ee" },
-  { icon: Mic, title: "landing.signal.voice.title", copy: "landing.signal.voice.copy", metric: "landing.signal.voice.metric", accent: "#fbbf24" },
-  { icon: Smile, title: "landing.signal.expression.title", copy: "landing.signal.expression.copy", metric: "landing.signal.expression.metric", accent: "#fb7185" },
-  { icon: Waves, title: "landing.signal.presence.title", copy: "landing.signal.presence.copy", metric: "landing.signal.presence.metric", accent: "#7c5cff" },
+  { icon: Eye, title: "landing.signal.eye.title", copy: "landing.signal.eye.copy", metric: "landing.signal.eye.metric", accent: "var(--color-mint)" },
+  { icon: Target, title: "landing.signal.posture.title", copy: "landing.signal.posture.copy", metric: "landing.signal.posture.metric", accent: "var(--color-brand-soft)" },
+  { icon: Hand, title: "landing.signal.gestures.title", copy: "landing.signal.gestures.copy", metric: "landing.signal.gestures.metric", accent: "var(--color-aqua)" },
+  { icon: Mic, title: "landing.signal.voice.title", copy: "landing.signal.voice.copy", metric: "landing.signal.voice.metric", accent: "var(--color-amber)" },
+  { icon: Smile, title: "landing.signal.expression.title", copy: "landing.signal.expression.copy", metric: "landing.signal.expression.metric", accent: "var(--color-rose)" },
+  { icon: Waves, title: "landing.signal.presence.title", copy: "landing.signal.presence.copy", metric: "landing.signal.presence.metric", accent: "var(--color-brand)" },
 ];
 
 const STEPS: { n: string; title: MessageKey; copy: MessageKey; icon: typeof Video }[] = [
@@ -39,11 +39,11 @@ const STEPS: { n: string; title: MessageKey; copy: MessageKey; icon: typeof Vide
 ];
 
 const WEIGHTS: { label: MessageKey; weight: number; color: string }[] = [
-  { label: "metric.eyeContact", weight: 30, color: "#34d399" },
-  { label: "metric.posture", weight: 25, color: "#a78bfa" },
-  { label: "metric.gestures", weight: 20, color: "#22d3ee" },
-  { label: "metric.voice", weight: 15, color: "#fbbf24" },
-  { label: "metric.expression", weight: 10, color: "#fb7185" },
+  { label: "metric.eyeContact", weight: 30, color: "var(--color-mint)" },
+  { label: "metric.posture", weight: 25, color: "var(--color-brand-soft)" },
+  { label: "metric.gestures", weight: 20, color: "var(--color-aqua)" },
+  { label: "metric.voice", weight: 15, color: "var(--color-amber)" },
+  { label: "metric.expression", weight: 10, color: "var(--color-rose)" },
 ];
 
 const USE_CASES: { title: MessageKey; copy: MessageKey }[] = [
@@ -126,7 +126,7 @@ export default async function LandingPage() {
 
         <div className="container-page relative grid items-center gap-10 pb-16 pt-24 sm:gap-14 sm:pb-20 sm:pt-28 lg:grid-cols-[1.02fr_0.98fr] lg:gap-10 lg:pt-32 2xl:gap-16">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] py-1 pl-1 pr-3.5 backdrop-blur">
+            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-raised/70 py-1 pl-1 pr-3.5 backdrop-blur">
               <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-soft">
                 {t("common.new")}
               </span>
@@ -135,7 +135,7 @@ export default async function LandingPage() {
 
             <h1 className="mt-6 text-balance text-[32px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[52px] sm:leading-[0.99] lg:text-[62px] 2xl:text-[68px]">
               {t("landing.heroTitleA")}{" "}
-              <span className="font-display italic text-transparent [background:linear-gradient(92deg,#a78bfa,#ffffff_45%,#67e8f9)] [-webkit-background-clip:text] [background-clip:text]">
+              <span className="hero-accent font-display italic text-transparent">
                 {t("landing.heroTitleAccent")}
               </span>
               {t("landing.heroTitleB")}
@@ -189,7 +189,7 @@ export default async function LandingPage() {
                 <span className="metric-num text-[11px] text-mist">04:12</span>
               </div>
 
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line/80 bg-[radial-gradient(120%_100%_at_50%_0%,#161227_0%,#0a0912_55%,#08070d_100%)]">
+              <div className="dark-stage relative aspect-[4/3] overflow-hidden rounded-xl border border-line/80 bg-[radial-gradient(120%_100%_at_50%_0%,#161227_0%,#0a0912_55%,#08070d_100%)]">
                 <div className="absolute inset-0 opacity-90">
                   <div className="absolute inset-x-0 top-0 h-full w-full p-6">
                     <FaceMeshGlyph />
@@ -218,10 +218,10 @@ export default async function LandingPage() {
 
                 <div className="absolute inset-x-3 bottom-3 grid grid-cols-2 gap-2">
                   {[
-                    { label: t("metric.eyeContact"), value: 83, color: "#34d399" },
-                    { label: t("metric.posture"), value: 91, color: "#a78bfa" },
-                    { label: t("metric.gestures"), value: 78, color: "#22d3ee" },
-                    { label: t("metric.voice"), value: 84, color: "#fbbf24" },
+                    { label: t("metric.eyeContact"), value: 83, color: "var(--color-mint)" },
+                    { label: t("metric.posture"), value: 91, color: "var(--color-brand-soft)" },
+                    { label: t("metric.gestures"), value: 78, color: "var(--color-aqua)" },
+                    { label: t("metric.voice"), value: 84, color: "var(--color-amber)" },
                   ].map((m) => (
                     <div
                       key={m.label}
@@ -281,8 +281,8 @@ export default async function LandingPage() {
                   <span
                     className="grid size-10 shrink-0 place-items-center rounded-xl border"
                     style={{
-                      borderColor: `${s.accent}33`,
-                      background: `linear-gradient(180deg, ${s.accent}1f, transparent)`,
+                      borderColor: `color-mix(in oklab, ${s.accent} 22%, transparent)`,
+                      background: `linear-gradient(180deg, color-mix(in oklab, ${s.accent} 13%, transparent), transparent)`,
                       color: s.accent,
                     }}
                   >
@@ -301,7 +301,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ============================== HOW ============================== */}
-      <section id="platform" className="relative scroll-mt-24 border-y border-line/60 bg-white/[0.012]">
+      <section id="platform" className="relative scroll-mt-24 border-y border-line/60 bg-raised/40">
         <div className="container-page py-14 sm:py-20">
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12 2xl:gap-16">
             <Reveal>
@@ -403,9 +403,9 @@ export default async function LandingPage() {
               <div className="mt-6 hairline" />
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {[
-                  { label: "0–40", copy: t("landing.scoring.band.low"), color: "#fb7185" },
-                  { label: "41–70", copy: t("landing.scoring.band.mid"), color: "#fbbf24" },
-                  { label: "71–100", copy: t("landing.scoring.band.high"), color: "#34d399" },
+                  { label: "0–40", copy: t("landing.scoring.band.low"), color: "var(--color-rose)" },
+                  { label: "41–70", copy: t("landing.scoring.band.mid"), color: "var(--color-amber)" },
+                  { label: "71–100", copy: t("landing.scoring.band.high"), color: "var(--color-mint)" },
                 ].map((b) => (
                   <div key={b.label} className="rounded-lg border border-line/70 px-2.5 py-2">
                     <div className="metric-num text-[11px]" style={{ color: b.color }}>
@@ -421,7 +421,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ============================== PROGRESS ============================== */}
-      <section className="relative border-y border-line/60 bg-white/[0.012]">
+      <section className="relative border-y border-line/60 bg-raised/40">
         <div className="container-page grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
           <Reveal>
             <div>
@@ -536,7 +536,7 @@ export default async function LandingPage() {
                     [t("landing.report.strength1"), t("landing.report.strength1Copy")],
                     [t("landing.report.strength2"), t("landing.report.strength2Copy")],
                   ].map(([title, copy]) => (
-                    <div key={title} className="rounded-lg border border-line/70 bg-white/[0.015] px-3 py-2.5">
+                    <div key={title} className="rounded-lg border border-line/70 bg-raised/45 px-3 py-2.5">
                       <div className="text-[12.5px] font-medium text-ink">{title}</div>
                       <div className="mt-0.5 text-[11.5px] leading-relaxed text-fog">{copy}</div>
                     </div>
@@ -552,7 +552,7 @@ export default async function LandingPage() {
                     [t("landing.report.invest1"), t("landing.report.invest1Copy")],
                     [t("landing.report.invest2"), t("landing.report.invest2Copy")],
                   ].map(([title, copy]) => (
-                    <div key={title} className="rounded-lg border border-line/70 bg-white/[0.015] px-3 py-2.5">
+                    <div key={title} className="rounded-lg border border-line/70 bg-raised/45 px-3 py-2.5">
                       <div className="text-[12.5px] font-medium text-ink">{title}</div>
                       <div className="mt-0.5 text-[11.5px] leading-relaxed text-fog">{copy}</div>
                     </div>
@@ -574,7 +574,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ============================== USE CASES ============================== */}
-      <section className="border-y border-line/60 bg-white/[0.012]">
+      <section className="border-y border-line/60 bg-raised/40">
         <div className="container-page py-14 sm:py-20">
           <Reveal>
             <SectionHeading

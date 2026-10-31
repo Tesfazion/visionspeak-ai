@@ -23,11 +23,11 @@ import { Bar, Pill, ScoreRing, cn, toneFor } from "@/components/ui";
 import type { SpeechSnapshot } from "@/lib/analysis/speech";
 
 const PILLARS = [
-  { key: "eyeContact", label: "Eye contact", color: "#34d399" },
-  { key: "posture", label: "Posture", color: "#a78bfa" },
-  { key: "gestures", label: "Gestures", color: "#22d3ee" },
-  { key: "voice", label: "Voice", color: "#fbbf24" },
-  { key: "expression", label: "Expression", color: "#fb7185" },
+  { key: "eyeContact", label: "Eye contact", color: "var(--color-mint)" },
+  { key: "posture", label: "Posture", color: "var(--color-brand-soft)" },
+  { key: "gestures", label: "Gestures", color: "var(--color-aqua)" },
+  { key: "voice", label: "Voice", color: "var(--color-amber)" },
+  { key: "expression", label: "Expression", color: "var(--color-rose)" },
 ] as const;
 
 export function LiveScorePanel({ metrics, phase }: { metrics: LiveMetrics | null; phase: string }) {
@@ -73,7 +73,7 @@ export function LiveScorePanel({ metrics, phase }: { metrics: LiveMetrics | null
             <div key={p.key}>
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-[11.5px] text-mist">{p.label}</span>
-                <span className="metric-num text-[11.5px]" style={{ color: toneFor(value).hex }}>
+                <span className="metric-num text-[11.5px]" style={{ color: toneFor(value).color }}>
                   {value}
                 </span>
               </div>
@@ -140,7 +140,7 @@ export function SignalGrid({ metrics }: { metrics: LiveMetrics | null }) {
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
         {TILES.map((t) => (
-          <div key={t.key} className="rounded-xl border border-line/80 bg-white/[0.015] px-3 py-2.5">
+          <div key={t.key} className="rounded-xl border border-line/80 bg-raised/45 px-3 py-2.5">
             <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.14em] text-fog">
               <t.icon className="size-3" />
               {t.label}
@@ -331,7 +331,7 @@ export function SessionMeta({
             placeholder="Your name"
             aria-label="Speaker name"
             disabled={disabled}
-            className="h-8 w-32 rounded-lg border border-line bg-white/[0.02] px-2.5 text-[12.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none disabled:opacity-50"
+            className="h-8 w-32 rounded-lg border border-line bg-raised/50 px-2.5 text-[12.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none disabled:opacity-50"
           />
           <input
             value={title}
@@ -339,11 +339,11 @@ export function SessionMeta({
             placeholder="Session title"
             aria-label="Session title"
             disabled={disabled}
-            className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-white/[0.02] px-2.5 text-[12.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none disabled:opacity-50"
+            className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-raised/50 px-2.5 text-[12.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none disabled:opacity-50"
           />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-line bg-white/[0.02] p-0.5">
+          <div className="flex items-center rounded-lg border border-line bg-raised/50 p-0.5">
             {languages.map((l) => (
               <button
                 key={l.id}
@@ -360,7 +360,7 @@ export function SessionMeta({
               </button>
             ))}
           </div>
-          <div className="flex items-center rounded-lg border border-line bg-white/[0.02] p-0.5">
+          <div className="flex items-center rounded-lg border border-line bg-raised/50 p-0.5">
             {modes.map((m) => (
             <button
               key={m.id}

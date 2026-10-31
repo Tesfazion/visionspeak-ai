@@ -5,14 +5,22 @@ import type { ReactNode } from "react";
 
 export const cn = (...parts: (string | false | null | undefined)[]) => clsx(parts);
 
-export type Tone = { text: string; hex: string; bg: string; ring: string };
+export type Tone = { text: string; color: string; bg: string; ring: string };
 
-/** One colour language for every score in the product. */
+/**
+ * One colour language for every score in the product.
+ *
+ * `color` is a CSS variable reference rather than a literal, so a score arc,
+ * bar or number is the vivid hue on black and the darker, legible one on
+ * paper — the same tokens the rest of the UI uses. Only ever put it in a CSS
+ * property (`style={{ color }}`), never in an SVG colour *attribute*: a
+ * `var()` is not valid there.
+ */
 export function toneFor(score: number): Tone {
-  if (score >= 80) return { text: "text-mint", hex: "#34d399", bg: "bg-mint/10", ring: "ring-mint/25" };
-  if (score >= 65) return { text: "text-aqua", hex: "#22d3ee", bg: "bg-aqua/10", ring: "ring-aqua/25" };
-  if (score >= 50) return { text: "text-amber", hex: "#fbbf24", bg: "bg-amber/10", ring: "ring-amber/25" };
-  return { text: "text-rose", hex: "#fb7185", bg: "bg-rose/10", ring: "ring-rose/25" };
+  if (score >= 80) return { text: "text-mint", color: "var(--color-mint)", bg: "bg-mint/10", ring: "ring-mint/25" };
+  if (score >= 65) return { text: "text-aqua", color: "var(--color-aqua)", bg: "bg-aqua/10", ring: "ring-aqua/25" };
+  if (score >= 50) return { text: "text-amber", color: "var(--color-amber)", bg: "bg-amber/10", ring: "ring-amber/25" };
+  return { text: "text-rose", color: "var(--color-rose)", bg: "bg-rose/10", ring: "ring-rose/25" };
 }
 
 export function scoreLabel(score: number) {
@@ -46,7 +54,7 @@ export function ScoreRing({
   const clamped = Math.max(0, Math.min(100, value));
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const color = tone ?? toneFor(clamped).hex;
+  const color = tone ?? toneFor(clamped).color;
 
   return (
     <div
@@ -59,12 +67,15 @@ export function ScoreRing({
       aria-label={`${label ?? "score"}: ${Math.round(clamped)} out of 100`}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
+        {/* currentColor keeps the empty track one shade off the card face in
+            both themes (and inside a .dark-stage). */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="currentColor"
+          strokeOpacity={0.12}
           strokeWidth={stroke}
         />
         <circle
@@ -72,14 +83,16 @@ export function ScoreRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={color}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped / 100)}
           style={{
+            // `color` is a CSS variable, so it has to be set as a style rather
+            // than the stroke attribute (where var() is not valid).
+            stroke: color,
             transition: "stroke-dashoffset 900ms cubic-bezier(0.16,1,0.3,1), stroke 400ms ease",
-            filter: `drop-shadow(0 0 10px ${color}55)`,
+            filter: `drop-shadow(0 0 10px color-mix(in oklab, ${color} 34%, transparent))`,
           }}
         />
       </svg>
@@ -117,10 +130,10 @@ export function Bar({
   animate?: boolean;
 }) {
   const v = Math.max(0, Math.min(100, value));
-  const color = tone ?? toneFor(v).hex;
+  const color = tone ?? toneFor(v).color;
   return (
     <div
-      className={cn("relative w-full overflow-hidden rounded-full bg-white/[0.06]", className)}
+      className={cn("relative w-full overflow-hidden rounded-full bg-raised", className)}
       style={{ height }}
       role="progressbar"
       aria-valuenow={Math.round(v)}
@@ -131,8 +144,8 @@ export function Bar({
         className="absolute inset-y-0 left-0 rounded-full"
         style={{
           width: `${v}%`,
-          background: `linear-gradient(90deg, ${color}88, ${color})`,
-          boxShadow: `0 0 12px ${color}44`,
+          background: `linear-gradient(90deg, color-mix(in oklab, ${color} 53%, transparent), ${color})`,
+          boxShadow: `0 0 12px color-mix(in oklab, ${color} 27%, transparent)`,
           transition: animate ? "width 800ms cubic-bezier(0.16,1,0.3,1)" : undefined,
         }}
       />
@@ -153,7 +166,7 @@ export function Pill({
   title?: string;
 }) {
   const tones = {
-    neutral: "border-line bg-white/[0.03] text-mist",
+    neutral: "border-line bg-raised/60 text-mist",
     good: "border-mint/30 bg-mint/10 text-mint",
     warn: "border-amber/30 bg-amber/10 text-amber",
     bad: "border-rose/30 bg-rose/10 text-rose",
@@ -189,7 +202,7 @@ export function Stat({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border border-line/80 bg-white/[0.015] px-3.5 py-3", className)}>
+    <div className={cn("rounded-xl border border-line/80 bg-raised/45 px-3.5 py-3", className)}>
       <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-fog">{label}</div>
       <div className="mt-1.5 flex items-baseline gap-1">
         <span className="metric-num text-xl font-medium text-ink" style={tone ? { color: tone } : undefined}>
@@ -203,7 +216,7 @@ export function Stat({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-lg bg-white/[0.05]", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-lg bg-raised", className)} aria-hidden />;
 }
 
 /** Placeholder for a route that is still streaming in. */
@@ -274,8 +287,8 @@ type ButtonSize = "sm" | "md" | "lg";
 const variants: Record<ButtonVariant, string> = {
   primary:
     "bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60 shadow-[0_12px_30px_-12px_rgba(124,92,255,0.8)] hover:from-[#8a6dff] hover:to-[#7355ff]",
-  outline: "border border-line-bright bg-white/[0.02] text-ink hover:bg-white/[0.05] hover:border-white/20",
-  ghost: "border border-transparent text-mist hover:text-ink hover:bg-white/[0.05]",
+  outline: "border border-line-bright bg-raised/60 text-ink hover:bg-raised hover:border-ink/25",
+  ghost: "border border-transparent text-mist hover:text-ink hover:bg-raised/70",
   subtle: "border border-line bg-elevated/70 text-mist hover:text-ink hover:border-line-bright",
   danger: "border border-rose/30 bg-rose/10 text-rose hover:bg-rose/15",
 };

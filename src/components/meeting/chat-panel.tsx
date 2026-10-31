@@ -49,7 +49,7 @@ export function ChatPanel({
         </div>
         <button
           type="button"
-          className="rounded-lg p-1.5 text-mist hover:bg-white/5 hover:text-ink"
+          className="rounded-lg p-1.5 text-mist hover:bg-raised hover:text-ink"
           aria-label="Close chat"
         >
           <span className="sr-only">Close chat</span>
@@ -58,7 +58,7 @@ export function ChatPanel({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line/50 bg-white/[0.02] px-4 text-center text-fog/70">
+          <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line/60 bg-raised/50 px-4 text-center text-fog/80">
             <Activity className="size-6 opacity-50" />
             <span className="text-[11px]">No messages yet — say hello.</span>
           </div>
@@ -68,10 +68,10 @@ export function ChatPanel({
             return (
               <div key={m.id} className={cn("flex gap-2 text-sm", mine ? "flex-row-reverse" : "")}>
                 <div className={cn("max-w-[80%] rounded-lg border px-3 py-2", mine
-                  ? "bg-brand/10 border-brand/40 text-white"
-                  : "bg-white/[0.03] border-line text-ink/90")}>
+                  ? "bg-brand/10 border-brand/40 text-ink"
+                  : "bg-raised/60 border-line text-ink/90")}>
                   {mine ? (
-                    <span className="block text-[10px] text-fog/60 uppercase">You</span>
+                    <span className="block text-[10px] text-fog uppercase">You</span>
                   ) : (
                     <span className="block text-[10px] font-semibold text-brand-soft">{m.name}</span>
                   )}

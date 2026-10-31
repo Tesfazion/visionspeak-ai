@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/site/locale-provider";
 import {
   Check,
   Copy,
   Download,
-  Edit,
   FileText,
   Link2,
   Loader2,
@@ -28,15 +28,13 @@ interface Props {
   canExportPdf?: boolean;
 }
 
-const shortDate = (iso: string) =>
-  new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }).format(new Date(iso));
-
 export function ReportActions({
   session,
   canManage = false,
   canExportCsv = false,
   canExportPdf = false,
 }: Props) {
+  const { locale } = useI18n();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -60,8 +58,12 @@ export function ReportActions({
   const [editNotes, setEditNotes] = useState(session.notes ?? "");
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-
   const r = session.report;
+
+  const shortDate = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { day: "2-digit", month: "short" }).format(
+      new Date(iso),
+    );
 
   const copySummary = async () => {
     const text = [
@@ -301,13 +303,10 @@ export function ReportActions({
               )}
               {shareUrl ? "Copy link" : "Share"}
             </Button>
-<Button variant="subtle" size="sm" onClick={() => setEmailOpen((v) => !v)} disabled={emailBusy}>
-          <Mail className="size-3.5" /> {emailOpen ? "Close" : "Email"}
-        </Button>
-        <Button variant="subtle" size="sm" onClick={() => setEditing(true)}>
-          <Edit className="size-3.5" /> Edit
-        </Button>
-        <Button variant="danger" size="sm" onClick={remove} disabled={deleting}>
+            <Button variant="subtle" size="sm" onClick={() => setEmailOpen((v) => !v)} disabled={emailBusy}>
+              <Mail className="size-3.5" /> {emailOpen ? "Close" : "Email"}
+            </Button>
+            <Button variant="danger" size="sm" onClick={remove} disabled={deleting}>
               <Trash2 className="size-3.5" />
               {deleting ? "Deleting…" : "Delete"}
             </Button>
@@ -354,6 +353,8 @@ export function ReportActions({
           )}
         </div>
       )}
+
+      {pdfError && <p className="text-[10.5px] text-rose">{pdfError}</p>}
 
       {editing && (
         <div className="mt-3 w-full max-w-sm rounded-xl border border-line bg-white/[0.02] p-4">
@@ -404,8 +405,6 @@ export function ReportActions({
           {editError && <p className="mt-2 text-[11px] text-rose">{editError}</p>}
         </div>
       )}
-
-      {pdfError && <p className="text-[10.5px] text-rose">{pdfError}</p>}
 
       {canManage && shareUrl && (
         <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-fog">

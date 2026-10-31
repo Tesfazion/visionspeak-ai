@@ -190,7 +190,7 @@ export default async function DashboardPage() {
       value: sessions.length,
       unit: "",
       icon: Gauge,
-      accent: "#7c5cff",
+      accent: "var(--color-brand)",
       hint: t("dash.stat.sessionsHint", { count: weekCount }),
     },
     {
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
       value: formatDuration(totalSec),
       unit: "",
       icon: Clock,
-      accent: "#22d3ee",
+      accent: "var(--color-aqua)",
       hint: t("dash.stat.timeHint"),
     },
     {
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
       value: best,
       unit: "/100",
       icon: Award,
-      accent: toneFor(best).hex,
+      accent: toneFor(best).color,
       hint: t("dash.stat.bestHint", { label: scoreLabel(best) }),
     },
     {
@@ -214,7 +214,7 @@ export default async function DashboardPage() {
       value: weekAvg,
       unit: "/100",
       icon: TrendingUp,
-      accent: toneFor(weekAvg).hex,
+      accent: toneFor(weekAvg).color,
       hint: t("dash.stat.weekHint", { value: avgOverall }),
     },
   ];
@@ -281,7 +281,7 @@ export default async function DashboardPage() {
           </div>
           <div className="min-w-0 flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <span className="rounded-full border border-line/70 bg-white/[0.03] px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
+              <span className="rounded-full border border-line/70 bg-raised/60 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fog">
                 {t("dash.edge", { label: strongest.label, value: strongest.value })}
               </span>
               {streak > 0 && (
@@ -316,7 +316,7 @@ export default async function DashboardPage() {
           >
             <span
               className="absolute inset-x-0 top-0 h-[2px]"
-              style={{ background: `linear-gradient(90deg, ${s.accent}, ${s.accent}00)` }}
+              style={{ background: `linear-gradient(90deg, ${s.accent}, transparent)` }}
               aria-hidden
             />
             <div className="flex items-center justify-between">
@@ -368,7 +368,7 @@ export default async function DashboardPage() {
                   <span className="flex items-center gap-1.5 text-[11px] text-mist">
                     <p.icon className="size-3 text-fog" /> {p.label}
                   </span>
-                  <span className="metric-num text-[11px]" style={{ color: toneFor(p.value).hex }}>
+                  <span className="metric-num text-[11px]" style={{ color: toneFor(p.value).color }}>
                     {p.value}
                   </span>
                 </div>
@@ -376,7 +376,7 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 rounded-xl border border-line/70 bg-white/[0.015] p-3">
+          <div className="mt-4 rounded-xl border border-line/70 bg-raised/45 p-3">
             <div className="text-[10px] uppercase tracking-[0.14em] text-fog">{t("dash.focus")}</div>
             <p className="pretty mt-1 text-[11.5px] leading-relaxed text-mist">
               {t("dash.focusBody", { pillar: weakest.label, value: weakest.value })}

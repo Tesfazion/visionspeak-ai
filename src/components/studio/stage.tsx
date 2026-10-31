@@ -50,7 +50,7 @@ export function Stage({
 
   return (
     <div className="panel overflow-hidden p-2.5">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line/80 bg-[radial-gradient(120%_100%_at_50%_0%,#141024_0%,#0a0912_60%,#07060c_100%)] sm:aspect-video">
+      <div className="dark-stage relative aspect-[4/3] overflow-hidden rounded-xl border border-line/80 bg-[radial-gradient(120%_100%_at_50%_0%,#141024_0%,#0a0912_60%,#07060c_100%)] sm:aspect-video">
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full scale-x-[-1] object-cover"
@@ -160,13 +160,13 @@ export function Stage({
                   </span>
                   <h2 className="mt-4 text-[16px] font-medium text-ink">Preparing the studio</h2>
                   <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fog">{progress}…</p>
-                  <div className="mx-auto mt-4 h-1 w-40 overflow-hidden rounded-full bg-white/10">
+                  <div className="mx-auto mt-4 h-1 w-40 overflow-hidden rounded-full bg-raised">
                     <div className="h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-brand to-aqua" />
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-line bg-white/[0.04] text-mist">
+                  <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-line bg-raised/70 text-mist">
                     <CameraOff className="size-6" />
                   </span>
                   <h2 className="mt-4 text-[17px] font-medium text-ink">Ready when you are</h2>
@@ -315,7 +315,7 @@ export function TimelineStrip({ samples }: { samples: FrameSample[] }) {
               className="min-w-[2px] flex-1 rounded-sm transition-all duration-300"
               style={{
                 height: `${Math.max(12, s.confidence)}%`,
-                background: tone.hex,
+                background: tone.color,
                 opacity: 0.35 + (s.confidence / 100) * 0.65,
               }}
             />

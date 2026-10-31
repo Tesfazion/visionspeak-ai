@@ -65,7 +65,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   };
 
   const field =
-    "h-11 w-full rounded-xl border border-line bg-white/[0.02] pl-10 pr-3 text-[13.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none";
+    "h-11 w-full rounded-xl border border-line bg-raised/50 pl-10 pr-3 text-[13.5px] text-ink placeholder:text-fog/60 focus:border-brand/50 focus:outline-none";
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">

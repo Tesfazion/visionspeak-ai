@@ -81,7 +81,7 @@ export function LoadMore({ initialSessions, total, pageSize = 50 }: LoadMoreProp
               key={s.id}
               href={`/report/${s.id}`}
               className={cn(
-                "group grid gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.03]",
+                "group grid gap-3 px-5 py-3.5 transition-colors hover:bg-raised/60",
                 "lg:grid-cols-[1.8fr_repeat(3,0.5fr)_0.6fr_auto] lg:items-center lg:gap-4",
               )}
             >
@@ -89,7 +89,7 @@ export function LoadMore({ initialSessions, total, pageSize = 50 }: LoadMoreProp
                 <div className="flex items-center gap-2">
                   <span
                     className="size-1.5 shrink-0 rounded-full"
-                    style={{ background: toneFor(r.overall).hex }}
+                    style={{ background: toneFor(r.overall).color }}
                     aria-hidden
                   />
                   <span className="truncate text-[13px] font-medium text-ink transition-colors group-hover:text-brand-soft">
@@ -118,9 +118,9 @@ export function LoadMore({ initialSessions, total, pageSize = 50 }: LoadMoreProp
                 <span
                   className="metric-num rounded-md border px-1.5 py-0.5 text-[10.5px]"
                   style={{
-                    color: toneFor(r.overall).hex,
-                    borderColor: `${toneFor(r.overall).hex}44`,
-                    background: `${toneFor(r.overall).hex}12`,
+                    color: toneFor(r.overall).color,
+                    borderColor: `color-mix(in oklab, ${toneFor(r.overall).color} 27%, transparent)`,
+                    background: `color-mix(in oklab, ${toneFor(r.overall).color} 7%, transparent)`,
                   }}
                 >
                   {r.grade} {r.overall}

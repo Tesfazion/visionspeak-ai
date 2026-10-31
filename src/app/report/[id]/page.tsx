@@ -205,7 +205,7 @@ export default async function ReportPage({
             <ScoreRing value={r.overall} size={128} stroke={9} label={t("metric.overall")} className="sm:hidden" />
             <ScoreRing value={r.overall} size={148} stroke={10} label={t("metric.overall")} className="max-sm:hidden" />
             <div className="lg:hidden">
-              <div className="metric-num text-2xl font-medium" style={{ color: tone.hex }}>
+              <div className="metric-num text-2xl font-medium" style={{ color: tone.color }}>
                 {r.grade}
               </div>
               <div className="text-[12px] text-mist">{r.gradeLabel}</div>
@@ -241,7 +241,7 @@ export default async function ReportPage({
           </div>
 
           <div className="hidden shrink-0 flex-col items-end gap-1 lg:flex">
-            <div className="metric-num text-[44px] font-medium leading-none" style={{ color: tone.hex }}>
+            <div className="metric-num text-[44px] font-medium leading-none" style={{ color: tone.color }}>
               {r.grade}
             </div>
             <div className="text-[12.5px] font-medium text-ink">{r.gradeLabel}</div>
@@ -298,7 +298,7 @@ export default async function ReportPage({
                   </span>
                   <span className="flex items-baseline gap-2">
                     <span className="text-[10px] text-fog/70">{p.hint}</span>
-                    <span className="metric-num text-[12.5px]" style={{ color: toneFor(p.value).hex }}>
+                    <span className="metric-num text-[12.5px]" style={{ color: toneFor(p.value).color }}>
                       {p.value}
                     </span>
                   </span>
@@ -308,7 +308,7 @@ export default async function ReportPage({
             ))}
           </div>
 
-          <div className="mt-5 rounded-xl border border-line/70 bg-white/[0.015] p-3">
+          <div className="mt-5 rounded-xl border border-line/70 bg-raised/45 p-3">
             <p className="font-mono text-[10px] leading-relaxed text-fog">
               confidence = 0.30·eye + 0.25·posture + 0.20·gestures + 0.15·voice + 0.10·expression
             </p>
@@ -476,8 +476,8 @@ export default async function ReportPage({
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <Bar value={b.you} height={4} tone={toneFor(b.you).hex} />
-                  <Bar value={b.average} height={2} tone="#3f3f52" />
+                  <Bar value={b.you} height={4} tone={toneFor(b.you).color} />
+                  <Bar value={b.average} height={2} tone="var(--color-ink)" />
                 </div>
               </div>
             ))}
@@ -532,7 +532,7 @@ export default async function ReportPage({
               </div>
               <h3 className="mt-3 text-[13.5px] font-medium text-ink">{action.title}</h3>
               <p className="pretty mt-1.5 text-[11.5px] leading-relaxed text-fog">{action.why}</p>
-              <div className="mt-3 rounded-lg border border-line/70 bg-white/[0.015] p-3">
+              <div className="mt-3 rounded-lg border border-line/70 bg-raised/45 p-3">
                 <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-fog">drill</div>
                 <p className="pretty mt-1 text-[11.5px] leading-relaxed text-mist">{action.drill}</p>
               </div>

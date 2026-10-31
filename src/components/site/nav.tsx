@@ -178,7 +178,7 @@ export function SiteNav() {
               <div className="ml-1 hidden items-center gap-2 border-l border-line/70 pl-2 lg:flex">
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-white/5"
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-raised"
                   title={account?.email}
                 >
                   <span
@@ -198,7 +198,7 @@ export function SiteNav() {
                 </Link>
                 <Link
                   href="/account"
-                  className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-white/5 hover:text-ink"
+                  className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-raised hover:text-ink"
                   aria-label={t("nav.account")}
                   title={t("nav.account")}
                 >
@@ -208,7 +208,7 @@ export function SiteNav() {
                   type="button"
                   onClick={signOut}
                   disabled={signingOut}
-                  className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-white/5 hover:text-ink disabled:opacity-50"
+                  className="grid size-8 place-items-center rounded-lg text-fog transition-colors hover:bg-raised hover:text-ink disabled:opacity-50"
                   aria-label={t("nav.signOut")}
                   title={t("nav.signOut")}
                 >
@@ -254,7 +254,7 @@ export function SiteNav() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="flex min-h-11 items-center rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-white/5 hover:text-ink"
+              className="flex min-h-11 items-center rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-raised hover:text-ink"
             >
               {t(link.key)}
             </Link>
@@ -265,7 +265,7 @@ export function SiteNav() {
           <button
             type="button"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-white/5 hover:text-ink"
+            className="flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-[14px] text-mist transition-colors hover:bg-raised hover:text-ink"
           >
             {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             {theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}

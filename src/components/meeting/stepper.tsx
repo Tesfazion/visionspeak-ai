@@ -36,7 +36,7 @@ export function Stepper({
               i === value
                 ? "border-brand/50 bg-brand/10"
                 : i < value
-                  ? "border-line bg-white/[0.02]"
+                  ? "border-line bg-raised/50"
                   : "border-line/60 bg-transparent opacity-60",
             )}
           >
@@ -57,7 +57,7 @@ export function Stepper({
           onClick={() => onChange(value - 1)}
           className={cn(
             "flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[11px] text-fog transition-colors",
-            canPrev ? "hover:border-white/20 hover:text-ink" : "opacity-40 cursor-not-allowed",
+            canPrev ? "hover:border-line-bright hover:text-ink" : "opacity-40 cursor-not-allowed",
           )}
         >
           <ArrowLeft className="size-3.5" /> Back

@@ -154,7 +154,7 @@ export default function MeetingLobbyPage() {
                       className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] capitalize transition-colors ${
                         mode === option
                           ? "border-brand/50 bg-brand/10 text-brand-soft"
-                          : "border-line text-fog hover:border-white/20"
+                          : "border-line text-fog hover:border-line-bright"
                       }`}
                     >
                       {option}

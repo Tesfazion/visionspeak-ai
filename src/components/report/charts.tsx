@@ -17,18 +17,10 @@ import {
 } from "recharts";
 import type { PillarScores, TimelinePoint } from "@/lib/types";
 import { cn } from "@/components/ui";
-
-const tooltipStyle = {
-  background: "rgba(12,12,20,0.95)",
-  border: "1px solid #24243a",
-  borderRadius: 12,
-  padding: "8px 10px",
-  fontSize: 11,
-  color: "#f4f4f9",
-  boxShadow: "0 20px 40px -20px rgba(0,0,0,0.9)",
-} as const;
+import { useChartTheme } from "@/components/site/theme";
 
 export function ProfileRadar({ pillars }: { pillars: PillarScores }) {
+  const chart = useChartTheme();
   const [showTable, setShowTable] = useState(false);
   const data = [
     { dim: "Eye contact", value: pillars.eyeContact },
@@ -43,26 +35,27 @@ export function ProfileRadar({ pillars }: { pillars: PillarScores }) {
     <div>
       <div className="h-[248px] w-full sm:h-[268px] 2xl:h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data} outerRadius="72%">
+          <RadarChart data={data} outerRadius="72%" aria-describedby="radar-data-table">
             <defs>
               <linearGradient id="radar-fill" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.55} />
-                <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.2} />
+                <stop offset="0%" stopColor={chart.hue.violet} stopOpacity={0.55} />
+                <stop offset="100%" stopColor={chart.hue.cyan} stopOpacity={0.2} />
               </linearGradient>
             </defs>
-            <PolarGrid stroke="rgba(255,255,255,0.09)" />
-            <PolarAngleAxis dataKey="dim" tick={{ fill: "#8b8ba4", fontSize: 10 }} />
+            <PolarGrid stroke={chart.polarGrid} />
+            <PolarAngleAxis dataKey="dim" tick={{ fill: chart.axis, fontSize: 10 }} />
             <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
             <Radar
               dataKey="value"
-              stroke="#a78bfa"
+              stroke={chart.hue.violet}
               strokeWidth={2}
               fill="url(#radar-fill)"
               fillOpacity={1}
               isAnimationActive={false}
               aria-label="Six-dimension profile radar chart showing eye contact, posture, gestures, voice, expression and engagement"
+              aria-describedby="radar-data-table"
             />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip contentStyle={chart.tooltip} />
           </RadarChart>
         </ResponsiveContainer>
       </div>
@@ -76,7 +69,7 @@ export function ProfileRadar({ pillars }: { pillars: PillarScores }) {
           {showTable ? "Hide data table" : "Show data table"}
         </button>
       </div>
-      <table className={cn("mt-2 w-full text-left text-[11px]", showTable ? "" : "sr-only")}>
+      <table id="radar-data-table" className={cn("mt-2 w-full text-left text-[11px]", showTable ? "" : "sr-only")}>
         <caption className="sr-only">Profile radar values by dimension</caption>
         <thead>
           <tr className="border-b border-line/60">
@@ -98,17 +91,18 @@ export function ProfileRadar({ pillars }: { pillars: PillarScores }) {
 }
 
 const METRICS = [
-  { key: "confidence", label: "Confidence", color: "#a78bfa" },
-  { key: "engagement", label: "Engagement", color: "#22d3ee" },
-  { key: "leadership", label: "Leadership", color: "#34d399" },
-  { key: "eyeContact", label: "Eye contact", color: "#fbbf24" },
-  { key: "voice", label: "Voice", color: "#fb7185" },
-  { key: "posture", label: "Posture", color: "#60a5fa" },
+  { key: "confidence", label: "Confidence", hue: "violet" },
+  { key: "engagement", label: "Engagement", hue: "cyan" },
+  { key: "leadership", label: "Leadership", hue: "emerald" },
+  { key: "eyeContact", label: "Eye contact", hue: "amber" },
+  { key: "voice", label: "Voice", hue: "rose" },
+  { key: "posture", label: "Posture", hue: "blue" },
 ] as const;
 
 type MetricKey = (typeof METRICS)[number]["key"];
 
 export function TimelineChart({ timeline }: { timeline: TimelinePoint[] }) {
+  const chart = useChartTheme();
   const [active, setActive] = useState<MetricKey[]>(["confidence", "engagement", "leadership"]);
   const [showTable, setShowTable] = useState(false);
 
@@ -134,10 +128,10 @@ export function TimelineChart({ timeline }: { timeline: TimelinePoint[] }) {
               aria-pressed={on}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] transition-colors",
-                on ? "border-line-bright bg-white/[0.06] text-ink" : "border-line/70 text-fog hover:text-mist",
+                on ? "border-line-bright bg-raised text-ink" : "border-line/70 text-fog hover:text-mist",
               )}
             >
-              <span className="size-1.5 rounded-full" style={{ background: on ? m.color : "#3f3f52" }} />
+              <span className="size-1.5 rounded-full" style={{ background: on ? chart.hue[m.hue] : chart.idle }} />
               {m.label}
             </button>
           );
@@ -146,12 +140,12 @@ export function TimelineChart({ timeline }: { timeline: TimelinePoint[] }) {
 
       <div className="h-[228px] w-full sm:h-[248px] 2xl:h-[290px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 4, right: 6, bottom: 0, left: -18 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <LineChart data={data} margin={{ top: 4, right: 6, bottom: 0, left: -18 }} aria-describedby="timeline-data-table">
+            <CartesianGrid stroke={chart.grid} vertical={false} />
             <XAxis
               dataKey="t"
               tickFormatter={(v: number) => `${Math.floor(v / 60)}m`}
-              tick={{ fill: "#7a7a92", fontSize: 10 }}
+              tick={{ fill: chart.axis, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               minTickGap={48}
@@ -159,17 +153,17 @@ export function TimelineChart({ timeline }: { timeline: TimelinePoint[] }) {
             <YAxis
               domain={[30, 100]}
               ticks={[40, 60, 80, 100]}
-              tick={{ fill: "#7a7a92", fontSize: 10 }}
+              tick={{ fill: chart.axis, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               width={40}
             />
             <Tooltip
-              contentStyle={tooltipStyle}
+              contentStyle={chart.tooltip}
               labelFormatter={(v) =>
                 `${Math.floor(Number(v) / 60)}m ${Number(v) % 60}s`
               }
-              cursor={{ stroke: "rgba(255,255,255,0.16)" }}
+              cursor={{ stroke: chart.cursor }}
             />
             {METRICS.filter((m) => active.includes(m.key)).map((m) => (
               <Line
@@ -177,7 +171,7 @@ export function TimelineChart({ timeline }: { timeline: TimelinePoint[] }) {
                 type="monotone"
                 dataKey={m.key}
                 name={m.label}
-                stroke={m.color}
+                stroke={chart.hue[m.hue]}
                 strokeWidth={1.8}
                 dot={false}
                 activeDot={{ r: 3, strokeWidth: 0 }}

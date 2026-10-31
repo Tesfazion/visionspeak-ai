@@ -70,8 +70,8 @@ export function MeetingCallout({ t }: { t: Translate }) {
             </div>
             <div className="mt-2.5 space-y-1.5">
               <div className="h-1.5 w-2/3 rounded-full bg-brand/40" />
-              <div className="h-1.5 w-5/6 rounded-full bg-white/10" />
-              <div className="h-1.5 w-1/2 rounded-full bg-white/10" />
+              <div className="h-1.5 w-5/6 rounded-full bg-raised" />
+              <div className="h-1.5 w-1/2 rounded-full bg-raised" />
             </div>
           </div>
           {[
@@ -79,7 +79,7 @@ export function MeetingCallout({ t }: { t: Translate }) {
             { label: t("dash.rooms.mockYou"), score: "71", tone: "text-amber" },
           ].map((tile) => (
             <div key={tile.label} className="relative rounded-xl border border-line/80 bg-base/50 p-3 pt-10">
-              <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-fog">
+              <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-raised px-1.5 py-0.5 text-[9px] text-fog">
                 <span className="size-1 rounded-full bg-mint" /> {t("meeting.live")}
               </span>
               <span className={`absolute right-3 top-3 metric-num text-[11px] ${tile.tone}`}>{tile.score}</span>

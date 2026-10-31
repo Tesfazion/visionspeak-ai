@@ -56,7 +56,7 @@ export function LanguageSwitcher({ variant = "icon" }: { variant?: "icon" | "ful
         className={cn(
           "flex items-center gap-1.5 rounded-lg text-mist transition-colors hover:text-ink",
           variant === "full"
-            ? "min-h-11 w-full px-2 text-[14px] hover:bg-white/5"
+            ? "min-h-11 w-full px-2 text-[14px] hover:bg-raised"
             : "h-10 px-2",
         )}
         aria-haspopup="listbox"
@@ -90,7 +90,7 @@ export function LanguageSwitcher({ variant = "icon" }: { variant?: "icon" | "ful
                   lang={item.htmlLang}
                   className={cn(
                     "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left text-[13px] transition-colors",
-                    active ? "bg-brand/15 text-ink" : "text-mist hover:bg-white/5 hover:text-ink",
+                    active ? "bg-brand/15 text-ink" : "text-mist hover:bg-raised hover:text-ink",
                   )}
                 >
                   <span className="flex flex-col">

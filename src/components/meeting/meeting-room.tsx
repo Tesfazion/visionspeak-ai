@@ -258,7 +258,7 @@ export function MeetingRoom({
               <button
                 type="button"
                 onClick={() => setChatOpen((v) => !v)}
-                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-white/5 hover:text-ink"
+                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-raised hover:text-ink"
                 aria-label="Toggle chat"
               >
                 <MessageSquare className="size-4" />
@@ -266,14 +266,14 @@ export function MeetingRoom({
               <button
                 type="button"
                 onClick={() => setTranscriptOpen((v) => !v)}
-                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-white/5 hover:text-ink"
+                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-raised hover:text-ink"
                 aria-label="Toggle transcript"
               >
                 <FileText className="size-4" />
               </button>
               <button
                 type="button"
-                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-white/5 hover:text-ink"
+                className="rounded-lg p-1.5 text-mist transition-colors hover:bg-raised hover:text-ink"
                 aria-label="Settings"
               >
                 <Settings className="size-4" />

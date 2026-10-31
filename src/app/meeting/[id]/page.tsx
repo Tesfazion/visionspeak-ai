@@ -23,7 +23,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="pt-16">
-      <Suspense fallback={<div className="panel m-4 h-[70vh] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+      <Suspense fallback={<div className="panel m-4 h-[70vh] animate-pulse rounded-2xl bg-raised/60" />}>
         <MeetingRoom
           meetingId={meeting.id}
           title={meeting.title}

@@ -69,7 +69,7 @@ export function Tile({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl border bg-surface",
+        "dark-stage group relative overflow-hidden rounded-xl border bg-surface",
         speaking ? "border-brand/60 shadow-glow-brand" : "border-line",
         dims,
         className,

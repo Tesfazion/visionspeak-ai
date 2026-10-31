@@ -84,7 +84,7 @@ export function ProWorkspace({
 
       <div className="relative mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         {/* Coaching summary — only meaningful with history, and it says so. */}
-        <div className="rounded-lg border border-line/70 bg-white/[0.02] p-4">
+        <div className="rounded-lg border border-line/70 bg-raised/50 p-4">
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-fog">
             <TrendingUp className="size-3.5 text-brand-soft" /> {t("pro.insights.title")}
           </div>
@@ -99,7 +99,7 @@ export function ProWorkspace({
                     <span className="min-w-0 truncate text-[11.5px] text-mist">{d.label}</span>
                     <span className="flex items-center gap-2">
                       <span className="w-24">
-                        <Bar value={d.value} height={4} tone={toneFor(d.value).hex} />
+                        <Bar value={d.value} height={4} tone={toneFor(d.value).color} />
                       </span>
                       <span
                         className={cn(
@@ -135,7 +135,7 @@ export function ProWorkspace({
 
         {/* The two Pro capabilities that are not just "more of the same". */}
         <div className="space-y-3">
-          <div className="rounded-lg border border-line/70 bg-white/[0.02] p-3.5">
+          <div className="rounded-lg border border-line/70 bg-raised/50 p-3.5">
             <div className="flex items-center gap-2 text-[11.5px] font-medium text-ink">
               <Download className="size-3.5 text-brand-soft" /> {t("pro.export.title")}
             </div>
@@ -149,7 +149,7 @@ export function ProWorkspace({
               </Link>
             )}
           </div>
-          <div className="rounded-lg border border-line/70 bg-white/[0.02] p-3.5">
+          <div className="rounded-lg border border-line/70 bg-raised/50 p-3.5">
             <div className="flex items-center gap-2 text-[11.5px] font-medium text-ink">
               <Share2 className="size-3.5 text-brand-soft" /> {t("pro.share.title")}
             </div>
@@ -199,7 +199,7 @@ export function FreeUpgrade({ quota, t }: { quota: QuotaState; t: Translate }) {
         <Bar value={pct} height={5} tone={remaining === 0 ? "#fb7185" : pct > 80 ? "#fbbf24" : "#34d399"} />
       </div>
 
-      <div className="mt-4 rounded-lg border border-line/70 bg-white/[0.015] p-3.5">
+      <div className="mt-4 rounded-lg border border-line/70 bg-raised/45 p-3.5">
         <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-fog">What Pro adds</div>
         <ul className="mt-2 space-y-2">
           {[

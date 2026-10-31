@@ -12,7 +12,7 @@ export default function OfflinePage() {
   return (
     <div className="container-page grid min-h-[70vh] place-items-center pt-24 text-center">
       <div>
-        <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-line bg-white/[0.03] text-amber">
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-line bg-raised/60 text-amber">
           <WifiOff className="size-6" />
         </span>
         <div className="eyebrow mt-6">No connection</div>

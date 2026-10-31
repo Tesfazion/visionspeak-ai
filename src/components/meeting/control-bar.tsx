@@ -73,7 +73,7 @@ export function ControlBar({
           onClick={onToggleView}
           className={cn(
             "rounded-lg border border-line px-2 py-1.5 text-[11px] text-fog transition-colors",
-            view === "grid" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-white/20",
+            view === "grid" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-line-bright",
           )}
           title="Toggle layout"
         >
@@ -83,7 +83,7 @@ export function ControlBar({
           type="button"
           onClick={onView.bind(null, "grid")}
           className={cn("rounded-lg border border-line px-2 py-1.5 text-[9px] uppercase tracking-[0.12em] text-fog transition-colors",
-            view === "grid" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-white/20")}
+            view === "grid" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-line-bright")}
         >
           Grid
         </button>
@@ -91,7 +91,7 @@ export function ControlBar({
           type="button"
           onClick={onView.bind(null, "speaker")}
           className={cn("rounded-lg border border-line px-2 py-1.5 text-[9px] uppercase tracking-[0.12em] text-fog transition-colors",
-            view === "speaker" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-white/20")}
+            view === "speaker" ? "border-brand/50 bg-brand/10 text-brand-soft" : "hover:border-line-bright")}
         >
           Speaker
         </button>
@@ -195,7 +195,7 @@ function ControlButton({
         disabled={disabled}
         className={cn(
           "relative flex items-center justify-center rounded-xl border border-line/50 bg-raised/60 p-2.5 text-fog transition-all",
-          "hover:border-line hover:bg-white/[0.06] hover:text-ink",
+          "hover:border-line hover:bg-raised hover:text-ink",
           active && "border-brand/50 bg-brand/12 text-brand-soft shadow-[0_0_0_1px_rgba(124,92,255,0.3)]",
           disabled && "cursor-not-allowed opacity-40",
         )}
