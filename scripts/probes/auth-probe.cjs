@@ -8,11 +8,18 @@
 // has, and records every status/location so the failing hop is obvious.
 //
 // Usage: node scripts/probes/auth-probe.cjs [baseUrl]
+//
+// Set VS_PROBE_XFP=https to send `X-Forwarded-Proto: https` with every request,
+// which is how a TLS-terminating proxy presents itself. The cookie flags in the
+// transcript then show the other branch of isSecureRequest (a Secure cookie must
+// be sent behind a proxy, and must NOT be sent over plain HTTP).
 const { writeFileSync } = require("node:fs");
 const { notePath } = require("../lib/diagnostics.cjs");
 
 const base = (process.argv[2] ?? "http://localhost:3210").replace(/\/$/, "");
-const out = [`base=${base}`, `when=${new Date().toISOString()}`, ""];
+// Headers a proxy would add; empty in the plain-HTTP case.
+const proxyHeaders = process.env.VS_PROBE_XFP ? { "X-Forwarded-Proto": process.env.VS_PROBE_XFP } : {};
+const out = [`base=${base}`, `x-forwarded-proto=${process.env.VS_PROBE_XFP ?? "(none)"}`, `when=${new Date().toISOString()}`, ""];
 
 const cookieValue = (setCookie) => setCookie.split(";")[0];
 
@@ -35,6 +42,7 @@ const post = (path, body, cookie) =>
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...proxyHeaders,
       ...(cookie ? { Cookie: cookie } : {}),
     },
     body: JSON.stringify(body),
@@ -43,7 +51,7 @@ const post = (path, body, cookie) =>
 
 const get = (path, cookie) =>
   fetch(base + path, {
-    headers: cookie ? { Cookie: cookie } : {},
+    headers: { ...proxyHeaders, ...(cookie ? { Cookie: cookie } : {}) },
     redirect: "manual",
   });
 
