@@ -209,6 +209,9 @@ export async function createUser(input: {
   email: string;
   password: string;
   name: string;
+  /** Marks the address confirmed at creation — set when no SMTP sender is
+   * configured, so an unverifiable account is never locked out of the studio. */
+  emailVerifiedAt?: string;
 }): Promise<{ user: PublicUser } | { error: string }> {
   return serialise(async () => {
     const users = await readUsers();
@@ -225,6 +228,7 @@ export async function createUser(input: {
       salt,
       createdAt: new Date().toISOString(),
       plan: "free",
+      ...(input.emailVerifiedAt ? { emailVerifiedAt: input.emailVerifiedAt } : {}),
     };
     await writeUsers([...users, user]);
     return { user: toPublicUser(user) } as const;

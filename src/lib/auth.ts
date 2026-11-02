@@ -49,6 +49,7 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
         name: user.name,
         createdAt: user.createdAt,
         plan: normalisePlan(user.plan),
+        emailVerifiedAt: user.emailVerifiedAt,
       }
     : null;
 }
