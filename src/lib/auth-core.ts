@@ -75,6 +75,7 @@ export interface PublicUser {
   name: string;
   createdAt: string;
   plan: PlanId;
+  emailVerifiedAt?: string;
   teamId?: string;
   teamRole?: "owner" | "member";
 }
@@ -85,6 +86,7 @@ export const toPublicUser = (u: StoredUser): PublicUser => ({
   name: u.name,
   createdAt: u.createdAt,
   plan: normalisePlan(u.plan),
+  emailVerifiedAt: u.emailVerifiedAt,
   teamId: u.teamId,
   teamRole: u.teamRole,
 });
@@ -234,11 +236,6 @@ export async function authenticate(email: string, password: string): Promise<Pub
   if (!user) {
     // Spend comparable time on unknown accounts so response timing does not
     // reveal which emails are registered.
-    await hashPassword(password, "00000000000000000000000000000000");
-    return null;
-  }
-  if (!isEmailVerified(user)) {
-    // Don't leak the fact that the email is unverified; make it look like a bad password
     await hashPassword(password, "00000000000000000000000000000000");
     return null;
   }
