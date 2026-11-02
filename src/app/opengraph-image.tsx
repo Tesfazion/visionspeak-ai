@@ -15,7 +15,7 @@ export default async function OpengraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #0a0a12 0%, #12102a 45%, #080b14 100%)",
+          background: "#21152B",
           padding: 72,
           fontFamily: "sans-serif",
         }}
@@ -26,7 +26,7 @@ export default async function OpengraphImage() {
               width: 56,
               height: 56,
               borderRadius: 18,
-              background: "linear-gradient(135deg, #a78bfa, #7c5cff 55%, #22d3ee)",
+              background: "#F06B58",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -35,7 +35,7 @@ export default async function OpengraphImage() {
           >
             <div style={{ width: 22, height: 22, borderRadius: 99, background: "#06060b" }} />
           </div>
-          <div style={{ color: "#f4f4f9", fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }}>
+          <div style={{ color: "#FBF8F5", fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }}>
             VisionSpeak AI
           </div>
         </div>
@@ -43,7 +43,7 @@ export default async function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
             style={{
-              color: "#f4f4f9",
+              color: "#FBF8F5",
               fontSize: 78,
               fontWeight: 700,
               lineHeight: 1.05,
@@ -53,7 +53,7 @@ export default async function OpengraphImage() {
           >
             Deliver like the room is yours.
           </div>
-          <div style={{ color: "#8b8ba4", fontSize: 30, lineHeight: 1.35, maxWidth: 820 }}>
+          <div style={{ color: "#B8A3BA", fontSize: 30, lineHeight: 1.35, maxWidth: 820 }}>
             Eye contact, posture, gestures, voice and expression — measured on-device and scored in real
             time.
           </div>
@@ -64,11 +64,11 @@ export default async function OpengraphImage() {
             <div
               key={chip}
               style={{
-                border: "1px solid #2a2a3d",
-                background: "rgba(255,255,255,0.03)",
+                border: "1px solid #49304F",
+                background: "#2A1D35",
                 borderRadius: 999,
                 padding: "10px 20px",
-                color: "#b9b9cc",
+                color: "#D4C0D4",
                 fontSize: 22,
               }}
             >

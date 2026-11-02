@@ -314,11 +314,10 @@ export default async function DashboardPage() {
             key={s.label}
             className="panel relative overflow-hidden p-4 transition-colors hover:border-line-bright"
           >
-            <span
-              className="absolute inset-x-0 top-0 h-[2px]"
-              style={{ background: `linear-gradient(90deg, ${s.accent}, transparent)` }}
-              aria-hidden
-            />
+              <span
+                className="absolute inset-x-0 top-0 h-[2px] bg-brand/70"
+                aria-hidden
+              />
             <div className="flex items-center justify-between">
               <span className="text-[9.5px] font-medium uppercase tracking-[0.16em] text-fog">{s.label}</span>
               <s.icon className="size-3.5" style={{ color: s.accent }} />

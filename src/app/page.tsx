@@ -117,11 +117,11 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute inset-0 grid-lines opacity-70" />
         <div
           className="pointer-events-none absolute -left-40 top-10 h-[32rem] w-[32rem] rounded-full blur-[120px]"
-          style={{ background: "radial-gradient(circle, rgba(124,92,255,0.28), transparent 65%)" }}
+          style={{ background: "#F06B58/15" }}
         />
         <div
           className="pointer-events-none absolute -right-32 top-40 h-[26rem] w-[26rem] rounded-full blur-[120px]"
-          style={{ background: "radial-gradient(circle, rgba(34,211,238,0.18), transparent 65%)" }}
+          style={{ background: "#6EC1E4/10" }}
         />
 
         <div className="container-page relative grid items-center gap-10 pb-16 pt-24 sm:gap-14 sm:pb-20 sm:pt-28 lg:grid-cols-[1.02fr_0.98fr] lg:gap-10 lg:pt-32 2xl:gap-16">
@@ -172,8 +172,7 @@ export default async function LandingPage() {
           {/* ---------------------------- live preview ---------------------------- */}
           <div className="relative">
             <div
-              className="absolute inset-x-6 -top-6 h-40 rounded-[2rem] blur-2xl"
-              style={{ background: "radial-gradient(ellipse at center, rgba(124,92,255,0.35), transparent 70%)" }}
+              className="absolute inset-x-6 -top-6 h-40 rounded-[2rem] blur-2xl bg-brand/20"
             />
             <div className="panel relative overflow-hidden p-3">
               <div className="flex items-center justify-between px-2 pb-3 pt-1">
@@ -280,11 +279,11 @@ export default async function LandingPage() {
                 <div className="flex items-start justify-between gap-3">
                   <span
                     className="grid size-10 shrink-0 place-items-center rounded-xl border"
-                    style={{
-                      borderColor: `color-mix(in oklab, ${s.accent} 22%, transparent)`,
-                      background: `linear-gradient(180deg, color-mix(in oklab, ${s.accent} 13%, transparent), transparent)`,
-                      color: s.accent,
-                    }}
+style={{
+                    borderColor: "color-mix(in oklab, var(--color-brand) 22%, transparent)",
+                    background: "var(--color-brand)",
+                    color: "var(--color-ink)",
+                  }}
                   >
                     <s.icon className="size-[18px]" />
                   </span>
@@ -632,11 +631,8 @@ export default async function LandingPage() {
       {/* ============================== CTA ============================== */}
       <section className="container-page pb-8">
         <Reveal>
-          <div className="relative overflow-hidden rounded-[1.5rem] border border-line bg-[linear-gradient(120deg,rgba(124,92,255,0.16),rgba(34,211,238,0.08)_45%,transparent_75%)] p-6 sm:p-12">
-            <div
-              className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full blur-[90px]"
-              style={{ background: "radial-gradient(circle, rgba(124,92,255,0.35), transparent 70%)" }}
-            />
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-line p-6 sm:p-12">
+            <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full blur-[90px] bg-brand/20" />
             <div className="relative flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
               <div className="max-w-xl">
                 <h2 className="text-balance text-[26px] font-semibold leading-tight tracking-[-0.02em] sm:text-[34px]">

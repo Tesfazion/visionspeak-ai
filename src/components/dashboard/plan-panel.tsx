@@ -58,11 +58,7 @@ export function ProWorkspace({
 
   return (
     <section className="relative mt-4 overflow-hidden rounded-xl border-2 border-brand/40 bg-gradient-to-br from-brand/[0.08] via-brand/[0.03] to-transparent p-6">
-      <div
-        className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(124,92,255,0.35), transparent 70%)" }}
-        aria-hidden
-      />
+      <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full blur-3xl bg-brand/35" aria-hidden />
       <div className="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <Pill tone="brand" className="mb-3">

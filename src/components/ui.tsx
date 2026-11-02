@@ -144,7 +144,7 @@ export function Bar({
         className="absolute inset-y-0 left-0 rounded-full"
         style={{
           width: `${v}%`,
-          background: `linear-gradient(90deg, color-mix(in oklab, ${color} 53%, transparent), ${color})`,
+          background: color,
           boxShadow: `0 0 12px color-mix(in oklab, ${color} 27%, transparent)`,
           transition: animate ? "width 800ms cubic-bezier(0.16,1,0.3,1)" : undefined,
         }}
