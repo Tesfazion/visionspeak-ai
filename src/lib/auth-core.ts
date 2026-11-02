@@ -67,6 +67,10 @@ export interface StoredUser {
   teamId?: string;
   /** Role within the team: owner | member. Absent on solo accounts. */
   teamRole?: "owner" | "member";
+  /** BYOK: encrypted API key for external AI providers. Absent = no external AI. */
+  encryptedApiKey?: string;
+  /** BYOK: preferred external AI provider. Absent = none. */
+  preferredProvider?: "openai" | "anthropic";
 }
 
 export interface PublicUser {
