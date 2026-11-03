@@ -2,6 +2,7 @@
   "name": "visionspeak-ai",
   "version": "1.0.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "VisionSpeak AI — an intelligent public speaking coach using computer vision, behavioral analytics and AI.",
   "engines": {
     "node": ">=22.6"

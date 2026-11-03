@@ -29,6 +29,9 @@ backups/
 public/mediapipe/models/*.task
 public/mediapipe/wasm/
 
+# Agent worktrees (.kilo/) — local multi-branch checkouts, never source.
+.kilo/
+
 # Generated diagnostics — see docs/README.md. docs/README.md itself is tracked.
 docs/notes/
 docs/logs/
