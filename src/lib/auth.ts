@@ -22,8 +22,25 @@ const baseCookieOptions = {
   maxAge: Math.floor(SESSION_TTL_MS / 1000),
 } as const;
 
+/**
+ * Explicitly control the cookie Secure flag via AUTH_COOKIE_SECURE env var.
+ * - "true"  → always set Secure (for HTTPS-only deployments)
+ * - "false" → never set Secure (for HTTP deployments, local dev, or behind TLS-terminating proxy)
+ * - unset   → auto-detect from request (x-forwarded-proto / request URL protocol)
+ *
+ * This solves the common issue where a TLS-terminating proxy sets
+ * x-forwarded-proto: https but the browser connection is actually HTTP,
+ * causing the Secure cookie to be discarded by the browser.
+ */
+function getCookieSecureFlag(request: Request): boolean {
+  const env = process.env.AUTH_COOKIE_SECURE?.toLowerCase();
+  if (env === "true") return true;
+  if (env === "false") return false;
+  return isSecureRequest(request);
+}
+
 export function cookieOptionsFor(request: Request) {
-  return { ...baseCookieOptions, secure: isSecureRequest(request) };
+  return { ...baseCookieOptions, secure: getCookieSecureFlag(request) };
 }
 
 export async function setSessionCookie(userId: string, request: Request) {
