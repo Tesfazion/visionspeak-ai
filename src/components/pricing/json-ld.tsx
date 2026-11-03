@@ -40,6 +40,22 @@ export function PricingJsonLd() {
           "@type": "Offer",
           price: "12",
           priceCurrency: "USD",
+          priceEtb: "696",
+          availability: "https://schema.org/InStock",
+          url: `${base}/pricing`,
+        },
+      },
+      {
+        "@type": "Product",
+        name: "Pro (ETB)",
+        description:
+          "200 analysed sessions a month, 60-minute sessions, unlimited history, CSV and PDF export.",
+        "@id": `${base}/pricing`,
+        brand: { "@type": "Brand", name: BRAND_NAME },
+        offers: {
+          "@type": "Offer",
+          price: "696",
+          priceCurrency: "ETB",
           availability: "https://schema.org/InStock",
           url: `${base}/pricing`,
         },
