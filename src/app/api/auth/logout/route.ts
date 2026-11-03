@@ -1,15 +1,16 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/auth";
-import { SESSION_COOKIE, revokeSessionToken } from "@/lib/auth-core";
+import { SESSION_COOKIE, SESSION_TTL_MS, revokeSessionToken } from "@/lib/auth-core";
+import { cookieOptionsFor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  // Clearing the cookie only removes it from this browser: the token itself is
-  // stateless and would keep working for anyone who copied it. Revoke it first.
+  // Get the current token to revoke it before clearing
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (token) await revokeSessionToken(token).catch(() => false);
-  await clearSessionCookie(request);
-  return NextResponse.json({ ok: true });
+
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE, "", { ...cookieOptionsFor(request), maxAge: 0 });
+  return response;
 }

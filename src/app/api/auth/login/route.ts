@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authenticate, countUsers, createRateLimiter, normaliseEmail, validateCredentials } from "@/lib/auth-core";
-import { setSessionCookie } from "@/lib/auth";
+import { createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from "@/lib/auth-core";
+import { cookieOptionsFor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -42,24 +43,20 @@ export async function POST(request: Request) {
   try {
     const user = await authenticate(email, parsed.password);
     if (!user) {
-      // An empty user file can never accept any password — every attempt is
-      // rejected regardless of what was typed. Saying "incorrect password"
-      // there sends people round in circles trying to recall a password that
-      // was never set (a fresh checkout, or a store reset on an ephemeral
-      // host), so name the real problem instead. It reveals nothing about a
-      // specific address: the count is zero for all of them.
       if ((await countUsers()) === 0) {
         return NextResponse.json(
           { error: "No account exists on this deployment yet. Create one to get in." },
           { status: 401 },
         );
       }
-      // One message for both "unknown email" and "wrong password".
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
     limiter.reset(key);
-    await setSessionCookie(user.id, request);
-    return NextResponse.json({ user });
+
+    const response = NextResponse.json({ user });
+    const token = await createSessionToken(user.id);
+    response.cookies.set(SESSION_COOKIE, token, cookieOptionsFor(request));
+    return response;
   } catch (err) {
     console.error("[auth] login failed", err);
     return NextResponse.json({ error: "Sign-in is temporarily unavailable." }, { status: 500 });

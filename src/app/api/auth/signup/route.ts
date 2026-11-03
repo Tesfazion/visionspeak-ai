@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS } from "@/lib/auth-core";
+import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS, createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
-import { setSessionCookie } from "@/lib/auth";
+import { cookieOptionsFor } from "@/lib/auth";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import { logEvent, newRequestId } from "@/lib/log";
 
@@ -51,11 +51,15 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
-    await setSessionCookie(result.user.id, request);
+
+    const response = NextResponse.json({ user: result.user }, { status: 201 });
+    const token = await createSessionToken(result.user.id);
+    response.cookies.set(SESSION_COOKIE, token, cookieOptionsFor(request));
+
     if (emailConfigured()) {
-      const token = await createToken("verify", result.user.id, VERIFY_TTL_MS);
+      const verifyToken = await createToken("verify", result.user.id, VERIFY_TTL_MS);
       const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-      const verifyLink = `${base}/verify-email/${token}`;
+      const verifyLink = `${base}/verify-email/${verifyToken}`;
       await sendEmail({
         to: result.user.email,
         subject: "VisionSpeak — Verify your email address",
@@ -63,8 +67,9 @@ export async function POST(request: Request) {
         html: `<p>Click <a href="${verifyLink}">this link</a> to verify your email address.</p><p>If you did not sign up for VisionSpeak, you can ignore this email.</p>`,
       });
     }
+
     logEvent("info", "auth.signup", { requestId, userId: result.user.id, plan: result.user.plan });
-    return NextResponse.json({ user: result.user }, { status: 201 });
+    return response;
   } catch (err) {
     logEvent("error", "auth.signup_failed", { requestId, error: String(err) });
     return NextResponse.json({ error: "The account could not be created." }, { status: 500 });

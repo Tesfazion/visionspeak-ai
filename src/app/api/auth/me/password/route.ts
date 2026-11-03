@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, clearSessionCookie, setSessionCookie } from "@/lib/auth";
-import { changePassword } from "@/lib/auth-core";
+import { getCurrentUser, clearSessionCookie } from "@/lib/auth";
+import { changePassword, createSessionToken, SESSION_COOKIE } from "@/lib/auth-core";
 import { logEvent, newRequestId } from "@/lib/log";
+import { cookieOptionsFor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +52,11 @@ export async function POST(request: Request) {
     if ("error" in result) {
       return NextResponse.json({ error: messageFor(result.error) }, { status: 422 });
     }
-    await clearSessionCookie(request);
-    await setSessionCookie(user.id, request);
+    const response = NextResponse.json({ ok: true });
+    const token = await createSessionToken(user.id);
+    response.cookies.set(SESSION_COOKIE, token, cookieOptionsFor(request));
     logEvent("info", "auth.password_changed", { requestId, userId: user.id });
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err) {
     logEvent("error", "auth.password_change_failed", { requestId, userId: user.id, error: String(err) });
     return NextResponse.json({ error: "Could not update the password." }, { status: 500 });
