@@ -1,7 +1,6 @@
 import type { SessionAggregate } from "@/lib/analysis/engine";
 import { EMOTIONS } from "@/lib/types";
 import { createHash } from "node:crypto";
-import type { PublicUser } from "./auth-core";
 
 /**
  * Request hardening shared by the API routes.

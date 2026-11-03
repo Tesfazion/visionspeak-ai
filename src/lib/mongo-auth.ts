@@ -2,11 +2,15 @@
 import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
+import type { Db } from "mongodb";
 import { promisify } from "node:util";
 import { normalisePlan, type PlanId } from "@/lib/plans";
 import { dataFile } from "@/lib/data-dir";
 import { COLLECTIONS } from "@/lib/db/schema";
 import { withStore } from "@/lib/db/mongo";
+
+/** Documents keep the app's string id in Mongo's `_id` field. */
+type UserDoc = StoredUser & { _id: string };
 
 const scrypt = promisify(scryptCb) as (
   password: string,
@@ -32,13 +36,6 @@ function migrateUserRecords(
 const USERS_FILE = dataFile("users.json");
 const TOKENS_FILE = dataFile("tokens.json");
 const SECRET_FILE = dataFile("auth-secret");
-
-let queue: Promise<unknown> = Promise.resolve();
-const serialise = <T,>(fn: () => Promise<T>): Promise<T> => {
-  const run = queue.then(fn, fn);
-  queue = run.catch(() => undefined);
-  return run;
-};
 
 let tokenQueue: Promise<unknown> = Promise.resolve();
 
@@ -87,7 +84,7 @@ export async function countUsers() {
       const users = await readUsers();
       return users.length;
     },
-    async (db: any) => db.collection(COLLECTIONS.users).countDocuments(),
+    async (db: Db) => db.collection<UserDoc>(COLLECTIONS.users).countDocuments(),
   );
 }
 
@@ -98,8 +95,8 @@ export async function findUserByEmail(email: string) {
       const users = await readUsers();
       return users.find((u) => u.email === target) ?? null;
     },
-    async (db: any) => {
-      const user = await db.collection(COLLECTIONS.users).findOne({ email: target });
+    async (db: Db) => {
+      const user = await db.collection<UserDoc>(COLLECTIONS.users).findOne({ email: target });
       return user as unknown as StoredUser | null;
     },
   );
@@ -111,8 +108,8 @@ export async function findUserById(id: string) {
       const users = await readUsers();
       return users.find((u) => u.id === id) ?? null;
     },
-    async (db: any) => {
-      const user = await db.collection(COLLECTIONS.users).findOne({ _id: id });
+    async (db: Db) => {
+      const user = await db.collection<UserDoc>(COLLECTIONS.users).findOne({ _id: id });
       return user as unknown as StoredUser | null;
     },
   );
@@ -143,8 +140,8 @@ export async function createUser(input: {
       await writeUsers([...users, user]);
       return { user: toPublicUser(user) } as const;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const email = normaliseEmail(input.email);
       const existing = await col.findOne({ email });
       if (existing) {
@@ -189,8 +186,8 @@ export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicU
       await writeUsers(users);
       return toPublicUser(users[index]);
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const result = await col.updateOne(
         { _id: userId },
         { $set: { plan: normalisePlan(plan) } },
@@ -230,8 +227,8 @@ export async function deleteAccount(userId: string): Promise<boolean> {
       await writeUsers(users);
       return true;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const target = await col.findOne({ _id: userId });
       if (!target) return false;
       await col.updateOne({ _id: userId }, {
@@ -313,8 +310,8 @@ export async function resetPassword(token: string, newPassword: string) {
       await writeUsers(users);
       return { ok: true } as const;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const { salt, passwordHash } = await hashPassword(newPassword);
       const result = await col.updateOne({ _id: userId }, { $set: { salt, passwordHash } });
       if (result.matchedCount === 0) return { error: "Account not found." } as const;
@@ -335,8 +332,8 @@ export async function verifyEmail(token: string) {
       await writeUsers(users);
       return { ok: true } as const;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const result = await col.updateOne(
         { _id: userId },
         { $set: { emailVerifiedAt: new Date().toISOString() } },
@@ -409,8 +406,8 @@ export async function revokeSessionToken(token: string): Promise<boolean> {
       await writeUsers(users);
       return true;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const hash = createHmac("sha256", token).digest("hex");
       const resolvedUserId = await verifySessionToken(token);
       if (!resolvedUserId) return false;
@@ -435,8 +432,8 @@ export async function revokeOtherSessions(userId: string): Promise<boolean> {
       await writeUsers(users);
       return true;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.users);
+    async (db: Db) => {
+      const col = db.collection<UserDoc>(COLLECTIONS.users);
       const result = await col.updateOne({ _id: userId }, { $set: { sessionsValidAfter: new Date().toISOString() } });
       return result.modifiedCount === 1;
     },

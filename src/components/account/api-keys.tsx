@@ -16,7 +16,7 @@ type ApiKeySummary = {
   useCount: number;
 };
 
-export function ApiKeysPanel({ userId }: { userId: string }) {
+export function ApiKeysPanel() {
   const { t } = useI18n();
   const [keys, setKeys] = useState<ApiKeySummary[]>([]);
   const [loading, setLoading] = useState(true);

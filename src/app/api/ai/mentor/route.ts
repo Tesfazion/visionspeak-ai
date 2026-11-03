@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { listExternalAiKeys, getExternalAiKeyByHash, callLlm, touchExternalAiKey } from "@/lib/external-ai-keys";
-import { MentorRequest, MentorResponse } from "@/lib/external-ai-keys/types";
+import { MentorResponse } from "@/lib/external-ai-keys/types";
 
 export async function POST(request: NextRequest) {
   try {

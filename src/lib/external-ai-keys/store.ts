@@ -90,7 +90,8 @@ export async function createExternalAiKey(
 }
 
 function omitHash(key: StoredExternalAiKey): Omit<StoredExternalAiKey, "keyHash"> {
-  const { keyHash, ...rest } = key;
+  const rest: Partial<StoredExternalAiKey> = { ...key };
+  delete rest.keyHash;
   return rest as Omit<StoredExternalAiKey, "keyHash">;
 }
 

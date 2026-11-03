@@ -2,11 +2,15 @@
 import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes } from "node:crypto";
+import type { Db } from "mongodb";
 import type { SessionRecord, ShareLink } from "@/lib/types";
 import { buildDemoHistory } from "@/lib/analysis/demo";
 import { dataFile } from "@/lib/data-dir";
 import { COLLECTIONS } from "@/lib/db/schema";
 import { withStore } from "@/lib/db/mongo";
+
+/** Documents keep the app's string id in Mongo's `_id` field. */
+type SessionDoc = SessionRecord & { _id: string };
 
 const SCHEMA_VERSION = 2;
 const FILE = dataFile("sessions.json");
@@ -117,8 +121,8 @@ export async function createShare(
       await writeAll(records);
       return share;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const target = await col.findOne({ _id: id });
       if (!target || !writableBy(target as unknown as SessionRecord, userId)) return null;
       const now = Date.now();
@@ -145,8 +149,8 @@ export async function revokeShare(id: string, userId: string): Promise<boolean> 
       await writeAll(records);
       return true;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const target = await col.findOne({ _id: id });
       if (!target || !writableBy(target as unknown as SessionRecord, userId) || !target.share) return false;
       await col.updateOne({ _id: id }, { $unset: { share: 1 } });
@@ -164,8 +168,8 @@ export async function getSharedSession(id: string, token: unknown): Promise<Sess
       if (record.share.expiresAt <= new Date().toISOString()) return null;
       return record;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const record = await col.findOne({ _id: id });
       if (!record?.share || record.share.token !== token) return null;
       if (record.share.expiresAt <= new Date().toISOString()) return null;
@@ -189,8 +193,8 @@ export async function listSessions(
         .filter((r: SessionRecord) => visibleTo(r, userId) && ((options.includeSamples ?? true) || !isSample(r)))
         .sort((a: SessionRecord, b: SessionRecord) => (a.createdAt < b.createdAt ? 1 : -1));
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const filter: Record<string, unknown> = {};
       if (options.includeSamples !== true) filter.source = { $ne: "demo" };
       const records = await col.find(filter).sort({ createdAt: -1 }).toArray();
@@ -209,8 +213,8 @@ export async function getSession(id: string, userId: string | null): Promise<Ses
       if (!record) return null;
       return visibleTo(record, userId) ? record : null;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const record = await col.findOne({ _id: id });
       if (!record) return null;
       return visibleTo(record as unknown as SessionRecord, userId) ? record as unknown as SessionRecord : null;
@@ -231,8 +235,8 @@ export async function findByClientSessionId(
         ) ?? null
       );
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const record = await col.findOne({
         ownerId: userId,
         clientSessionId,
@@ -251,12 +255,11 @@ export async function saveSession(record: SessionRecord): Promise<SessionRecord>
       await writeAll(next);
       return record;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       await col.replaceOne(
         { _id: record.id },
         {
-          _id: record.id,
           ...record,
           createdAt: record.createdAt || new Date().toISOString(),
         },
@@ -276,8 +279,8 @@ export async function deleteSession(id: string, userId: string | null): Promise<
       await writeAll(records.filter((r) => r.id !== id));
       return true;
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const target = await col.findOne({ _id: id });
       if (!target || !writableBy(target as unknown as SessionRecord, userId)) return false;
       const result = await col.deleteOne({ _id: id });
@@ -300,8 +303,8 @@ export async function updateSession(
       await writeAll(records);
       return records[idx];
     },
-    async (db: any) => {
-      const col = db.collection(COLLECTIONS.sessions);
+    async (db: Db) => {
+      const col = db.collection<SessionDoc>(COLLECTIONS.sessions);
       const target = await col.findOne({ _id: id });
       if (!target || !writableBy(target as unknown as SessionRecord, userId)) return null;
       await col.updateOne({ _id: id }, { $set: patch });

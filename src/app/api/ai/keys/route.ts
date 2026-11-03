@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { listExternalAiKeys, createExternalAiKey } from "@/lib/external-ai-keys/store";
 import { isSupportedProvider } from "@/lib/external-ai-keys/types";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
