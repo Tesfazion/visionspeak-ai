@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { deleteExternalAiKey, touchExternalAiKey, setExternalAiKeyModel } from "@/lib/external-ai-keys/store";
+import { deleteExternalAiKey, setExternalAiKeyModel } from "@/lib/external-ai-keys/store";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -12,7 +12,7 @@ export async function DELETE(
       return Response.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const keyId = params.id;
+    const { id: keyId } = await params;
     const success = await deleteExternalAiKey(keyId, user.id);
 
     if (!success) {
@@ -31,7 +31,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -49,7 +49,8 @@ export async function PATCH(
       );
     }
 
-    const success = await setExternalAiKeyModel(params.id, user.id, model);
+    const { id: keyId } = await params;
+    const success = await setExternalAiKeyModel(keyId, user.id, model);
 
     if (!success) {
       return Response.json({ error: "Key not found or access denied." }, { status: 404 });
