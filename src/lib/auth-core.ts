@@ -95,8 +95,16 @@ export const toPublicUser = (u: StoredUser): PublicUser => ({
  * Validation
  * ------------------------------------------------------------------ */
 
-export const MIN_PASSWORD = 8;
+const MAX_PASSWORD_LENGTH = 200;
+const SALT_BYTES = 16;
+const PASSWORD_HASH_BYTES = 64;
+const UID_RANDOM_BYTES = 4;
+const TOKEN_RANDOM_BYTES = 24;
+const SECRET_RANDOM_BYTES = 32;
+const DUMMY_SALT = "0".repeat(32);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+export const MIN_PASSWORD = 8;
 
 export function normaliseEmail(email: string) {
   return email.trim().toLowerCase();
@@ -111,7 +119,7 @@ export function validateCredentials(input: { email?: unknown; password?: unknown
   if (password.length < MIN_PASSWORD) {
     return { error: `Password must be at least ${MIN_PASSWORD} characters.` } as const;
   }
-  if (password.length > 200) return { error: "Password is too long." } as const;
+  if (password.length > MAX_PASSWORD_LENGTH) return { error: "Password is too long." } as const;
   return { email, password, name: name || email.split("@")[0] } as const;
 }
 
@@ -119,13 +127,13 @@ export function validateCredentials(input: { email?: unknown; password?: unknown
  * Hashing
  * ------------------------------------------------------------------ */
 
-export async function hashPassword(password: string, salt = randomBytes(16).toString("hex")) {
-  const key = await scrypt(password, salt, 64);
+export async function hashPassword(password: string, salt = randomBytes(SALT_BYTES).toString("hex")) {
+  const key = await scrypt(password, salt, PASSWORD_HASH_BYTES);
   return { salt, passwordHash: key.toString("hex") };
 }
 
 export async function verifyPassword(password: string, user: Pick<StoredUser, "salt" | "passwordHash">) {
-  const key = await scrypt(password, user.salt, 64);
+  const key = await scrypt(password, user.salt, PASSWORD_HASH_BYTES);
   const stored = Buffer.from(user.passwordHash, "hex");
   if (stored.length !== key.length) return false;
   return timingSafeEqual(key, stored);
@@ -189,7 +197,7 @@ async function writeUsers(users: StoredUser[]) {
   }
 }
 
-export const uid = () => `u_${Date.now().toString(36)}${randomBytes(4).toString("hex")}`;
+export const uid = () => `u_${Date.now().toString(36)}${randomBytes(UID_RANDOM_BYTES).toString("hex")}`;
 
 export async function countUsers() {
   return (await readUsers()).length;
@@ -240,7 +248,7 @@ export async function authenticate(email: string, password: string): Promise<Pub
   if (!user) {
     // Spend comparable time on unknown accounts so response timing does not
     // reveal which emails are registered.
-    await hashPassword(password, "00000000000000000000000000000000");
+    await hashPassword(password, DUMMY_SALT);
     return null;
   }
   return (await verifyPassword(password, user)) ? toPublicUser(user) : null;
@@ -377,7 +385,7 @@ export async function createToken(
   userId: string,
   ttlMs: number,
 ): Promise<string> {
-  const raw = randomBytes(24).toString("hex");
+  const raw = randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
   const tokenHash = createHmac("sha256", raw).digest("hex");
   const run = tokenQueue.then(async () => {
     const tokens = await readTokens();
@@ -561,7 +569,7 @@ async function getSecret(): Promise<string> {
     );
   }
 
-  const generated = randomBytes(32).toString("hex");
+  const generated = randomBytes(SECRET_RANDOM_BYTES).toString("hex");
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
