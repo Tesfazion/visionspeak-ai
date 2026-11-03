@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteAccount } from "@/lib/auth-core";
-import { clearSessionCookie } from "@/lib/auth";
+import { clearSessionCookieOn } from "@/lib/auth";
 import { listSessions, deleteSession } from "@/lib/store";
 import { logEvent, newRequestId } from "@/lib/log";
 
@@ -40,9 +40,10 @@ export async function DELETE(request: Request) {
     if (!deleted) {
       return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
-    await clearSessionCookie(request);
+    const response = NextResponse.json({ ok: true });
+    clearSessionCookieOn(response, request);
     logEvent("info", "auth.account_deleted", { requestId, userId: user.id });
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err) {
     logEvent("error", "auth.delete_failed", { requestId, error: String(err) });
     return NextResponse.json({ error: "Could not delete the account." }, { status: 500 });

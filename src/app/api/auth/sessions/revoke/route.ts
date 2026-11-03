@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearSessionCookie, getCurrentUser, setSessionCookie } from "@/lib/auth";
+import { clearSessionCookieOn, getCurrentUser, setSessionCookieOn } from "@/lib/auth";
 import { revokeOtherSessions } from "@/lib/auth-core";
 import { logEvent, newRequestId } from "@/lib/log";
 
@@ -23,12 +23,14 @@ export async function POST(request: Request) {
   try {
     const revoked = await revokeOtherSessions(user.id);
     if (!revoked) {
-      await clearSessionCookie(request);
-      return NextResponse.json({ error: "Account not found." }, { status: 404 });
+      const response = NextResponse.json({ error: "Account not found." }, { status: 404 });
+      clearSessionCookieOn(response, request);
+      return response;
     }
-    await setSessionCookie(user.id, request);
+    const response = NextResponse.json({ ok: true });
+    await setSessionCookieOn(response, user.id, request);
     logEvent("info", "auth.sessions_revoked", { requestId, userId: user.id });
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err) {
     logEvent("error", "auth.revoke_failed", { requestId, error: String(err) });
     return NextResponse.json({ error: "Could not revoke sessions." }, { status: 500 });
