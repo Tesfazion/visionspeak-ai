@@ -261,6 +261,64 @@ export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicU
   });
 }
 
+/**
+ * Profile edits a signed-in user may make themselves: display name and a
+ * password change that re-verified the current one first.
+ */
+export async function updateProfile(
+  userId: string,
+  input: { name?: string },
+): Promise<PublicUser | null> {
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return null;
+    const name = typeof input.name === "string" ? input.name.trim().slice(0, 60) : "";
+    if (name) users[index] = { ...users[index], name };
+    await writeUsers(users);
+    return toPublicUser(users[index]);
+  });
+}
+
+export type PasswordChangeError =
+  | "account_missing"
+  | "wrong_current"
+  | "too_short"
+  | "too_long";
+
+/**
+ * Change the password while signed in. The current password is verified (with
+ * the same constant-time compare as login) so a stolen session cookie alone is
+ * not enough to take the account. On success, every other session is cut off —
+ * a password change should behave like "sign out everywhere".
+ */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: true } | { error: PasswordChangeError }> {
+  if (newPassword.length < MIN_PASSWORD) return { error: "too_short" };
+  if (newPassword.length > 200) return { error: "too_long" };
+  return serialise(async () => {
+    const users = await readUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return { error: "account_missing" } as const;
+    const user = users[index];
+    if (!user.passwordHash || !(await verifyPassword(currentPassword, user))) {
+      return { error: "wrong_current" } as const;
+    }
+    const { salt, passwordHash } = await hashPassword(newPassword);
+    users[index] = {
+      ...user,
+      salt,
+      passwordHash,
+      sessionsValidAfter: new Date().toISOString(),
+    };
+    await writeUsers(users);
+    return { ok: true } as const;
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * One-time action tokens (password reset, email verification)
  *

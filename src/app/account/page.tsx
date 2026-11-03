@@ -4,6 +4,8 @@ import { getCurrentUser, loginHref } from "@/lib/auth";
 import { AccountSettingsForm } from "./account-form";
 import { BillingStatus } from "@/components/account/billing-status";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Account settings",
   description: "Manage your VisionSpeak account and session security.",

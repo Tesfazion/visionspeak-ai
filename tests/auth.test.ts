@@ -14,6 +14,7 @@ delete process.env.AUTH_SECRET;
 const {
   MIN_PASSWORD,
   authenticate,
+  changePassword,
   countUsers,
   createRateLimiter,
   createSessionToken,
@@ -23,10 +24,16 @@ const {
   isSecureRequest,
   normaliseEmail,
   revokeOtherSessions,
+  updateProfile,
   validateCredentials,
   verifyPassword,
   verifySessionToken,
 } = await import("@/lib/auth-core");
+type PasswordChangeError = Awaited<ReturnType<typeof changePassword>> extends
+  | { ok: true }
+  | { error: infer E }
+  ? E
+  : never;
 
 before(() => assert.ok(sandbox));
 after(() => rm(sandbox, { recursive: true, force: true }));
@@ -215,4 +222,55 @@ test("the session cookie is only marked Secure when the request arrived over TLS
 
   // A URL that cannot be parsed must not silently opt into Secure (nor throw).
   assert.equal(isSecureRequest({ headers: new Headers(), url: "not a url" } as unknown as Request), false);
+});
+
+test("updateProfile changes the display name only", async () => {
+  const created = await createUser({ email: "profile@example.com", password: "longenough", name: "Before" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+
+  const updated = await updateProfile(created.user.id, { name: "  After  " });
+  assert.equal(updated?.name, "After");
+
+  // An empty or absent name leaves the record untouched rather than blanking it.
+  assert.equal((await updateProfile(created.user.id, {}))?.name, "After");
+  assert.equal(await updateProfile("u_ghost", { name: "Ghost" }), null);
+});
+
+test("changePassword requires the current password and rotates the hash", async () => {
+  const created = await createUser({ email: "pwchange@example.com", password: "oldpassword", name: "Pw" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+  const userId = created.user.id;
+
+  const expectError = async (
+    promise: Promise<{ ok: true } | { error: PasswordChangeError }>,
+    expected: PasswordChangeError,
+  ) => {
+    const result = await promise;
+    assert.ok("error" in result, `expected error ${expected}`);
+    if (!("error" in result)) return;
+    assert.equal(result.error, expected);
+  };
+
+  await expectError(changePassword(userId, "wrongpassword", "newpassword1"), "wrong_current");
+  await expectError(changePassword(userId, "oldpassword", "short"), "too_short");
+  await expectError(changePassword(userId, "oldpassword", "x".repeat(201)), "too_long");
+
+  const ok = await changePassword(userId, "oldpassword", "newpassword1");
+  assert.ok("ok" in ok);
+  assert.equal((await authenticate("pwchange@example.com", "newpassword1"))?.id, userId);
+  assert.equal(await authenticate("pwchange@example.com", "oldpassword"), null);
+
+  // A password change cuts off earlier session tokens, like "sign out everywhere".
+  // A token minted BEFORE the change was requested: the cookie the browser held.
+  const held = await createSessionToken(userId, 60_000);
+  assert.equal(await verifySessionToken(held), userId, "the old cookie works before the cut-off");
+
+  await changePassword(userId, "newpassword1", "newpassword2");
+  assert.equal(await verifySessionToken(held), null, "the old cookie dies after a second change");
+  const fresh = await createSessionToken(userId, 60_000);
+  assert.equal(await verifySessionToken(fresh), userId, "a cookie minted after the cut-off survives");
+
+  await expectError(changePassword("u_ghost", "x", "longenough"), "account_missing");
 });
