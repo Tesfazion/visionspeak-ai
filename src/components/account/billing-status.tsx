@@ -61,7 +61,7 @@ export function BillingStatus({ plan }: { plan: "free" | "pro" }) {
         {checkoutUrl ? (
           <Link href={checkoutUrl} className={cn(
             "inline-flex items-center justify-center h-10 px-4 text-[13px] rounded-xl gap-2 w-full",
-            "bg-gradient-to-b from-brand to-brand-soft text-white border border-brand/60",
+            "bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60",
           )}>
             {t("billing.free.cta")}
           </Link>
@@ -72,7 +72,7 @@ export function BillingStatus({ plan }: { plan: "free" | "pro" }) {
             disabled={loading}
             className={cn(
               "inline-flex items-center justify-center h-10 px-4 text-[13px] rounded-xl gap-2 w-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
-              "bg-gradient-to-b from-brand to-brand-soft text-white border border-brand/60",
+              "bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60",
             )}
           >
             {loading ? "Loading…" : t("billing.free.cta")}

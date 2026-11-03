@@ -81,10 +81,10 @@ export function tensionScore(m: BlendshapeMap) {
 }
 
 export const EMOTION_META: Record<EmotionLabel, { label: string; color: string; emoji: string }> = {
-  neutral: { label: "Neutral", color: "#c8b4c4", emoji: "•" },
-  happy: { label: "Warm", color: "#f06b58", emoji: "◡" },
-  surprise: { label: "Surprised", color: "#e8bfa8", emoji: "!" },
-  sad: { label: "Concerned", color: "#b84a3e", emoji: "︵" },
-  angry: { label: "Tense", color: "#49304f", emoji: "︿" },
-  fear: { label: "Anxious", color: "#8f6a60", emoji: "◦" },
+  neutral: { label: "Neutral", color: "#8b8ba4", emoji: "•" },
+  happy: { label: "Warm", color: "#34d399", emoji: "◡" },
+  surprise: { label: "Surprised", color: "#fbbf24", emoji: "!" },
+  sad: { label: "Concerned", color: "#60a5fa", emoji: "︵" },
+  angry: { label: "Tense", color: "#fb7185", emoji: "︿" },
+  fear: { label: "Anxious", color: "#c084fc", emoji: "◦" },
 };
