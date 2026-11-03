@@ -1,5 +1,6 @@
 ﻿// MongoDB auth adapter
 import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { normalisePlan, type PlanId } from "@/lib/plans";
@@ -463,7 +464,6 @@ export function createRateLimiter({ limit, windowMs }: { limit: number; windowMs
 }
 
 let cachedSecret: string | null = null;
-let warnedEphemeralSecret = false;
 
 async function getSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
@@ -481,7 +481,7 @@ async function getSecret(): Promise<string> {
   } catch {}
   const generated = randomBytes(32).toString("hex");
   try {
-    await fs.mkdir(require("node:path").dirname(SECRET_FILE), { recursive: true });
+    await fs.mkdir(dirname(SECRET_FILE), { recursive: true });
     await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
   } catch {}
   cachedSecret = generated;
@@ -553,7 +553,7 @@ async function readUsers(): Promise<StoredUser[]> {
 }
 
 async function writeUsers(users: StoredUser[]): Promise<void> {
-  await fs.mkdir(require("node:path").dirname(USERS_FILE), { recursive: true });
+  await fs.mkdir(dirname(USERS_FILE), { recursive: true });
   const tmp = `${USERS_FILE}.tmp`;
   const data = { schemaVersion: SCHEMA_VERSION, version: SCHEMA_VERSION, records: users };
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
@@ -585,7 +585,7 @@ async function readTokens(): Promise<TokenRecord[]> {
 }
 
 async function writeTokens(tokens: TokenRecord[]): Promise<void> {
-  await fs.mkdir(require("node:path").dirname(TOKENS_FILE), { recursive: true });
+  await fs.mkdir(dirname(TOKENS_FILE), { recursive: true });
   const tmp = `${TOKENS_FILE}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(tokens, null, 2), "utf8");
   for (let attempt = 0; ; attempt++) {

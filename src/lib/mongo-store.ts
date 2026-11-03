@@ -1,5 +1,6 @@
 // MongoDB session store adapter
 import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { SessionRecord, ShareLink } from "@/lib/types";
 import { buildDemoHistory } from "@/lib/analysis/demo";
@@ -60,7 +61,7 @@ async function readAll(): Promise<SessionRecord[]> {
 }
 
 async function writeAll(records: SessionRecord[]): Promise<void> {
-  await fs.mkdir(require("node:path").dirname(FILE), { recursive: true });
+  await fs.mkdir(dirname(FILE), { recursive: true });
   const tmp = `${FILE}.tmp`;
   const data = { schemaVersion: SCHEMA_VERSION, version: SCHEMA_VERSION, records };
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
