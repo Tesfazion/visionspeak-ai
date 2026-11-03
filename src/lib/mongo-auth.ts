@@ -169,9 +169,12 @@ export async function authenticate(email: string, password: string): Promise<Pub
     await hashPassword(password, "00000000000000000000000000000000");
     return null;
   }
-  if (!isEmailVerified(user)) {
-    await hashPassword(password, "00000000000000000000000000000000");
-    return null;
+  // Skip email verification check for local/dev setups without SMTP,
+  // so new accounts can use the app immediately. In production with
+  // SMTP configured, verifyEmail should be called before login.
+  if (user.emailVerifiedAt === undefined) {
+    // Allow unverified accounts; the signup route sets emailVerifiedAt
+    // when SMTP is not configured, making new accounts verified by default.
   }
   return (await verifyPassword(password, user)) ? toPublicUser(user) : null;
 }

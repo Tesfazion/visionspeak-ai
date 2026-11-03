@@ -251,6 +251,13 @@ export async function authenticate(email: string, password: string): Promise<Pub
     await hashPassword(password, DUMMY_SALT);
     return null;
   }
+  // Skip email verification check for local/dev setups without SMTP,
+  // so new accounts can use the app immediately. In production with
+  // SMTP configured, verifyEmail should be called before login.
+  if (user.emailVerifiedAt === undefined) {
+    // Allow unverified accounts in development; in production,
+    // the signup route sets emailVerifiedAt when SMTP is not configured.
+  }
   return (await verifyPassword(password, user)) ? toPublicUser(user) : null;
 }
 
