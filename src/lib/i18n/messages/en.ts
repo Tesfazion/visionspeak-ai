@@ -146,6 +146,25 @@ export const en = {
   "account.revoke.done": "Other sessions revoked. This device stays signed in.",
   "account.back": "Back to dashboard",
 
+  /* ----------------------------------------------------------- api keys */
+  "apiKeys.eyebrow": "API keys (BYOK)",
+  "apiKeys.title": "API Keys",
+  "apiKeys.create": "Create API key",
+  "apiKeys.nameLabel": "Key name",
+  "apiKeys.scopesLabel": "Scopes",
+  "apiKeys.createButton": "Create key",
+  "apiKeys.creating": "Creating…",
+  "apiKeys.list": "Your keys",
+  "apiKeys.loading": "Loading keys…",
+  "apiKeys.empty": "No API keys yet. Create one to call VisionSpeak from your own tooling.",
+  "apiKeys.created": "Created",
+  "apiKeys.expires": "Expires",
+  "apiKeys.uses": "Uses",
+  "apiKeys.useCount": "requests",
+  "apiKeys.delete": "Delete",
+  "apiKeys.extend": "Extend 30 days",
+  "apiKeys.back": "Back to account",
+
   /* ------------------------------------------------------------- billing */
   "billing.free.body": "You are on the free plan. Upgrade for longer sessions, unlimited history and CSV export.",
   "billing.free.cta": "Upgrade to Pro",

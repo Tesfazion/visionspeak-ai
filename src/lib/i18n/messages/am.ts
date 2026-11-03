@@ -149,6 +149,25 @@ export const am = {
   "account.revoke.done": "ሌሎች ክፍለ ጊዜዎች ተሰርዘዋል። ይህ መሣሪያ ገብቶ ይቆያል።",
   "account.back": "ወደ ዳሽቦርድ ተመለስ",
 
+  /* ----------------------------------------------------------- api keys */
+  "apiKeys.eyebrow": "API ቁልፎች (BYOK)",
+  "apiKeys.title": "API ቁልፎች",
+  "apiKeys.create": "API ቁልፍ ፍጠር",
+  "apiKeys.nameLabel": "የቁልፍ ስም",
+  "apiKeys.scopesLabel": "ጊዜዎች",
+  "apiKeys.createButton": "ቁልፍ ፍጠር",
+  "apiKeys.creating": "በመፍጠር ላይ...",
+  "apiKeys.list": "የእርስዎ ቁልፎች",
+  "apiKeys.loading": "ቁልፎች በመጫን...",
+  "apiKeys.empty": "እስካሁን API ቁልፎች የለም። ከራስዎ መሣሪያዎች VisionSpeakን ለማጠቃለያ አንዱን ፍጠሩ።",
+  "apiKeys.created": "ተፈጥሯል",
+  "apiKeys.expires": "የሚያልቅ ቀን",
+  "apiKeys.uses": "አጠቃላዮች",
+  "apiKeys.useCount": "ጥሪዎች",
+  "apiKeys.delete": "ሰርዝ",
+  "apiKeys.extend": "30 ቀን ሯሳት",
+  "apiKeys.back": "ወደ መለያ ተመለስ",
+
   /* ------------------------------------------------------------- billing */
   "billing.free.body": "በነጻ ዕቅድ ላይ ነዎት። ለረዥም ክፍለ ጊዜዎች፣ ያልተገደበ ታሪክ እና CSV ማውጣት ያሻሽሉ።",
   "billing.free.cta": "ወደ Pro አሻሽል",
