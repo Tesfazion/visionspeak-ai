@@ -38,7 +38,7 @@ cannot advertise a limit it does not apply.
 | Share links | 7 days | 30 days, revocable |
 | CSV export | — | ✅ |
 | PDF report download | — | ✅ |
-| Price | $0 | $12/month or $108/year |
+| Price | $0 | $12/month or $108/year (696 ETB/month or 6264 ETB/year) |
 
 - **Enforcement** — `POST /api/sessions` returns `402` with `code: "quota_exceeded"` once the
   monthly allowance is spent, and `422` + `code: "session_too_long"` for an over-length

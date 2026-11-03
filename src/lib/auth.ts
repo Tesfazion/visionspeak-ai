@@ -4,7 +4,6 @@ import {
   SESSION_TTL_MS,
   createSessionToken,
   findUserById,
-  isSecureRequest,
   verifySessionToken,
   type PublicUser,
 } from "./auth-core";
