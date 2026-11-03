@@ -533,6 +533,16 @@ export async function isEmailVerified(user: StoredUser) {
 export function isSecureRequest(request: Request): boolean {
   const forwarded = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
   if (forwarded) return forwarded === "https";
+
+  const publicUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (publicUrl) {
+    try {
+      return new URL(publicUrl).protocol === "https:";
+    } catch {
+      // fall through
+    }
+  }
+
   try {
     return new URL(request.url).protocol === "https:";
   } catch {

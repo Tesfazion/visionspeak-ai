@@ -26,17 +26,39 @@ const baseCookieOptions = {
  * Explicitly control the cookie Secure flag via AUTH_COOKIE_SECURE env var.
  * - "true"  → always set Secure (for HTTPS-only deployments)
  * - "false" → never set Secure (for HTTP deployments, local dev, or behind TLS-terminating proxy)
- * - unset   → auto-detect from request (x-forwarded-proto / request URL protocol)
+ * - unset   → auto-detect from request (x-forwarded-proto / request URL protocol / public site URL)
  *
  * This solves the common issue where a TLS-terminating proxy sets
  * x-forwarded-proto: https but the browser connection is actually HTTP,
  * causing the Secure cookie to be discarded by the browser.
+ * Also handles mobile networks where carrier proxies may strip headers.
  */
 function getCookieSecureFlag(request: Request): boolean {
   const env = process.env.AUTH_COOKIE_SECURE?.toLowerCase();
   if (env === "true") return true;
   if (env === "false") return false;
-  return isSecureRequest(request);
+
+  // 1. Check x-forwarded-proto header (set by most TLS-terminating proxies)
+  const forwarded = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwarded) return forwarded === "https";
+
+  // 2. Check public site URL (NEXT_PUBLIC_SITE_URL) — this is the URL users actually visit.
+  // If the public URL is HTTPS, we should set Secure even if the internal request is HTTP.
+  const publicUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (publicUrl) {
+    try {
+      return new URL(publicUrl).protocol === "https:";
+    } catch {
+      // fall through
+    }
+  }
+
+  // 3. Fall back to request URL protocol (works for direct connections without proxy)
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function cookieOptionsFor(request: Request) {
