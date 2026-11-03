@@ -22,11 +22,21 @@ export const DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024;
 /** 1 Hz samples for two hours; anything beyond this is not a real session. */
 export const MAX_TIMELINE_POINTS = 7200;
 
+/** Minimum valid timeline samples for a valid session payload. */
+export const MIN_TIMELINE_POINTS = 3;
+
+/** Maximum array entries allowed in speech filler arrays. */
+export const MAX_SPEECH_FILLERS = 500;
+
 /** Absurd-but-finite numbers are how a payload poisons a score silently. */
-const MAX_ABS_NUMBER = 1_000_000;
-const MAX_DEPTH = 6;
-const MAX_VALUES = 60_000;
-const MAX_STRING = 40_000;
+export const MAX_ABS_NUMBER = 1_000_000;
+export const MAX_DEPTH = 6;
+export const MAX_VALUES = 60_000;
+export const MAX_STRING = 40_000;
+
+/** Emotion values are percentages (0-100). */
+export const MAX_EMOTION_PERCENT = 100;
+export const MIN_EMOTION_PERCENT = 0;
 
 const fail = (status: number, error: string, code?: string): Guard<never> => ({
   ok: false,
@@ -150,8 +160,8 @@ export function parseAggregate(input: unknown, options: AggregateOptions): Guard
       "session_too_long",
     );
   }
-  if (!Array.isArray(timeline) || timeline.length < 3) {
-    return fail(422, "Session payload needs at least three timeline samples.", "invalid_aggregate");
+  if (!Array.isArray(timeline) || timeline.length < MIN_TIMELINE_POINTS) {
+    return fail(422, `Session payload needs at least ${MIN_TIMELINE_POINTS} timeline samples.`, "invalid_aggregate");
   }
   if (timeline.length > MAX_TIMELINE_POINTS) {
     return fail(422, `Session payload exceeds ${MAX_TIMELINE_POINTS} timeline samples.`, "invalid_aggregate");
@@ -179,7 +189,7 @@ export function parseAggregate(input: unknown, options: AggregateOptions): Guard
     if (value !== undefined && !Array.isArray(value)) {
       return fail(422, `Speech "${field}" must be an array.`, "invalid_aggregate");
     }
-    if (Array.isArray(value) && value.length > 500) {
+    if (Array.isArray(value) && value.length > MAX_SPEECH_FILLERS) {
       return fail(422, `Speech "${field}" has too many entries.`, "invalid_aggregate");
     }
   }
