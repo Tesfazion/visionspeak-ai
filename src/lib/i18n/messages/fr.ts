@@ -147,6 +147,25 @@ export const fr = {
   "account.revoke.done": "Autres sessions révoquées. Cet appareil reste connecté.",
   "account.back": "Retour au tableau de bord",
 
+  /* ----------------------------------------------------------- api keys */
+  "apiKeys.eyebrow": "Clés API (BYOK)",
+  "apiKeys.title": "Clés API",
+  "apiKeys.create": "Créer une clé API",
+  "apiKeys.nameLabel": "Nom de la clé",
+  "apiKeys.scopesLabel": "Pouvoirs",
+  "apiKeys.createButton": "Créer",
+  "apiKeys.creating": "Création...",
+  "apiKeys.list": "Vos clés",
+  "apiKeys.loading": "Chargement des clés...",
+  "apiKeys.empty": "Aucune clé API pour l'instant. Créez-en une pour appeler VisionSpeak à partir de vos outils.",
+  "apiKeys.created": "Créé",
+  "apiKeys.expires": "Expire",
+  "apiKeys.uses": "Uvres",
+  "apiKeys.useCount": "requêtes",
+  "apiKeys.delete": "Supprimer",
+  "apiKeys.extend": "Extender 30 jours",
+  "apiKeys.back": "Retour à l'accueil",
+
   /* ------------------------------------------------------------- billing */
   "billing.free.body": "Vous êtes sur le plan gratuit. Passez à Pro pour des sessions plus longues, un historique illimité et l'export CSV.",
   "billing.free.cta": "Passer à Pro",

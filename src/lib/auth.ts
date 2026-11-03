@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 import {
   SESSION_COOKIE,
   SESSION_TTL_MS,
@@ -21,40 +20,20 @@ const baseCookieOptions = {
   sameSite: "lax",
   path: "/",
   maxAge: Math.floor(SESSION_TTL_MS / 1000),
-};
+} as const;
 
 export function cookieOptionsFor(request: Request) {
-  const options: Record<string, unknown> = { ...baseCookieOptions };
-  if (isSecureRequest(request)) {
-    options.secure = true;
-  }
-  return options;
+  return { ...baseCookieOptions, secure: isSecureRequest(request) };
 }
 
-/**
- * Set the session cookie on a NextResponse so the browser actually receives it.
- *
- * Route handlers (login, signup) build their own NextResponse, so the cookie
- * must be attached to *that* response — calling `cookies().set()` from a route
- * handler silently writes to a store that is never sent, and the next request
- * has no session, which reads to the user as "the dashboard never opens".
- */
-export async function setSessionCookieOn(
-  response: NextResponse,
-  userId: string,
-  request: Request,
-) {
-  response.cookies.set(
-    SESSION_COOKIE,
-    await createSessionToken(userId),
-    cookieOptionsFor(request) as Parameters<typeof response.cookies.set>[2],
-  );
-  return response;
+export async function setSessionCookie(userId: string, request: Request) {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, await createSessionToken(userId), cookieOptionsFor(request));
 }
 
-export function clearSessionCookieOn(response: NextResponse, request: Request) {
-  response.cookies.set(SESSION_COOKIE, "", { ...cookieOptionsFor(request), maxAge: 0 });
-  return response;
+export async function clearSessionCookie(request: Request) {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, "", { ...cookieOptionsFor(request), maxAge: 0 });
 }
 
 /** The signed-in user, or null. Safe to call from any server component. */
@@ -70,6 +49,7 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
         name: user.name,
         createdAt: user.createdAt,
         plan: normalisePlan(user.plan),
+        emailVerifiedAt: user.emailVerifiedAt,
       }
     : null;
 }

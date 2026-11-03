@@ -107,6 +107,25 @@ export const es = {
   "account.revoke.done": "Otras sesiones revocadas. Este dispositivo sigue conectado.",
   "account.back": "Volver al panel",
 
+  /* ----------------------------------------------------------- api keys */
+  "apiKeys.eyebrow": "Claves API (BYOK)",
+  "apiKeys.title": "Claves API",
+  "apiKeys.create": "Crear clave API",
+  "apiKeys.nameLabel": "Nombre de la clave",
+  "apiKeys.scopesLabel": "Alcances",
+  "apiKeys.createButton": "Crear clave",
+  "apiKeys.creating": "Creando...",
+  "apiKeys.list": "Tus claves",
+  "apiKeys.loading": "Cargando claves...",
+  "apiKeys.empty": "Aún no tienes claves API. Crea una para llamar a VisionSpeak desde tus propias herramientas.",
+  "apiKeys.created": "Creado",
+  "apiKeys.expires": "Expira",
+  "apiKeys.uses": "Usos",
+  "apiKeys.useCount": "solicitudes",
+  "apiKeys.delete": "Eliminar",
+  "apiKeys.extend": "Extender 30 días",
+  "apiKeys.back": "Volver a la cuenta",
+
   /* ------------------------------------------------------------- billing */
   "billing.free.body": "Estás en el plan gratuito. Mejora para sesiones más largas, historial ilimitado y exportación CSV.",
   "billing.free.cta": "Mejorar a Pro",

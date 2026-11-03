@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticate, countUsers, createRateLimiter, normaliseEmail, validateCredentials } from "@/lib/auth-core";
-import { setSessionCookieOn } from "@/lib/auth";
+import { setSessionCookie } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +58,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
     limiter.reset(key);
-    const response = NextResponse.json({ user });
-    await setSessionCookieOn(response, user.id, request);
-    return response;
+    await setSessionCookie(user.id, request);
+    return NextResponse.json({ user });
   } catch (err) {
     console.error("[auth] login failed", err);
     return NextResponse.json({ error: "Sign-in is temporarily unavailable." }, { status: 500 });

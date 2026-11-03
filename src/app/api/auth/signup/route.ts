@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
-import { setSessionCookieOn } from "@/lib/auth";
+import { setSessionCookie } from "@/lib/auth";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import { logEvent, newRequestId } from "@/lib/log";
 
@@ -38,17 +38,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createUser(parsed);
+    const result = await createUser({
+      ...parsed,
+      // Verification is only meaningful when the platform can actually send the
+      // link. With no SMTP configured (CI, local dev, self-hosts without a mail
+      // setup) an unverifiable account would be locked out of the studio
+      // forever — so the address is trusted as-is and no token is issued.
+      ...(emailConfigured()
+        ? {}
+        : { emailVerifiedAt: new Date().toISOString() }),
+    });
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
-    const response = NextResponse.json({ user: result.user }, { status: 201 });
-    await setSessionCookieOn(response, result.user.id, request);
-    // Send email verification link
-    const token = await createToken("verify", result.user.id, VERIFY_TTL_MS);
-    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const verifyLink = `${base}/verify-email/${token}`;
+    await setSessionCookie(result.user.id, request);
     if (emailConfigured()) {
+      const token = await createToken("verify", result.user.id, VERIFY_TTL_MS);
+      const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      const verifyLink = `${base}/verify-email/${token}`;
       await sendEmail({
         to: result.user.email,
         subject: "VisionSpeak — Verify your email address",
