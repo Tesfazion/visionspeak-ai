@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Check, Minus, Shield, Sparkles, Zap } from "@/components/icons";
 import { SiteFooter } from "@/components/site/footer";
 import { ButtonLink, Pill, cn } from "@/components/ui";
-import { PLANS, PLAN_IDS, formatUsd } from "@/lib/plans";
+import { PLANS, PLAN_IDS, formatUsd, formatEtb } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -71,6 +71,20 @@ export default function PricingPage() {
           billingDuration: "P1M",
         },
       },
+      {
+        "@type": "Offer",
+        name: "Pro (ETB)",
+        price: String(PLANS.pro.priceMonthlyEtb),
+        priceCurrency: "ETB",
+        availability: checkoutUrl ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+        url: checkoutUrl || `${base}/pricing`,
+        priceSpecification: {
+          "@type": "PriceSpecification",
+          price: String(PLANS.pro.priceMonthlyEtb),
+          priceCurrency: "ETB",
+          billingDuration: "P1M",
+        },
+      },
     ],
   };
   return (
@@ -125,9 +139,18 @@ export default function PricingPage() {
                 </span>
                 {plan.priceMonthlyUsd > 0 && <span className="text-[12px] text-fog">/ month</span>}
               </div>
+              <div className="mt-1 flex items-baseline gap-1.5 text-[18px] font-medium text-mist">
+                {formatEtb(plan.priceMonthlyEtb)}
+                {plan.priceMonthlyEtb > 0 && <span className="text-[12px] text-fog">/ month</span>}
+              </div>
               {plan.priceYearlyUsd > 0 && (
                 <p className="mt-1 text-[10.5px] text-fog">
                   or {formatUsd(plan.priceYearlyUsd)}/year — two months free
+                </p>
+              )}
+              {plan.priceYearlyEtb > 0 && (
+                <p className="mt-1 text-[10.5px] text-fog">
+                  or {formatEtb(plan.priceYearlyEtb)}/year — two months free
                 </p>
               )}
 

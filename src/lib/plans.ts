@@ -22,6 +22,8 @@ export interface Plan {
   tagline: string;
   priceMonthlyUsd: number;
   priceYearlyUsd: number;
+  priceMonthlyEtb: number;
+  priceYearlyEtb: number;
   /** Analyses a single account may save per calendar month (UTC). */
   sessionsPerMonth: number;
   /** Hard ceiling on one analysed session, enforced by the API. */
@@ -48,6 +50,8 @@ export const PLANS: Record<PlanId, Plan> = {
     tagline: "Prove it to yourself in one session.",
     priceMonthlyUsd: 0,
     priceYearlyUsd: 0,
+    priceMonthlyEtb: 0,
+    priceYearlyEtb: 0,
     sessionsPerMonth: 5,
     maxSessionMinutes: 10,
     maxMinutesPerMonth: 60,
@@ -72,6 +76,8 @@ export const PLANS: Record<PlanId, Plan> = {
     tagline: "For speakers, coaches and interview candidates who train weekly.",
     priceMonthlyUsd: 12,
     priceYearlyUsd: 108,
+    priceMonthlyEtb: 696,
+    priceYearlyEtb: 6264,
     sessionsPerMonth: 200,
     maxSessionMinutes: 60,
     maxMinutesPerMonth: 2000,
@@ -190,3 +196,5 @@ export function visibleHistory(
 }
 
 export const formatUsd = (value: number) => (value === 0 ? "Free" : `$${value}`);
+
+export const formatEtb = (value: number) => (value === 0 ? "Free" : `በ${value}`);
