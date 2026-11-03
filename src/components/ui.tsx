@@ -17,10 +17,10 @@ export type Tone = { text: string; color: string; bg: string; ring: string };
  * `var()` is not valid there.
  */
 export function toneFor(score: number): Tone {
-  if (score >= 80) return { text: "text-mint", color: "var(--color-mint)", bg: "bg-mint/10", ring: "ring-mint/25" };
-  if (score >= 65) return { text: "text-aqua", color: "var(--color-aqua)", bg: "bg-aqua/10", ring: "ring-aqua/25" };
-  if (score >= 50) return { text: "text-amber", color: "var(--color-amber)", bg: "bg-amber/10", ring: "ring-amber/25" };
-  return { text: "text-rose", color: "var(--color-rose)", bg: "bg-rose/10", ring: "ring-rose/25" };
+  if (score >= 80) return { text: "text-score-good", color: "var(--color-score-good)", bg: "bg-score-good/10", ring: "ring-score-good/25" };
+  if (score >= 65) return { text: "text-score-mid", color: "var(--color-score-mid)", bg: "bg-score-mid/10", ring: "ring-score-mid/25" };
+  if (score >= 50) return { text: "text-score-warn", color: "var(--color-score-warn)", bg: "bg-score-warn/10", ring: "ring-score-warn/25" };
+  return { text: "text-score-bad", color: "var(--color-score-bad)", bg: "bg-score-bad/10", ring: "ring-score-bad/25" };
 }
 
 export function scoreLabel(score: number) {
@@ -242,7 +242,7 @@ export function Sparkline({
   data,
   width = 120,
   height = 36,
-  color = "#22d3ee",
+  color = "#f06b58",
   fill = true,
   className,
 }: {
@@ -286,7 +286,7 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60 shadow-[0_12px_30px_-12px_rgba(124,92,255,0.8)] hover:from-[#8a6dff] hover:to-[#7355ff]",
+    "bg-gradient-to-b from-brand to-brand-soft text-white border border-brand/60 shadow-[0_12px_30px_-12px_rgba(240,107,88,0.8)] hover:from-brand-soft hover:to-brand",
   outline: "border border-line-bright bg-raised/60 text-ink hover:bg-raised hover:border-ink/25",
   ghost: "border border-transparent text-mist hover:text-ink hover:bg-raised/70",
   subtle: "border border-line bg-elevated/70 text-mist hover:text-ink hover:border-line-bright",

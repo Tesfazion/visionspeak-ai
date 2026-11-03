@@ -196,7 +196,7 @@ export function FreeUpgrade({ quota, t }: { quota: QuotaState; t: Translate }) {
       </div>
 
       <div className="mt-3">
-        <Bar value={pct} height={5} tone={remaining === 0 ? "#fb7185" : pct > 80 ? "#fbbf24" : "#34d399"} />
+        <Bar value={pct} height={5} tone={remaining === 0 ? "#e8bfa8" : pct > 80 ? "#f06b58" : "#f4ebdd"} />
       </div>
 
       <div className="mt-4 rounded-lg border border-line/70 bg-raised/45 p-3.5">

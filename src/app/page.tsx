@@ -72,7 +72,7 @@ function FaceMeshGlyph() {
 
   return (
     <svg viewBox="0 0 200 240" className="h-full w-full" aria-hidden>
-      <g stroke="rgba(167,139,250,0.22)" strokeWidth="0.7">
+      <g stroke="rgba(240,107,88,0.22)" strokeWidth="0.7">
         {outer.map((p, i) => {
           const next = outer[(i + 1) % outer.length];
           return <line key={`o${i}`} x1={p.x} y1={p.y} x2={next.x} y2={next.y} />;
@@ -91,18 +91,18 @@ function FaceMeshGlyph() {
           />
         ))}
       </g>
-      {outer.map((p, i) => (
-        <circle key={`od${i}`} cx={p.x} cy={p.y} r={1.6} fill="rgba(167,139,250,0.75)" />
-      ))}
-      {inner.map((p, i) => (
-        <circle key={`id${i}`} cx={p.x} cy={p.y} r={1.2} fill="rgba(34,211,238,0.6)" />
-      ))}
-      <ellipse cx="76" cy="104" rx="16" ry="7" fill="none" stroke="rgba(52,211,153,0.85)" strokeWidth="1.4" />
-      <ellipse cx="124" cy="104" rx="16" ry="7" fill="none" stroke="rgba(52,211,153,0.85)" strokeWidth="1.4" />
-      <circle cx="76" cy="104" r="3.4" fill="#34d399" />
-      <circle cx="124" cy="104" r="3.4" fill="#34d399" />
+{outer.map((p, i) => (
+          <circle key={`od${i}`} cx={p.x} cy={p.y} r={1.6} fill="rgba(240,107,88,0.75)" />
+        ))}
+        {inner.map((p, i) => (
+          <circle key={`id${i}`} cx={p.x} cy={p.y} r={1.2} fill="rgba(240,107,88,0.6)" />
+        ))}
+      <ellipse cx="76" cy="104" rx="16" ry="7" fill="none" stroke="rgba(240,107,88,0.85)" strokeWidth="1.4" />
+      <ellipse cx="124" cy="104" rx="16" ry="7" fill="none" stroke="rgba(240,107,88,0.85)" strokeWidth="1.4" />
+      <circle cx="76" cy="104" r="3.4" fill="#f06b58" />
+      <circle cx="124" cy="104" r="3.4" fill="#f06b58" />
       <path d="M82 152c6 5 14 7 18 7s12-2 18-7" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2" />
-      <path d="M100 112v22l-6 6" fill="none" stroke="rgba(167,139,250,0.35)" strokeWidth="0.9" />
+      <path d="M100 112v22l-6 6" fill="none" stroke="rgba(240,107,88,0.35)" strokeWidth="0.9" />
     </svg>
   );
 }

@@ -14,9 +14,9 @@ export function LogoMark({ size = 30, className }: { size?: number; className?: 
     >
       <defs>
         <linearGradient id="vs-mark" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#A78BFA" />
-          <stop offset="0.55" stopColor="#7C5CFF" />
-          <stop offset="1" stopColor="#22D3EE" />
+          <stop stopColor="#F06B58" />
+          <stop offset="0.55" stopColor="#E8BFA8" />
+          <stop offset="1" stopColor="#F4EBDD" />
         </linearGradient>
       </defs>
       <rect x="1" y="1" width="38" height="38" rx="12" stroke="url(#vs-mark)" strokeOpacity="0.55" />

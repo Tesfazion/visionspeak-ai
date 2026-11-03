@@ -42,7 +42,7 @@ export function VerifyEmailForm({ token }: { token: string }) {
         <div className="mt-6 flex flex-col gap-2">
           <Link
             href="/studio"
-            className="inline-flex items-center justify-center h-10 px-4 text-[13px] rounded-xl gap-2 bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60"
+            className="inline-flex items-center justify-center h-10 px-4 text-[13px] rounded-xl gap-2 bg-gradient-to-b from-brand to-brand-soft text-white border border-brand/60"
           >
             {t("auth.verify.cta")}
           </Link>

@@ -69,7 +69,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
               disabled={loading}
               className={cn(
                 "w-full inline-flex items-center justify-center font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
-                "h-10 px-4 text-[13px] rounded-xl gap-2 bg-gradient-to-b from-brand to-[#6847f0] text-white border border-brand/60",
+                "h-10 px-4 text-[13px] rounded-xl gap-2 bg-gradient-to-b from-brand to-brand-soft text-white border border-brand/60",
               )}
             >
               {loading ? "Saving…" : t("auth.reset.submit")}

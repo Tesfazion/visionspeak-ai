@@ -15,7 +15,7 @@ export default async function OpengraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #0a0a12 0%, #12102a 45%, #080b14 100%)",
+          background: "linear-gradient(135deg, #21152b 0%, #49304f 45%, #e8bfa8 100%)",
           padding: 72,
           fontFamily: "sans-serif",
         }}
@@ -26,16 +26,16 @@ export default async function OpengraphImage() {
               width: 56,
               height: 56,
               borderRadius: 18,
-              background: "linear-gradient(135deg, #a78bfa, #7c5cff 55%, #22d3ee)",
+              background: "linear-gradient(135deg, #f06b58, #e8bfa8 55%, #f4ebdd)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 30,
             }}
           >
-            <div style={{ width: 22, height: 22, borderRadius: 99, background: "#06060b" }} />
+            <div style={{ width: 22, height: 22, borderRadius: 99, background: "#21152b" }} />
           </div>
-          <div style={{ color: "#f4f4f9", fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }}>
+          <div style={{ color: "#fbf8f5", fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }}>
             VisionSpeak AI
           </div>
         </div>
@@ -43,7 +43,7 @@ export default async function OpengraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
             style={{
-              color: "#f4f4f9",
+              color: "#fbf8f5",
               fontSize: 78,
               fontWeight: 700,
               lineHeight: 1.05,
