@@ -22,6 +22,38 @@ import {
 type Agg = SessionAggregate;
 
 /**
+ * Thresholds for the report's insight generation. Centralised so the same
+ * numbers drive both the "strengths" and "improvements" lists and the
+ * coaching plan — a single edit keeps them in sync.
+ */
+const STRENGTH_EYE_CONTACT = 76;
+const STRENGTH_POSTURE = 76;
+const STRENGTH_GESTURES = 72;
+const STRENGTH_VOICE = 74;
+const STRENGTH_EXPRESSION = 70;
+const STRENGTH_LEADERSHIP = 80;
+const IMPROVEMENT_EYE_CONTACT = 78;
+const IMPROVEMENT_POSTURE = 78;
+const IMPROVEMENT_GESTURES = 72;
+const IMPROVEMENT_VOICE = 74;
+const IMPROVEMENT_EXPRESSION = 70;
+const MAX_STRENGTHS = 5;
+const MIN_IMPROVEMENTS = 3;
+const MAX_PLAN_ITEMS = 3;
+const FILLER_RATE_CLEAN = 1.5;
+const FILLER_RATE_MODERATE = 2.5;
+const MIN_WORDS_FOR_FILLER_RATE = 20;
+const MIN_WORDS_FOR_CLEAN_LANGUAGE = 40;
+const PACE_HOT = 185;
+const PACE_SLOW = 95;
+const BLINK_RATE_STRAIN = 30;
+const NERVOUSNESS_HIGH = 55;
+const PAUSE_COUNT_COMPOSED = 8;
+const HANDS_VISIBLE_LOW = 45;
+const VOLUME_CONSISTENCY_LOW = 60;
+const CHOSEN_MAX = 4;
+
+/**
  * Turns a raw session aggregate into the report the UI renders.
  * Every sentence is derived from measured values — nothing is canned praise.
  * `mode` selects the rubric: the composite weights stay fixed, the primitive
@@ -29,7 +61,7 @@ type Agg = SessionAggregate;
  */
 export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportData {
   const rubric = rubricFor(mode);
-  const fillerPer100 = agg.speech.words >= 20 ? (agg.speech.totalFillers / agg.speech.words) * 100 : 2.2;
+  const fillerPer100 = agg.speech.words >= MIN_WORDS_FOR_FILLER_RATE ? (agg.speech.totalFillers / agg.speech.words) * 100 : 2.2;
 
   const primitives = {
     eyeContact: Math.round(scoreEyeContact(agg.eyeContactPct, agg.blinkRatePerMin, rubric)),
@@ -193,7 +225,7 @@ function buildSummary(agg: Agg, pillars: ReportData["pillars"], overall: number,
   } carried the session at ${Math.round(best[1])}, while ${labels[worst[0]]} sat lowest at ${Math.round(
     worst[1],
   )}. ${
-    agg.voice.pauseCount > 8
+    agg.voice.pauseCount > PAUSE_COUNT_COMPOSED
       ? `You used ${agg.voice.pauseCount} pauses — that's a good sign of composure.`
       : "Your phrasing ran continuously; deliberate pauses will add gravity."
   }`;
@@ -202,56 +234,56 @@ function buildSummary(agg: Agg, pillars: ReportData["pillars"], overall: number,
 function buildStrengths(agg: Agg, p: ReportData["pillars"], fillerPer100: number): Insight[] {
   const out: Insight[] = [];
 
-  if (p.eyeContact >= 76)
+  if (p.eyeContact >= STRENGTH_EYE_CONTACT)
     out.push({
       icon: "eye",
       title: "Magnetic eye contact",
       detail: `You held the lens ${Math.round(agg.eyeContactPct)}% of the time across only ${agg.gazeAwayCount} breaks — that reads as trust and conviction.`,
     });
-  if (p.posture >= 76)
+  if (p.posture >= STRENGTH_POSTURE)
     out.push({
       icon: "activity",
       title: "Grounded, authoritative stance",
       detail: `Shoulders stayed level (${round(agg.avgShoulderSlopeDeg, 1)}° slope) and you were upright ${Math.round(agg.uprightPct)}% of the session.`,
     });
-  if (p.gestures >= 72)
+  if (p.gestures >= STRENGTH_GESTURES)
     out.push({
       icon: "hand",
       title: "Gestures that carry meaning",
       detail: `${round(agg.gestureRatePerMin, 1)} purposeful gestures per minute with an average openness of ${round(agg.openness, 2)} — expressive, not frantic.`,
     });
-  if (p.voice >= 74)
+  if (p.voice >= STRENGTH_VOICE)
     out.push({
       icon: "mic",
       title: "Steady vocal control",
       detail: `Volume consistency ${Math.round(agg.voice.volumeConsistency)}/100 at ${agg.wpm || "—"} wpm, with pitch movement of ${round(agg.voice.pitchVariation, 1)} semitones.`,
     });
-  if (p.expression >= 70)
+  if (p.expression >= STRENGTH_EXPRESSION)
     out.push({
       icon: "smile",
       title: "Warm, readable expression",
       detail: `Your face was active ${Math.round(agg.expressionVariety)}% of the range available, with a smile present ${Math.round(agg.smilePct)}% of the time.`,
     });
-  if (p.leadership >= 80)
+  if (p.leadership >= STRENGTH_LEADERSHIP)
     out.push({
       icon: "crown",
       title: "Leadership presence",
       detail: `Presence scored ${p.leadership}/100 — the combination of gaze, stillness and vocal command people read as seniority.`,
     });
-  if (fillerPer100 <= 1.5 && agg.speech.words > 40)
+  if (fillerPer100 <= FILLER_RATE_CLEAN && agg.speech.words > MIN_WORDS_FOR_CLEAN_LANGUAGE)
     out.push({
       icon: "quote",
       title: "Clean language",
       detail: `Only ${agg.speech.totalFillers} filler words in ${agg.speech.words} words (${round(fillerPer100, 1)} per 100) — your sentences land cleanly.`,
     });
 
-  return out.slice(0, 5);
+  return out.slice(0, MAX_STRENGTHS);
 }
 
 function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: number): Insight[] {
   const items: { score: number; insight: Insight }[] = [];
 
-  if (p.eyeContact < 78)
+  if (p.eyeContact < IMPROVEMENT_EYE_CONTACT)
     items.push({
       score: p.eyeContact,
       insight: {
@@ -260,7 +292,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `Gaze left the lens ${agg.gazeAwayCount} times, averaging ${round(agg.avgGazeAwaySec, 1)}s. Anchor on one person per sentence and finish the thought before moving.`,
       },
     });
-  if (p.posture < 78)
+  if (p.posture < IMPROVEMENT_POSTURE)
     items.push({
       score: p.posture,
       insight: {
@@ -269,31 +301,31 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `Average lean of ${round(agg.avgLeanDeg, 1)}° and ${Math.round(100 - agg.uprightPct)}% of the session off-axis. Reset with a long exhale and stacked ribs.`,
       },
     });
-  if (p.gestures < 72)
+  if (p.gestures < IMPROVEMENT_GESTURES)
     items.push({
       score: p.gestures,
       insight: {
         icon: "hand",
-        title: agg.handsVisiblePct < 45 ? "Hands are hiding" : "Gestures need more range",
+        title: agg.handsVisiblePct < HANDS_VISIBLE_LOW ? "Hands are hiding" : "Gestures need more range",
         detail:
-          agg.handsVisiblePct < 45
+          agg.handsVisiblePct < HANDS_VISIBLE_LOW
             ? `Hands were in frame only ${Math.round(agg.handsVisiblePct)}% of the time. Rest them at waist height so they can enter the story instantly.`
             : `${round(agg.gestureRatePerMin, 1)} gestures per minute is under the expressive range. Give each key idea one deliberate hand beat.`,
       },
     });
-  if (p.voice < 74)
+  if (p.voice < IMPROVEMENT_VOICE)
     items.push({
       score: p.voice,
       insight: {
         icon: "mic",
-        title: agg.voice.volumeConsistency < 60 ? "Volume wanders" : "Vocal colour is flat",
+        title: agg.voice.volumeConsistency < VOLUME_CONSISTENCY_LOW ? "Volume wanders" : "Vocal colour is flat",
         detail:
-          agg.voice.volumeConsistency < 60
+          agg.voice.volumeConsistency < VOLUME_CONSISTENCY_LOW
             ? `Volume consistency scored ${Math.round(agg.voice.volumeConsistency)}/100 — sentences trailed off. Aim for the back wall on the final three words.`
             : `Pitch variation of ${round(agg.voice.pitchVariation, 1)} semitones is narrow. Mark one word per sentence to lift or stress.`,
       },
     });
-  if (p.expression < 70)
+  if (p.expression < IMPROVEMENT_EXPRESSION)
     items.push({
       score: p.expression,
       insight: {
@@ -302,7 +334,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `Smiling only ${Math.round(agg.smilePct)}% of the session. Let the face react to your own content — especially on the opening and close.`,
       },
     });
-  if (fillerPer100 > 2.5)
+  if (fillerPer100 > FILLER_RATE_MODERATE)
     items.push({
       score: 100 - Math.min(90, fillerPer100 * 8),
       insight: {
@@ -313,7 +345,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         }. Replace them with a half-second silence; silence reads as control.`,
       },
     });
-  if (agg.wpm > 0 && agg.wpm > 185)
+  if (agg.wpm > 0 && agg.wpm > PACE_HOT)
     items.push({
       score: 62,
       insight: {
@@ -322,7 +354,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `${agg.wpm} words per minute. Drop to 140–170 and land your key line with a pause before and after.`,
       },
     });
-  if (agg.wpm > 0 && agg.wpm < 95)
+  if (agg.wpm > 0 && agg.wpm < PACE_SLOW)
     items.push({
       score: 62,
       insight: {
@@ -331,7 +363,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `${agg.wpm} words per minute. Add forward drive — think "conversation", not "reading".`,
       },
     });
-  if (agg.blinkRatePerMin > 30)
+  if (agg.blinkRatePerMin > BLINK_RATE_STRAIN)
     items.push({
       score: 55,
       insight: {
@@ -340,7 +372,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
         detail: `Blink rate of ${Math.round(agg.blinkRatePerMin)}/min is above the comfortable 12–25 range. Hydrate and soften your gaze on the lens.`,
       },
     });
-  if (agg.nervousness > 55)
+  if (agg.nervousness > NERVOUSNESS_HIGH)
     items.push({
       score: 50,
       insight: {
@@ -358,7 +390,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
   const chosen: Insight[] = [];
   const seen = new Set<string>();
   for (const item of items) {
-    if (chosen.length >= 4) break;
+    if (chosen.length >= CHOSEN_MAX) break;
     if (seen.has(item.insight.title)) continue;
     seen.add(item.insight.title);
     chosen.push(item.insight);
@@ -387,7 +419,7 @@ function buildImprovements(agg: Agg, p: ReportData["pillars"], fillerPer100: num
   ];
 
   for (const extra of followUps) {
-    if (chosen.length >= 3) break;
+    if (chosen.length >= MIN_IMPROVEMENTS) break;
     if (seen.has(extra.title)) continue;
     seen.add(extra.title);
     chosen.push(extra);
@@ -481,7 +513,7 @@ function buildPlan(agg: Agg, p: ReportData["pillars"], fillerPer100: number, rub
 
   return options
     .sort((a, b) => a.score - b.score)
-    .slice(0, 3)
+    .slice(0, MAX_PLAN_ITEMS)
     .map((o) => o.action);
 }
 
