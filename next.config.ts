@@ -84,7 +84,7 @@ const nextConfig: NextConfig = {
   // MediaPipe ships WASM assets that must not be bundled by webpack/turbopack.
   serverExternalPackages: [],
   experimental: {
-    optimizePackageImports: ["lucide-react", "recharts"],
+    optimizePackageImports: ["recharts"],
     ...(Number.isInteger(buildWorkers) && buildWorkers > 0 ? { cpus: buildWorkers } : {}),
   },
   async headers() {
