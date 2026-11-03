@@ -57,7 +57,12 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
       // the "not signed in" redirect. The user then sees the login page again
       // and concludes the password failed. A document load always sends the
       // new cookie and renders the destination fresh.
-      window.location.assign(next);
+      //
+      // Use a microtask delay to ensure the browser has processed the
+      // Set-Cookie header before navigating (critical on some mobile browsers).
+      queueMicrotask(() => {
+        window.location.assign(next);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.errorGeneric"));
       setBusy(false);
