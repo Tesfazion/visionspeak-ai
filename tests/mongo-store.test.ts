@@ -37,7 +37,17 @@ const { saveSession, getSession, listSessions, deleteSession } = await import("@
 const { buildDemoAggregate } = await import("@/lib/analysis/demo");
 
 before(() => assert.ok(sandbox));
-after(() => rm(sandbox, { recursive: true, force: true }));
+
+after(async () => {
+  // Give any pending MongoDB operations a moment to complete before cleanup
+  await new Promise((r) => setTimeout(r, 100));
+  try {
+    await rm(sandbox, { recursive: true, force: true });
+  } catch {
+    // Best-effort cleanup; on Windows rm -rf may fail if files are locked.
+    // CI will still pass; the sandbox is ephemeral.
+  }
+});
 
 test("createUser stores the account with the app's own id as _id", async () => {
   const created = await createUser({ email: "mongo@example.com", password: "longenough", name: "Mongo" });
