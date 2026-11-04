@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
-import { authenticate, countUsers, createRateLimiter, normaliseEmail, validateCredentials } from "@/lib/auth-core";
-import { createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from "@/lib/auth-core";
+import {
+  authenticate,
+  countUsers,
+  createRateLimiter,
+  normaliseEmail,
+  validateCredentials,
+  createSessionToken,
+  SESSION_COOKIE,
+} from "@/lib/auth-core";
 import { cookieOptionsFor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 /**
  * 8 attempts per 15 minutes per email+IP. In-memory: reset on restart and not
- * shared between instances, which is appropriate for a single-process deploy.
+ * shared between instances.
  */
 const limiter = createRateLimiter({ limit: 8, windowMs: 15 * 60 * 1000 });
 
@@ -43,12 +50,7 @@ export async function POST(request: Request) {
   try {
     const user = await authenticate(email, parsed.password);
     if (!user) {
-      if ((await countUsers()) === 0) {
-        return NextResponse.json(
-          { error: "No account exists on this deployment yet. Create one to get in." },
-          { status: 401 },
-        );
-      }
+      // Don't reveal whether accounts exist to prevent user enumeration
       return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
     limiter.reset(key);

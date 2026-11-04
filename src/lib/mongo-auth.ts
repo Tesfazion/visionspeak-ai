@@ -261,8 +261,9 @@ export interface TokenRecord {
 export type TokenKind = "reset" | "verify";
 
 export async function createToken(kind: TokenKind, userId: string, ttlMs: number): Promise<string> {
-  const raw = randomBytes(24).toString("hex");
-  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const raw = randomBytes(32).toString("hex");
+  const secret = await getSecret();
+  const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
     const tokens = await readTokens();
     const now = Date.now();
@@ -278,7 +279,8 @@ export async function createToken(kind: TokenKind, userId: string, ttlMs: number
 }
 
 export async function consumeToken(kind: TokenKind, raw: string): Promise<string | null> {
-  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const secret = await getSecret();
+  const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
     const tokens = await readTokens();
     const now = Date.now();
@@ -465,9 +467,13 @@ export function createRateLimiter({ limit, windowMs }: { limit: number; windowMs
 
 let cachedSecret: string | null = null;
 
-async function getSecret(): Promise<string> {
+export async function getAuthSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
   const fromEnv = process.env.AUTH_SECRET?.trim();
+  if (fromEnv && fromEnv.length >= 32) {
+    cachedSecret = fromEnv;
+    return cachedSecret;
+  }
   if (fromEnv && fromEnv.length >= 16) {
     cachedSecret = fromEnv;
     return cachedSecret;
@@ -479,6 +485,9 @@ async function getSecret(): Promise<string> {
       return cachedSecret;
     }
   } catch {}
+  if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
+    console.error("[auth] CRITICAL: AUTH_SECRET not set in production - using generated secret will invalidate all sessions on restart");
+  }
   const generated = randomBytes(32).toString("hex");
   try {
     await fs.mkdir(dirname(SECRET_FILE), { recursive: true });
@@ -486,6 +495,10 @@ async function getSecret(): Promise<string> {
   } catch {}
   cachedSecret = generated;
   return cachedSecret;
+}
+
+async function getSecret(): Promise<string> {
+  return getAuthSecret();
 }
 
 const sign = async (payload: string) =>

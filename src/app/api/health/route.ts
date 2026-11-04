@@ -15,6 +15,8 @@ export async function GET() {
     /* a missing cookie store must not fail the probe */
   }
 
+  const hasAuthSecret = Boolean(process.env.AUTH_SECRET?.trim() && process.env.AUTH_SECRET.trim().length >= 16);
+
   return NextResponse.json(
     {
       ok: true,
@@ -25,9 +27,9 @@ export async function GET() {
       signedIn: Boolean(user),
       storage: STORAGE_KIND,
       // Ephemeral storage keeps the app usable on serverless previews but the
-      // data does not survive a cold start. Surfaced so a deployment can be
-      // checked with a single curl instead of discovering it the hard way.
+      // data does not survive a cold start.
       durable: !STORAGE_IS_EPHEMERAL,
+      authConfigured: hasAuthSecret,
       ms: Date.now() - started,
       at: new Date().toISOString(),
     },

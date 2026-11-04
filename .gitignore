@@ -14,6 +14,10 @@ tsconfig.tsbuildinfo
 .env
 .env*.local
 !.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Local data — accounts, signed-session secret, recorded sessions, meeting
 # rooms, one-shot auth/verification tokens and probe output. Every file here is

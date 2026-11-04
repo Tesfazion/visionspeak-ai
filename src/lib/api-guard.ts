@@ -298,7 +298,10 @@ export function readClientSessionId(value: unknown): string | null {
 /** Best-effort client address for throttling (trusts the platform proxy). */
 export function clientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for") ?? "";
-  return forwarded.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
+  const ip = forwarded.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
+  // Basic validation to prevent header spoofing abuse in logs
+  if (ip.length > 45) return "local";
+  return ip;
 }
 
 /**

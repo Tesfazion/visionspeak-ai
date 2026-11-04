@@ -393,7 +393,8 @@ export async function createToken(
   ttlMs: number,
 ): Promise<string> {
   const raw = randomBytes(TOKEN_RANDOM_BYTES).toString("hex");
-  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const secret = await getSecret();
+  const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
     const tokens = await readTokens();
     const now = Date.now();
@@ -421,7 +422,8 @@ export async function consumeToken(
   kind: TokenKind,
   raw: string,
 ): Promise<string | null> {
-  const tokenHash = createHmac("sha256", raw).digest("hex");
+  const secret = await getSecret();
+  const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
     const tokens = await readTokens();
     const now = Date.now();
@@ -560,9 +562,13 @@ export function isSecureRequest(request: Request): boolean {
 let cachedSecret: string | null = null;
 let warnedEphemeralSecret = false;
 
-async function getSecret(): Promise<string> {
+export async function getAuthSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
   const fromEnv = process.env.AUTH_SECRET?.trim();
+  if (fromEnv && fromEnv.length >= 32) {
+    cachedSecret = fromEnv;
+    return cachedSecret;
+  }
   if (fromEnv && fromEnv.length >= 16) {
     cachedSecret = fromEnv;
     return cachedSecret;
@@ -585,6 +591,9 @@ async function getSecret(): Promise<string> {
         "Set AUTH_SECRET in the deployment environment.",
     );
   }
+  if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
+    console.error("[auth] CRITICAL: AUTH_SECRET not set in production - sessions will be invalidated on restart");
+  }
 
   const generated = randomBytes(SECRET_RANDOM_BYTES).toString("hex");
   try {
@@ -592,11 +601,14 @@ async function getSecret(): Promise<string> {
     await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
   } catch {
     // Read-only deployment without AUTH_SECRET: keep it in memory rather than
-    // crashing every auth request. Logins still work for the life of this
-    // process; set AUTH_SECRET to make them survive a restart.
+    // crashing every auth request.
   }
   cachedSecret = generated;
   return cachedSecret;
+}
+
+async function getSecret(): Promise<string> {
+  return getAuthSecret();
 }
 
 const sign = async (payload: string) =>

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { requestPasswordReset } from "@/lib/auth-core";
+import { requestPasswordReset, createRateLimiter } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
-import { createRateLimiter } from "@/lib/auth-core";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import { logEvent, newRequestId } from "@/lib/log";
 

@@ -7,14 +7,6 @@ import { createSessionToken } from "@/lib/auth-core";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Sign out everywhere.
- *
- * Sets a cut-off on the account, so every token issued before it is refused by
- * `verifySessionToken` on its next request — including a duplicate of the cookie
- * this browser holds. A fresh cookie is then issued for this device, which is what
- * keeps the person who pressed the button signed in.
- */
 export async function POST(request: Request) {
   const requestId = newRequestId();
   const user = await getCurrentUser();

@@ -50,7 +50,7 @@ test("createUser stores the account with the app's own id as _id", async () => {
     const { MongoClient } = await import("mongodb");
     const client = new MongoClient(process.env.MONGODB_URI!);
     try {
-      const doc = await client.db().collection("users").findOne({ _id: created.user.id });
+      const doc = await client.db().collection("users").findOne({ _id: created.user.id } as never);
       assert.ok(doc, "the account must be in MongoDB, not only in the JSON file");
       assert.equal(doc.email, "mongo@example.com");
       assert.ok(doc.passwordHash && !doc.password, "only the hash is stored");

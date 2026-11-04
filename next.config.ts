@@ -82,7 +82,7 @@ const nextConfig: NextConfig = {
   // Development only: let the LAN URL Next prints reach the dev client.
   ...(isDev ? { allowedDevOrigins: [...new Set(["localhost", "127.0.0.1", ...lanHosts()])] } : {}),
   // MediaPipe ships WASM assets that must not be bundled by webpack/turbopack.
-  serverExternalPackages: [],
+  serverExternalPackages: ["mongodb"],
   experimental: {
     optimizePackageImports: ["recharts"],
     ...(Number.isInteger(buildWorkers) && buildWorkers > 0 ? { cpus: buildWorkers } : {}),
