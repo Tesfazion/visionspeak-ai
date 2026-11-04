@@ -473,16 +473,16 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
 
   /* The hero's italic accent */
   .hero-accent {
-    background: transparent;
+    background: linear-gradient(135deg, #a78bfa, #7c5cff 55%, #22d3ee);
     -webkit-background-clip: text;
     background-clip: text;
-    color: #7c5cff;
+    color: transparent;
   }
   html[data-theme="light"] .hero-accent {
-    background: transparent;
+    background: linear-gradient(135deg, #5a3ce8, #7c5cff 55%, #0ea5e9);
     -webkit-background-clip: text;
     background-clip: text;
-    color: #5a3ce8;
+    color: transparent;
   }
 
   .text-gradient-brand {

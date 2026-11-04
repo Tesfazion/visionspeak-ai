@@ -10,6 +10,8 @@ import { getI18n } from "@/lib/i18n/server";
 import { POST_AUTH_PATH } from "@/lib/routes";
 import { MIN_PASSWORD } from "@/lib/auth-core";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Create account",
   description: "Create an account to keep a private record of every speaking practice session.",

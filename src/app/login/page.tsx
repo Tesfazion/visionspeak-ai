@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { POST_AUTH_PATH } from "@/lib/routes";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Sign in",
   description: "Sign in to open a live practice session and keep your speaking history.",

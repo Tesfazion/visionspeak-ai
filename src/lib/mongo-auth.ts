@@ -513,6 +513,7 @@ export interface PublicUser {
   name: string;
   createdAt: string;
   plan: PlanId;
+  emailVerifiedAt?: string;
   teamId?: string;
   teamRole?: "owner" | "member";
 }

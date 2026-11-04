@@ -24,7 +24,7 @@ import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/tre
 import { SiteFooter } from "@/components/site/footer";
 import { Bar, ButtonLink, Pill, ScoreRing, scoreLabel, toneFor } from "@/components/ui";
 import { formatDuration } from "@/lib/math";
-import { listSessions } from "@/lib/store";
+import { listSessions } from "@/lib/mongo-store";
 import { STORAGE_IS_EPHEMERAL } from "@/lib/data-dir";
 import { getCurrentUser, loginHref } from "@/lib/auth";
 import { planFor, quotaState, visibleHistory } from "@/lib/plans";

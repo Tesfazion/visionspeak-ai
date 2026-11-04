@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteAccount } from "@/lib/auth-core";
 import { clearSessionCookie } from "@/lib/auth";
-import { listSessions, deleteSession } from "@/lib/store";
+import { listSessions, deleteSession } from "@/lib/mongo-store";
 import { logEvent, newRequestId } from "@/lib/log";
 
 export const dynamic = "force-dynamic";

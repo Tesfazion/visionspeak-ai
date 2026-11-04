@@ -6,7 +6,7 @@ import { readClientSessionId, parseAggregate, readJsonLimited, reportIntegrityHa
 import { logEvent, newRequestId } from "@/lib/log";
 import { uid } from "@/lib/math";
 import { planFor, quotaState, visibleHistory } from "@/lib/plans";
-import { findByClientSessionId, listSessions, saveSession } from "@/lib/store";
+import { findByClientSessionId, listSessions, saveSession } from "@/lib/mongo-store";
 import type { SessionMode, SessionRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
