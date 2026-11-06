@@ -25,8 +25,8 @@ to Vercel Project Settings → Environment Variables as `DATABASE_URL`.
 - Removed the previous ignored local `DATABASE_URL` entry; no credential value is
   stored or reproduced in this report.
 - Changed CI database tests to use a separately configured `TEST_DATABASE_URL`
-  secret. Database integration and smoke tests are skipped until a disposable
-  test database is configured.
+  secret for a disposable Neon database. CI fails clearly when the secret is
+  missing; tests and smoke checks remove only data created by their unique run.
 - Added PostgreSQL URL validation and TLS certificate verification, and bounded
   connection-pool settings for serverless deployments. Missing database hosts
   and loopback hosts are rejected instead of falling back to a local connection.

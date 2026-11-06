@@ -15,9 +15,10 @@ Variables; never commit secrets. PostgreSQL and an auth secret are required.
 | `NEXT_PUBLIC_SUPPORT_EMAIL`                                         | production | Contact address on `/privacy` and `/terms`, and for deletion requests.                                                                                                               |
 | `NEXT_PUBLIC_LEGAL_ENTITY` · `NEXT_PUBLIC_LEGAL_JURISDICTION`       | production | Operator name and governing law shown on the legal pages.                                                                                                                            |
 
-For CI integration tests, configure the GitHub Actions secret `TEST_DATABASE_URL` with a
-**disposable test database**, never the production Neon database. CI skips database integration
-tests and the HTTP smoke job when this secret is absent.
+`TEST_DATABASE_URL` is used only by tests. Set it locally to a dedicated disposable Neon database
+branch and add the same value as the GitHub Actions `TEST_DATABASE_URL` secret. CI fails early if
+the secret is missing. Tests use verified TLS and clean up only rows they created; never point this
+variable at production.
 
 On Vercel, set only `DATABASE_URL` for the application; the app does not read the individual
 `PG*`, `POSTGRES_*`, unpooled, or Prisma-specific variables. Never paste database credentials into

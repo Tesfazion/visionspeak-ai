@@ -30,6 +30,11 @@ if (files.length === 0) {
   process.exit(1);
 }
 
+if (!process.env.TEST_DATABASE_URL?.trim()) {
+  console.error("[test] TEST_DATABASE_URL must point to a dedicated disposable Neon database before tests can run.");
+  process.exit(1);
+}
+
 const log = createWriteStream(diagnostics.logPath("test.log"), { flags: "w" });
 
 const args = [
@@ -52,7 +57,7 @@ const child = spawn(process.execPath, args, {
   cwd: root,
   stdio: ["ignore", "pipe", "pipe"],
   windowsHide: true,
-  env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+  env: { ...process.env, NODE_ENV: "test", NO_COLOR: "1", FORCE_COLOR: "0" },
 });
 
 child.stdout.pipe(log, { end: false });

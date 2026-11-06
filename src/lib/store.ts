@@ -16,7 +16,7 @@ export const isValidShareToken = (token: unknown): token is string =>
 type SessionRow = { data: SessionRecord };
 
 async function seedSamples(): Promise<void> {
-  const { rowCount } = await dbQuery("SELECT 1 FROM sessions LIMIT 1");
+  const { rowCount } = await dbQuery("SELECT 1 FROM sessions WHERE source = 'demo' LIMIT 1");
   if (rowCount) return;
   for (const record of buildDemoHistory()) {
     await saveSession(record);

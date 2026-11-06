@@ -20,3 +20,8 @@ test("PostgreSQL pool enables verified TLS and serverless-safe pooling", () => {
   assert.match(config.connectionString, /channel_binding=require/);
   assert.match(config.connectionString, /sslmode=require/);
 });
+
+test("PostgreSQL pool refuses loopback databases", () => {
+  assert.throws(() => createPoolConfig("postgresql://postgres@127.0.0.1/app"), /remote PostgreSQL host/);
+  assert.throws(() => createPoolConfig("postgresql://postgres@[::1]/app"), /remote PostgreSQL host/);
+});

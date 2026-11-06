@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
+import { after, test } from "node:test";
+import { randomUUID } from "node:crypto";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testRunId = randomUUID();
+const testEmail = (scenario: string) => `test-${testRunId}-${scenario}@example.com`;
 if (testDatabaseUrl) process.env.DATABASE_URL = testDatabaseUrl;
 process.env.AUTH_SECRET = "auth-test-secret-0123456789abcdef";
 
@@ -9,7 +12,6 @@ const {
   MIN_PASSWORD,
   authenticate,
   changePassword,
-  countUsers,
   createRateLimiter,
   createSessionToken,
   createUser,
@@ -27,11 +29,14 @@ const {
 } = await import("@/lib/auth-core");
 const { dbQuery } = await import("@/lib/db/postgres");
 
-before(async () => {
-  if (testDatabaseUrl) await dbQuery("TRUNCATE users, auth_tokens");
-});
 after(async () => {
-  if (testDatabaseUrl) await dbQuery("TRUNCATE users, auth_tokens");
+  if (!testDatabaseUrl) return;
+  const emailPattern = `test-${testRunId}-%@example.com`;
+  await dbQuery(
+    "DELETE FROM auth_tokens WHERE user_id IN (SELECT id FROM users WHERE email LIKE $1)",
+    [emailPattern],
+  );
+  await dbQuery("DELETE FROM users WHERE email LIKE $1", [emailPattern]);
 });
 
 test("validateCredentials rejects bad input", () => {
@@ -62,9 +67,8 @@ test("hashPassword/verifyPassword round-trip without storing plaintext", async (
 test("createUser stores a hashed account and rejects duplicate email", {
   skip: !testDatabaseUrl,
 }, async () => {
-  const countBefore = await countUsers();
   const created = await createUser({
-    email: `first-${Date.now()}@example.com`,
+    email: testEmail("first"),
     password: "longenough",
     name: "First",
   });
@@ -76,19 +80,18 @@ test("createUser stores a hashed account and rejects duplicate email", {
   assert.ok(!("password" in (stored ?? {})));
   const duplicate = await createUser({ email: created.user.email.toUpperCase(), password: "longenough", name: "Dupe" });
   assert.ok("error" in duplicate);
-  assert.equal(await countUsers(), countBefore + 1);
 });
 
 test("authenticate accepts the right password only", { skip: !testDatabaseUrl }, async () => {
-  const email = `login-${Date.now()}@example.com`;
+  const email = testEmail("login");
   await createUser({ email, password: "supersecret", name: "Login" });
   assert.equal((await authenticate(email.toUpperCase(), "supersecret"))?.email, email);
   assert.equal(await authenticate(email, "wrong-password"), null);
-  assert.equal(await authenticate(`ghost-${Date.now()}@example.com`, "supersecret"), null);
+  assert.equal(await authenticate(testEmail("ghost"), "supersecret"), null);
 });
 
 test("session tokens are signed, expire and reject tampering", { skip: !testDatabaseUrl }, async () => {
-  const created = await createUser({ email: `token-${Date.now()}@example.com`, password: "longenough", name: "Token" });
+  const created = await createUser({ email: testEmail("token"), password: "longenough", name: "Token" });
   assert.ok("user" in created);
   if (!("user" in created)) return;
   const token = await createSessionToken(created.user.id, 60_000);
@@ -104,7 +107,7 @@ test("session tokens are signed, expire and reject tampering", { skip: !testData
 });
 
 test("signing out everywhere invalidates earlier tokens", { skip: !testDatabaseUrl }, async () => {
-  const created = await createUser({ email: `revoke-${Date.now()}@example.com`, password: "longenough", name: "Revoke" });
+  const created = await createUser({ email: testEmail("revoke"), password: "longenough", name: "Revoke" });
   assert.ok("user" in created);
   if (!("user" in created)) return;
   const before = await createSessionToken(created.user.id, 60_000);
@@ -164,7 +167,7 @@ test("the session cookie is Secure only for HTTPS requests", () => {
 });
 
 test("profile edits and password changes persist in PostgreSQL", { skip: !testDatabaseUrl }, async () => {
-  const email = `profile-${Date.now()}@example.com`;
+  const email = testEmail("profile");
   const created = await createUser({ email, password: "original-pass", name: "Before" });
   assert.ok("user" in created);
   if (!("user" in created)) return;

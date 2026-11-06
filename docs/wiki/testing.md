@@ -10,10 +10,11 @@ node scripts/smoke.mjs http://localhost:3000   # end-to-end checks, against a ru
 node scripts/qa/qa-meeting.mjs                 # checks: lobby, auth, roster, signaling, chat, end
 ```
 
-Database-backed tests are skipped unless `TEST_DATABASE_URL` points to a disposable PostgreSQL
-database. GitHub Actions reads this value from the `TEST_DATABASE_URL` repository secret; the
-database is not provisioned by the workflow, and the smoke job is skipped when the secret is
-absent. Never point this variable at production.
+Tests require `TEST_DATABASE_URL` to point to a dedicated, disposable Neon database branch.
+Configure it locally before `npm test` and as the GitHub Actions `TEST_DATABASE_URL` secret. The
+test runner fails if it is missing, so integration coverage cannot silently disappear. Tests use
+verified TLS and delete only records created by their own unique run; never use a production Neon
+database for tests.
 
 **Unit suite** — covers what is otherwise invisible:
 

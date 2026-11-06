@@ -343,6 +343,12 @@ expect(
   404,
   "account B cannot delete account A's session",
 );
+const deleteAccountB = await request("/api/auth/me/delete", {
+  method: "DELETE",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ confirm: emailB }),
+});
+expect(deleteAccountB.status, 200, "smoke-test account B is removed");
 
 const dup = await request("/api/auth/signup", {
   method: "POST",
@@ -466,6 +472,23 @@ await logout.text();
 const afterLogout = await request("/api/sessions");
 expect(afterLogout.status, 401, "sessions API is closed after sign-out");
 await afterLogout.text();
+
+const cleanupLogin = await request("/api/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email: emailA, password }),
+});
+expect(cleanupLogin.status, 200, "sign back in to remove smoke-test account A");
+await cleanupLogin.text();
+const deleteAccountA = await request("/api/auth/me/delete", {
+  method: "DELETE",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ confirm: emailA }),
+});
+expect(deleteAccountA.status, 200, "smoke-test account A is removed");
+const deletedAccount = await request("/api/auth/me");
+const deletedAccountBody = await deletedAccount.json().catch(() => ({}));
+pass(deletedAccountBody.user === null, "deleted smoke-test account has no active session");
 
 /* ------------------------------------------------------------------ *
  * Report

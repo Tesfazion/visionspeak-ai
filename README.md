@@ -23,7 +23,8 @@ npm run dev      # http://localhost:3000
 
 `DATABASE_URL` and `AUTH_SECRET` are required in the server environment. On Vercel, configure them in
 the project's Environment Variables. Local development requires a separate disposable Neon database;
-never point local tests at production data.
+never point local tests at production data. Set `TEST_DATABASE_URL` to a disposable Neon database
+branch for database-backed tests; GitHub Actions requires it as a repository secret.
 
 Create an account at **`/signup`**, open **Studio → Enable camera & mic**, and speak for a minute.
 Want to see the output first? **`/report/demo`** is a public, fully scored sample session — no

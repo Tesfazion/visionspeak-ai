@@ -11,8 +11,9 @@ on first use.
 
 The database must be reachable from every application instance. Set
 `DATABASE_URL` in the hosting environment. For tests that exercise database
-behavior, set `TEST_DATABASE_URL` to a disposable Neon database; tests clear
-relevant tables and must never use production data.
+behavior, set `TEST_DATABASE_URL` to a dedicated disposable Neon branch. Tests
+remove only the records they create. GitHub Actions requires the same value as a
+repository secret for integration and smoke tests; never use production data.
 
 ## Vercel
 
