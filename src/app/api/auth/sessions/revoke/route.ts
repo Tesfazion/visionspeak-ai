@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, clearSessionCookie } from "@/lib/auth";
-import { revokeOtherSessions, revokeSessionToken, SESSION_COOKIE } from "@/lib/auth-core";
+import { getCurrentUser } from "@/lib/auth";
+import { revokeOtherSessions, SESSION_COOKIE } from "@/lib/auth-core";
 import { logEvent, newRequestId } from "@/lib/log";
 import { cookieOptionsFor } from "@/lib/auth";
 import { createSessionToken } from "@/lib/auth-core";

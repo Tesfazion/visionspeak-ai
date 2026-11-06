@@ -64,10 +64,9 @@ export default function PrivacyPage() {
 
           <Section title="Where it is stored">
             <p>
-              Accounts and sessions live in a JSON data store operated for this deployment. If the
-              deployment runs on a serverless host without a durable volume, the platform reports
-              storage as <span className="text-mist">temporary</span> in <code>/api/health</code> and on your
-              dashboard, and data may be lost when the instance restarts.
+              Account and session records are stored in the PostgreSQL database configured for this
+              deployment. Database access is restricted to the application; database backups and
+              retention are managed by the service operator.
             </p>
           </Section>
 

@@ -1,7 +1,7 @@
 # Docs & diagnostics
 
 This folder keeps the repository root clean. The project itself lives in `src/`,
-`public/`, `data/` and `scripts/` — anything written for *inspection* rather than
+`public/` and `scripts/` — anything written for *inspection* rather than
 *shipping* belongs here.
 
 ```
@@ -36,7 +36,6 @@ the repository root.
 | `scripts/probes/grep.cjs` | `notes/grep.txt` |
 | `scripts/probes/log-filter.cjs` | `notes/dev-errors.txt` |
 | `scripts/probes/net-probe.cjs` | `artifacts/net-probe.json` |
-| `scripts/probes/reseed.cjs` | `artifacts/reseed-report.json` |
 | `scripts/fetch-fonts.mjs` | `artifacts/fonts-report.json` |
 | `scripts/make-icons.mjs` | `artifacts/icons-report.json` |
 | `scripts/probes/kill-port.cjs` | `logs/kill-port.log` |
@@ -62,9 +61,8 @@ run-* wrappers. One-off diagnostics are grouped by purpose:
 command and captures its output to `notes/probe-<name>.txt`, which is how a check like
 `npm run verify` or `npx eslint .` can be read in this environment.
 
-`npm run backup` and `npm run restore -- <dir>` are the one pair that does **not** write
-here: they copy `data/` to `backups/<timestamp>/` (git-ignored) and back, so a restore
-never lands in the diagnostics tree.
+Database backups are managed with PostgreSQL's native `pg_dump` and `pg_restore` tools; they
+should be stored outside the repository.
 
 ## Building on a memory-constrained machine
 

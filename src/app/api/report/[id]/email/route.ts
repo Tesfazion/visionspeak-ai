@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getSession } from "@/lib/mongo-store";
+import { getSession } from "@/lib/store";
 import { renderReportPdf } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
 import { logEvent, newRequestId } from "@/lib/log";

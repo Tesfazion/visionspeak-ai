@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { logEvent, newRequestId } from "@/lib/log";
 import { planFor } from "@/lib/plans";
-import { createShare, revokeShare } from "@/lib/mongo-store";
+import { createShare, revokeShare } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 

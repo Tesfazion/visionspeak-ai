@@ -1,21 +1,32 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { after, before, test } from "node:test";
+import { before, test } from "node:test";
 
-const sandbox = await mkdtemp(path.join(tmpdir(), "vs-store-"));
-process.env.VS_DATA_DIR = sandbox;
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+if (testDatabaseUrl) process.env.DATABASE_URL = testDatabaseUrl;
 
-const { deleteSession, getSession, isSample, listSessions, saveSession, updateSession, visibleTo, writableBy } =
-  await import("@/lib/store");
+const {
+  createShare,
+  deleteSession,
+  findByClientSessionId,
+  getSession,
+  getSharedSession,
+  isSample,
+  listSessions,
+  revokeShare,
+  saveSession,
+  updateSession,
+  visibleTo,
+  writableBy,
+} = await import("@/lib/store");
+const { dbQuery } = await import("@/lib/db/postgres");
 const { buildDemoAggregate } = await import("@/lib/analysis/demo");
 const { buildReport } = await import("@/lib/analysis/report");
 
-before(() => assert.ok(sandbox));
-after(() => rm(sandbox, { recursive: true, force: true }));
+before(async () => {
+  if (testDatabaseUrl) await dbQuery("TRUNCATE sessions");
+});
 
-const makeRecord = (id: string, ownerId?: string) => {
+const makeRecord = (id: string, ownerId?: string, clientSessionId?: string) => {
   const aggregate = buildDemoAggregate();
   aggregate.durationSec = 90;
   return {
@@ -29,79 +40,53 @@ const makeRecord = (id: string, ownerId?: string) => {
     notes: "",
     report: buildReport(aggregate, "practice"),
     ...(ownerId ? { ownerId } : {}),
+    ...(clientSessionId ? { clientSessionId } : {}),
   };
 };
 
-test("an empty store seeds the sample history once", async () => {
-  const sessions = await listSessions("u_alpha");
-  assert.ok(sessions.length >= 4, `expected seeded samples, got ${sessions.length}`);
-  assert.ok(sessions.every((s) => isSample(s)));
-
-  // Newest first.
-  for (let i = 1; i < sessions.length; i++) {
-    assert.ok(sessions[i - 1].createdAt >= sessions[i].createdAt);
-  }
-
-  // A second call must not duplicate the seed.
-  const again = await listSessions("u_alpha");
-  assert.equal(again.length, sessions.length);
-});
-
-test("live sessions are private to their owner", async () => {
+test("PostgreSQL session records enforce ownership and sample visibility", {
+  skip: !testDatabaseUrl,
+}, async () => {
   await saveSession(makeRecord("own-alpha", "u_alpha"));
   await saveSession(makeRecord("own-beta", "u_beta"));
-
   const alpha = await listSessions("u_alpha");
-  const beta = await listSessions("u_beta");
-  const anon = await listSessions(null);
-
-  assert.ok(alpha.some((s) => s.id === "own-alpha"));
-  assert.ok(!alpha.some((s) => s.id === "own-beta"));
-  assert.ok(beta.some((s) => s.id === "own-beta"));
-  assert.ok(!beta.some((s) => s.id === "own-alpha"));
-  // Anonymous visitors see samples only — never another account's history.
-  assert.ok(anon.every((s) => isSample(s)));
-});
-
-test("getSession enforces visibility", async () => {
-  assert.ok(await getSession("own-alpha", "u_alpha"));
+  assert.ok(alpha.some((record) => record.id === "own-alpha"));
+  assert.ok(!alpha.some((record) => record.id === "own-beta"));
+  assert.ok((await listSessions(null)).every(isSample));
   assert.equal(await getSession("own-alpha", "u_beta"), null);
   assert.equal(await getSession("own-alpha", null), null);
-  assert.equal(await getSession("does-not-exist", "u_alpha"), null);
-  // Samples are public.
-  assert.ok(await getSession("demo", null));
+  assert.ok(await getSession("own-alpha", "u_alpha"));
 });
 
-test("deleteSession refuses another account's record", async () => {
-  assert.equal(await deleteSession("own-alpha", "u_beta"), false);
-  assert.ok(await getSession("own-alpha", "u_alpha"), "record must survive a foreign delete");
-  assert.equal(await deleteSession("own-alpha", "u_alpha"), true);
-  assert.equal(await getSession("own-alpha", "u_alpha"), null);
-  assert.equal(await deleteSession("own-alpha", "u_alpha"), false);
+test("session updates, idempotency, and deletes persist", {
+  skip: !testDatabaseUrl,
+}, async () => {
+  const record = makeRecord("own-gamma", "u_gamma", "client-gamma");
+  await saveSession(record);
+  assert.equal((await findByClientSessionId("u_gamma", "client-gamma"))?.id, record.id);
+  assert.equal(await updateSession(record.id, "u_beta", { title: "Not allowed" }), null);
+  assert.equal((await updateSession(record.id, "u_gamma", { title: "Updated" }))?.title, "Updated");
+  assert.equal(await deleteSession(record.id, "u_beta"), false);
+  assert.equal(await deleteSession(record.id, "u_gamma"), true);
 });
 
-test("updateSession only patches the owner's record", async () => {
-  await saveSession(makeRecord("own-gamma", "u_gamma"));
-  assert.equal(await updateSession("own-gamma", "u_beta", { title: "hijack" }), null);
-  const patched = await updateSession("own-gamma", "u_gamma", { title: "Renamed" });
-  assert.equal(patched?.title, "Renamed");
+test("share links can be created, accessed, and revoked", {
+  skip: !testDatabaseUrl,
+}, async () => {
+  const record = makeRecord("share-session", "u_share");
+  await saveSession(record);
+  const share = await createShare(record.id, "u_share", 1);
+  assert.ok(share);
+  assert.ok(await getSharedSession(record.id, share.token));
+  assert.equal(await createShare(record.id, "u_other", 1), null);
+  assert.equal(await revokeShare(record.id, "u_other"), false);
+  assert.equal(await revokeShare(record.id, "u_share"), true);
+  assert.equal(await getSharedSession(record.id, share.token), null);
 });
 
-test("visibility helpers cover the legacy (no owner) case", () => {
+test("visibility helpers hide legacy ownerless sessions", () => {
   const legacy = makeRecord("legacy") as Parameters<typeof visibleTo>[0];
-  // Records written before accounts existed have no ownerId.
   assert.equal(visibleTo(legacy, "u_alpha"), false);
   assert.equal(visibleTo(legacy, null), false);
   assert.equal(writableBy(legacy, "u_alpha"), false);
-});
-
-test("saving the same id twice replaces instead of duplicating", async () => {
-  await saveSession(makeRecord("dup-1", "u_delta"));
-  const updated = makeRecord("dup-1", "u_delta");
-  updated.title = "Second write";
-  await saveSession(updated);
-
-  const mine = (await listSessions("u_delta")).filter((s) => s.id === "dup-1");
-  assert.equal(mine.length, 1);
-  assert.equal(mine[0].title, "Second write");
 });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, clearSessionCookie } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { changePassword, createSessionToken, SESSION_COOKIE } from "@/lib/auth-core";
 import { logEvent, newRequestId } from "@/lib/log";
 import { cookieOptionsFor } from "@/lib/auth";

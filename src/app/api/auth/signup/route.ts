@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS, createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from "@/lib/auth-core";
+import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS, createSessionToken, SESSION_COOKIE } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
 import { cookieOptionsFor } from "@/lib/auth";
 import { sendEmail, emailConfigured } from "@/lib/email";

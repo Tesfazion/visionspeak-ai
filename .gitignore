@@ -19,12 +19,10 @@ tsconfig.tsbuildinfo
 .env.test.local
 .env.production.local
 
-# Local data — accounts, signed-session secret, recorded sessions, meeting
-# rooms, one-shot auth/verification tokens and probe output. Every file here is
-# per-machine state, never source, so the directory is ignored as a whole.
+# Legacy local JSON exports and probe output are per-machine state, never source.
 data/
 
-# `npm run backup` writes timestamped copies here; never commit account data.
+# Local database exports and legacy data backups may contain account data.
 backups/
 
 # Downloaded/copied model runtime — both are restored by `npm install`

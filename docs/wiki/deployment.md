@@ -1,69 +1,51 @@
 # Deployment
 
-## Vercel — one click after import
+## PostgreSQL
+
+PostgreSQL is the only persistent store for accounts, sessions, meetings,
+authentication tokens and external AI keys. Set `DATABASE_URL` wherever the
+application runs; keep it private and URL-encode reserved characters in its
+credentials. For Neon, use its pooled connection string. Connections require TLS
+with certificate verification; the application creates its tables and indexes
+on first use.
+
+The database must be reachable from every application instance. Set
+`DATABASE_URL` in the hosting environment. For tests that exercise database
+behavior, set `TEST_DATABASE_URL` to a disposable Neon database; tests clear
+relevant tables and must never use production data.
+
+## Vercel
 
 1. Import the repository at [vercel.com/new](https://vercel.com/new). The framework preset and
-   build command are already declared in `vercel.json`.
-2. Add environment variables (Project → Settings → Environment Variables):
-   - `AUTH_SECRET` — a 64-character hex secret (see [configuration](configuration.md)). **Without
-     this, sign-ins break on every cold start.**
-   - `NEXT_PUBLIC_SITE_URL` — `https://<your-domain>`.
-3. Deploy. `npm install` runs `scripts/setup-assets.mjs`, which copies the WASM runtime and
-   bundles the three model files into the deployment.
+   build command are declared in `vercel.json`.
+2. Add the Neon pooled `DATABASE_URL`, `AUTH_SECRET` and `NEXT_PUBLIC_SITE_URL` in Project →
+   Settings → Environment Variables. Generate `AUTH_SECRET` using the command in
+   [configuration](configuration.md).
+3. Deploy. `npm install` runs `scripts/setup-assets.mjs`, which installs the vision runtime assets.
 
-Verify a deployment in one request:
-
-```bash
-curl -s https://<your-domain>/api/health
-# {"ok":true,"service":"visionspeak-ai","storage":"ephemeral","durable":false,...}
-```
-
-> ### ⚠️ Serverless storage is ephemeral
->
-> A deployment bundle is **read-only**, so the JSON store falls back to the OS temp directory. That
-> keeps the app fully functional — signup, sessions and reports all work — but the data lives only
-> as long as the instance stays warm. A cold start resets it.
->
-> `/api/health` reports `"durable": false` and the dashboard shows a **temporary storage** badge in
-> this state, so it is never a silent surprise.
->
-> For data that must survive, pick one:
->
-> - **Set `VS_DATA_DIR`** to a mounted persistent volume (Fly.io, Railway, Render, a VM).
-> - **Back the store with a database.** `src/lib/store.ts` is ~130 lines behind five functions
->   (`listSessions`, `getSession`, `saveSession`, `deleteSession`, `updateSession`) — swapping in
->   Postgres or SQLite is a contained change, and `src/lib/auth-core.ts` is the same for users.
+`/api/health` reports PostgreSQL availability and returns HTTP 503 when it cannot connect.
 
 ## Self-hosting (Node)
 
 ```bash
 npm ci
 npm run build
-AUTH_SECRET=$(openssl rand -hex 32) npm start   # http://localhost:3000
+npm start
 ```
 
-`data/` is writable here, so sessions and accounts persist across restarts. Put the app behind a
-reverse proxy with TLS — `getUserMedia` requires a secure context.
+Set `DATABASE_URL` and `AUTH_SECRET` in the process environment before starting the server. Put the
+app behind a reverse proxy with TLS — `getUserMedia` requires a secure context.
 
 ## Docker
 
-```dockerfile
-FROM node:24-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+The app container does not include PostgreSQL; point it at a managed PostgreSQL instance or run a
+separate database service. For a database container, keep its data volume separate from the
+application image and configure `DATABASE_URL` through the deployment environment.
 
-FROM node:24-alpine
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app ./
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+## Backups
 
-Mount a volume at `/app/data` (or set `VS_DATA_DIR`) to keep the JSON store durable.
+Use PostgreSQL's native tools to back up and restore the configured database. Keep backup files
+outside the repository and protect them like the database itself.
 
 ## Testing the studio from another device
 
@@ -71,5 +53,5 @@ Mount a volume at `/app/data` (or set `VS_DATA_DIR`) to keep the JSON store dura
 plain-HTTP LAN address. Use:
 
 ```bash
-npm run dev:https     # self-signed HTTPS origin your browser will accept for local dev
+npm run dev:https
 ```

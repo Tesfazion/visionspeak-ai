@@ -2,13 +2,18 @@
 
 ```bash
 npm install      # copies the MediaPipe WASM runtime, fetches the 3 model bundles
+```
+
+Configure `DATABASE_URL` and `AUTH_SECRET` in the server environment before starting the app. For
+local development, use a separate disposable Neon database, not production:
+
+```bash
 npm run dev      # http://localhost:3000
 ```
 
 Create an account at **`/signup`**, open **Studio → Enable camera & mic**, and speak for a minute.
 
-> There is no seeded, demo or admin login: `/login` only accepts an account that already exists in
-> `data/users.json`, so a fresh checkout must go through `/signup` once. Signing in lands on
+> There is no seeded, demo or admin login: a fresh checkout must go through `/signup` once. Signing in lands on
 > `/dashboard` (session history), and `?next=/studio` takes you straight to the camera.
 
 Want to see the output first? **`/report/demo`** is a public, fully scored sample session — no

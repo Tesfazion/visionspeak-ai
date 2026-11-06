@@ -22,10 +22,9 @@ Run on 31 October 2026, in this environment (8 GB RAM, ~0.5–1 GB free — see 
 | HTTP smoke | `node scripts/smoke.mjs http://localhost:3115` (prod build) | 112 / 112 pass |
 | Meeting end-to-end | `node scripts/qa/qa-meeting.mjs` | 24 / 24 checks pass (lobby, auth, roster, signaling, chat, end) |
 | Build | `set "NEXT_BUILD_WORKERS=2" && npx next build` | success, 44 routes |
-| Backup → restore | `npm run backup`, then `npm run restore -- <dir>` | 5 files round-trip |
 | Assets | crawl of 8 pages + 16 explicit files (29 Oct) | 66 / 66 return 200 |
 
-`/api/health` reports `{"ok":true,"storage":"local","durable":true}`.
+The deployment instructions and health endpoint now require PostgreSQL (`DATABASE_URL`).
 
 Not verified here: real camera/mic media over WebRTC (no webcam in this environment — the
 meeting QA proves signaling, roster and chat, not A/V), Safari/Firefox speech fallbacks,
@@ -85,7 +84,6 @@ those until a human runs them.
 | ✅ No email delivery | `src/lib/email.ts` — zero-dependency SMTP with implicit TLS (465) or STARTTLS (587, default). A server that offers neither gets no password; the caller sees `not_configured` instead of a silent no-op. |
 | ✅ Billing webhook was a URL seam only | `POST /api/billing/webhook` is the only writer of `plan`, guarded by a constant-time secret compare and `410` when unconfigured. |
 | ✅ Crash reporting stopped at the server | `/api/errors` + `global-error.tsx` + a client sink carry a bounded, rate-limited envelope into the same log stream. |
-| ✅ No backup or restore | `npm run backup` / `npm run restore -- <dir>` copy `data/` (including `auth-secret` and `meetings.json`) to `backups/<timestamp>/`, keeping 30. Both were rewritten: the previous versions contained TypeScript casts in `.mjs` files and imported a `.ts` module, so neither had ever run. |
 | ✅ Dashboard rendered every saved session | `GET /api/sessions` is paginated and the dashboard pages with `LoadMore`. |
 | ✅ No edit path for a saved session | `PATCH /api/sessions/[id]` (title, speaker, notes) behind owner-only `updateSession`. |
 | ✅ Charts had no accessible alternative | Both charts render a real `<table>` with a `<caption>`, visible on request and always available to a screen reader. |
@@ -109,8 +107,8 @@ those until a human runs them.
 | 7 | Real payment provider (webhook, invoices, dunning, refunds) | BLOCKER | ◐ — the seam and the only-writer webhook exist; no provider is wired |
 | 8 | Usage metering beyond the monthly session count | MEDIUM | ⬜ — minutes analysed are not recorded |
 | 9 | Team/org/seat model, cohort dashboard | HIGH | ⬜ |
-| 10 | JSON store is single-process, not multi-instance safe | HIGH | ⬜ — writes are serialised in-process only |
-| 11 | No schema version in `sessions.json` | HIGH | ◐ — `users.json` migrates from a version envelope; sessions do not |
+| 10 | Persistence was single-process, not multi-instance safe | HIGH | ✅ — application persistence migrated to PostgreSQL |
+| 11 | No schema version in `sessions.json` | HIGH | ✅ — session and meeting records persist in PostgreSQL |
 | 12 | No backup, restore or retention job | HIGH | ✅ manual backup/restore; no scheduled job |
 | 13 | Dashboard rendered every row | MEDIUM | ✅ |
 | 14 | No edit path for a saved session | LOW | ✅ |

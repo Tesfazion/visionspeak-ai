@@ -16,7 +16,7 @@ async function gate(id: string) {
   if (!user) {
     return { response: NextResponse.json({ error: "unauthorized" }, { status: 401 }) } as const;
   }
-  const meeting = getMeeting(id);
+  const meeting = await getMeeting(id);
   if (!meeting) {
     return { response: NextResponse.json({ error: "not_found" }, { status: 404 }) } as const;
   }

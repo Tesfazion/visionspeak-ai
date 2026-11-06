@@ -20,7 +20,7 @@ export const DEFAULT_MODELS: Record<AiProvider, string> = {
   anthropic: "claude-3-haiku-20240307",
 };
 
-/** Stored external AI key record — never stores the raw key in plaintext. */
+/** Stored external AI key record; the raw provider key is persisted for API calls. */
 export interface StoredExternalAiKey {
   id: string;
   /** Provider (openai | openrouter | anthropic). */

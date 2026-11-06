@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, SESSION_TTL_MS, revokeSessionToken } from "@/lib/auth-core";
+import { SESSION_COOKIE, revokeSessionToken } from "@/lib/auth-core";
 import { cookieOptionsFor } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

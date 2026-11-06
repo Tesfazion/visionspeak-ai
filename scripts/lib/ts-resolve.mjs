@@ -4,10 +4,10 @@
 // Loaded with `--import ./scripts/lib/ts-resolve.mjs`; Node strips (or, with
 // --experimental-transform-types, rewrites) the type syntax itself.
 //
-// Query strings and hashes are preserved: `import("@/lib/data-dir.ts?fresh")`
+// Query strings and hashes are preserved on TypeScript module imports.
 // is how a test gets a *second* module instance (Node keys the registry on the
 // full specifier), which matters for modules that read `process.env` at load.
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import { registerHooks } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -25,7 +25,12 @@ const candidates = (base) => [
 
 function resolveToFile(base) {
   for (const candidate of candidates(base)) {
-    if (existsSync(candidate) && !candidate.endsWith(".d.ts")) return candidate;
+    if (candidate.endsWith(".d.ts")) continue;
+    try {
+      if (statSync(candidate).isFile()) return candidate;
+    } catch {
+      // Try the next supported extension or index file.
+    }
   }
   return null;
 }

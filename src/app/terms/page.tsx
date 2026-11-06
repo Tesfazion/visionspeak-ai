@@ -95,8 +95,8 @@ export default function TermsPage() {
           <Section title="7. Availability and changes">
             <p>
               The service is provided as-is and may change, including limits and features. We aim for high
-              availability but do not guarantee uninterrupted service. Where storage is reported as
-              temporary, data may be lost on restart — export anything you need to keep.
+              availability but do not guarantee uninterrupted service or that data will never be lost.
+              Export anything you need to retain independently.
             </p>
           </Section>
 
@@ -104,8 +104,7 @@ export default function TermsPage() {
             <p>
               To the maximum extent permitted by law, our aggregate liability for any claim relating to the
               service is limited to the amount you paid in the twelve months before the claim. We are not
-              liable for indirect or consequential loss, including lost opportunities or lost data where
-              you were warned that storage was temporary.
+              liable for indirect or consequential loss, including lost opportunities.
             </p>
           </Section>
 

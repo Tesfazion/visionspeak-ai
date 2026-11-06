@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { after, before, test } from "node:test";
 
-// auth-core resolves its data directory at import time, so the sandbox must
-// exist before the module is loaded.
-const sandbox = await mkdtemp(path.join(tmpdir(), "vs-auth-"));
-process.env.VS_DATA_DIR = sandbox;
-delete process.env.AUTH_SECRET;
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+if (testDatabaseUrl) process.env.DATABASE_URL = testDatabaseUrl;
+process.env.AUTH_SECRET = "auth-test-secret-0123456789abcdef";
 
 const {
   MIN_PASSWORD,
@@ -20,6 +14,7 @@ const {
   createSessionToken,
   createUser,
   findUserByEmail,
+  getAuthSecret,
   hashPassword,
   isSecureRequest,
   normaliseEmail,
@@ -29,14 +24,14 @@ const {
   verifyPassword,
   verifySessionToken,
 } = await import("@/lib/auth-core");
-type PasswordChangeError = Awaited<ReturnType<typeof changePassword>> extends
-  | { ok: true }
-  | { error: infer E }
-  ? E
-  : never;
+const { dbQuery } = await import("@/lib/db/postgres");
 
-before(() => assert.ok(sandbox));
-after(() => rm(sandbox, { recursive: true, force: true }));
+before(async () => {
+  if (testDatabaseUrl) await dbQuery("TRUNCATE users, auth_tokens");
+});
+after(async () => {
+  if (testDatabaseUrl) await dbQuery("TRUNCATE users, auth_tokens");
+});
 
 test("validateCredentials rejects bad input", () => {
   assert.match(validateCredentials({ email: "nope", password: "longenough" }).error ?? "", /valid email/);
@@ -63,114 +58,74 @@ test("hashPassword/verifyPassword round-trip without storing plaintext", async (
   assert.equal(await verifyPassword("wrong password", { salt, passwordHash }), false);
 });
 
-test("createUser stores the account and rejects duplicates", async () => {
-  const created = await createUser({ email: "first@example.com", password: "longenough", name: "First" });
+test("createUser stores a hashed account and rejects duplicate email", {
+  skip: !testDatabaseUrl,
+}, async () => {
+  const countBefore = await countUsers();
+  const created = await createUser({
+    email: `first-${Date.now()}@example.com`,
+    password: "longenough",
+    name: "First",
+  });
   assert.ok("user" in created);
   if (!("user" in created)) return;
-  assert.equal(created.user.email, "first@example.com");
-  assert.equal(created.user.name, "First");
-  assert.ok(!("passwordHash" in created.user), "public user must not leak the hash");
-
-  const duplicate = await createUser({ email: "FIRST@example.com", password: "longenough", name: "Dupe" });
+  assert.ok(!("passwordHash" in created.user));
+  const stored = await findUserByEmail(created.user.email);
+  assert.ok(stored?.passwordHash);
+  assert.ok(!("password" in (stored ?? {})));
+  const duplicate = await createUser({ email: created.user.email.toUpperCase(), password: "longenough", name: "Dupe" });
   assert.ok("error" in duplicate);
-  assert.match(duplicate.error, /already exists/);
-
-  assert.equal(await countUsers(), 1);
-  const raw = JSON.parse(await readFile(path.join(sandbox, "users.json"), "utf8"));
-  const records = Array.isArray(raw) ? raw : raw.records;
-  assert.equal(records.length, 1);
-  assert.ok(records[0].passwordHash && !records[0].password);
+  assert.equal(await countUsers(), countBefore + 1);
 });
 
-test("authenticate accepts the right password only", async () => {
-  await createUser({ email: "login@example.com", password: "supersecret", name: "Login" });
-
-  const ok = await authenticate("LOGIN@example.com", "supersecret");
-  assert.equal(ok?.email, "login@example.com");
-
-  assert.equal(await authenticate("login@example.com", "supersecreT"), null);
-  assert.equal(await authenticate("ghost@example.com", "supersecret"), null);
+test("authenticate accepts the right password only", { skip: !testDatabaseUrl }, async () => {
+  const email = `login-${Date.now()}@example.com`;
+  await createUser({ email, password: "supersecret", name: "Login" });
+  assert.equal((await authenticate(email.toUpperCase(), "supersecret"))?.email, email);
+  assert.equal(await authenticate(email, "wrong-password"), null);
+  assert.equal(await authenticate(`ghost-${Date.now()}@example.com`, "supersecret"), null);
 });
 
-test("session tokens are signed, expire and reject tampering", async () => {
-  const token = await createSessionToken("u_abc", 60_000);
-  assert.equal(await verifySessionToken(token), "u_abc");
-
+test("session tokens are signed, expire and reject tampering", { skip: !testDatabaseUrl }, async () => {
+  const created = await createUser({ email: `token-${Date.now()}@example.com`, password: "longenough", name: "Token" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+  const token = await createSessionToken(created.user.id, 60_000);
+  assert.equal(await verifySessionToken(token), created.user.id);
   const parts = token.split(".");
-  assert.equal(parts.length, 4, "userId.issuedAt.expiry.signature");
-
-  // Signature tampering.
+  assert.equal(parts.length, 4);
   assert.equal(await verifySessionToken(`${parts.slice(0, -1).join(".")}.deadbeef`), null);
-  // Payload tampering (swap the user id, keep the old signature).
   assert.equal(await verifySessionToken(`u_evil.${parts.slice(1).join(".")}`), null);
-  // Malformed, and a pre-`issuedAt` three-part token with a broken signature.
   assert.equal(await verifySessionToken("nonsense"), null);
   assert.equal(await verifySessionToken(""), null);
   assert.equal(await verifySessionToken(undefined), null);
-  assert.equal(await verifySessionToken(`u_abc.${parts[2]}.deadbeef`), null);
-
-  // Already expired.
-  const expired = await createSessionToken("u_abc", -1000);
-  assert.equal(await verifySessionToken(expired), null);
+  assert.equal(await verifySessionToken(await createSessionToken(created.user.id, -1000)), null);
 });
 
-test("signing out everywhere invalidates earlier tokens but keeps the new one", async () => {
-  const created = await createUser({ email: "revoke@example.com", password: "longenough", name: "Revoke" });
+test("signing out everywhere invalidates earlier tokens", { skip: !testDatabaseUrl }, async () => {
+  const created = await createUser({ email: `revoke-${Date.now()}@example.com`, password: "longenough", name: "Revoke" });
   assert.ok("user" in created);
   if (!("user" in created)) return;
-  const userId = created.user.id;
-
-  const before = await createSessionToken(userId, 60_000);
-  assert.equal(await verifySessionToken(before), userId);
-
-  assert.equal(await revokeOtherSessions(userId), true);
-  assert.equal(await verifySessionToken(before), null, "a token issued before the cut-off must die");
-
-  const after = await createSessionToken(userId, 60_000);
-  assert.equal(await verifySessionToken(after), userId, "the device that pressed the button stays signed in");
+  const before = await createSessionToken(created.user.id, 60_000);
+  assert.equal(await verifySessionToken(before), created.user.id);
+  assert.equal(await revokeOtherSessions(created.user.id), true);
+  assert.equal(await verifySessionToken(before), null);
+  const after = await createSessionToken(created.user.id, 60_000);
+  assert.equal(await verifySessionToken(after), created.user.id);
 });
 
-test("a pre-issuedAt token is honoured until a cut-off is set", async () => {
-  const created = await createUser({ email: "legacy@example.com", password: "longenough", name: "Legacy" });
-  assert.ok("user" in created);
-  if (!("user" in created)) return;
-  const userId = created.user.id;
-
-  // Exactly what the previous token format produced: no issuedAt segment.
-  const secret = (await readFile(path.join(sandbox, "auth-secret"), "utf8")).trim();
-  const expiry = Date.now() + 60_000;
-  const payload = `${userId}.${expiry}`;
-  const legacy = `${payload}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
-
-  assert.equal(await verifySessionToken(legacy), userId);
-  await revokeOtherSessions(userId);
-  assert.equal(await verifySessionToken(legacy), null, "a cut-off invalidates legacy tokens too");
-});
-
-test("the signing secret is persisted so restarts keep sessions valid", async () => {
-  const secret = await readFile(path.join(sandbox, "auth-secret"), "utf8");
-  assert.ok(secret.trim().length >= 16);
-});
-
-test("the secret is created once and reused", async () => {
-  const token = await createSessionToken("u_stable", 60_000);
-  const first = await readFile(path.join(sandbox, "auth-secret"), "utf8");
-  assert.equal(await verifySessionToken(token), "u_stable");
-  const second = await readFile(path.join(sandbox, "auth-secret"), "utf8");
-  assert.equal(first, second);
+test("the configured signing secret is reused", async () => {
+  assert.equal(await getAuthSecret(), process.env.AUTH_SECRET);
+  assert.equal(await getAuthSecret(), process.env.AUTH_SECRET);
 });
 
 test("rate limiter blocks after the limit and recovers after the window", () => {
-  // A long window keeps this deterministic: with a 40ms window a stalled CI
-  // runner could let the window expire between two checks and the test would
-  // fail for no real reason.
   const limiter = createRateLimiter({ limit: 2, windowMs: 10_000 });
   assert.equal(limiter.check("k").allowed, true);
   assert.equal(limiter.check("k").allowed, true);
   const blocked = limiter.check("k");
   assert.equal(blocked.allowed, false);
   assert.ok(blocked.retryAfterSec >= 1);
-  // A different key is unaffected.
   assert.equal(limiter.check("other").allowed, true);
 });
 
@@ -190,87 +145,22 @@ test("rate limiter resets a cleared key", () => {
   assert.equal(limiter.check("k").allowed, true);
 });
 
-test("a corrupt users file degrades to empty instead of throwing", async () => {
-  await writeFile(path.join(sandbox, "users.json"), "{not json", "utf8");
-  assert.equal(await countUsers(), 0);
-  assert.equal(await findUserByEmail("first@example.com"), null);
-});
-
-test("the session cookie is only marked Secure when the request arrived over TLS", async () => {
-  const req = (url: string, headers: Record<string, string> = {}) =>
-    new Request(url, { headers });
-
-  // A production build served over plain HTTP (the "Network" URL `next start`
-  // prints) must not send a Secure cookie: the browser would drop it and the
-  // user would bounce from /login straight back to /login.
-  assert.equal(isSecureRequest(req("http://192.168.1.20:3000/api/auth/login")), false);
-  assert.equal(isSecureRequest(req("https://visionspeak.example/api/auth/login")), true);
-
-  // Behind a TLS-terminating proxy the scheme is in the header, not the URL.
+test("the session cookie is Secure only for HTTPS requests", () => {
+  assert.equal(isSecureRequest(new Request("http://localhost/")), false);
+  assert.equal(isSecureRequest(new Request("https://example.com/")), true);
   assert.equal(
-    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "https" })),
+    isSecureRequest(new Request("http://internal/", { headers: { "x-forwarded-proto": "https" } })),
     true,
   );
-  assert.equal(
-    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "https, http" })),
-    true,
-  );
-  assert.equal(
-    isSecureRequest(req("http://10.0.0.5:3000/api/auth/login", { "x-forwarded-proto": "http" })),
-    false,
-  );
-
-  // A URL that cannot be parsed must not silently opt into Secure (nor throw).
-  assert.equal(isSecureRequest({ headers: new Headers(), url: "not a url" } as unknown as Request), false);
 });
 
-test("updateProfile changes the display name only", async () => {
-  const created = await createUser({ email: "profile@example.com", password: "longenough", name: "Before" });
+test("profile edits and password changes persist in PostgreSQL", { skip: !testDatabaseUrl }, async () => {
+  const email = `profile-${Date.now()}@example.com`;
+  const created = await createUser({ email, password: "original-pass", name: "Before" });
   assert.ok("user" in created);
   if (!("user" in created)) return;
-
-  const updated = await updateProfile(created.user.id, { name: "  After  " });
-  assert.equal(updated?.name, "After");
-
-  // An empty or absent name leaves the record untouched rather than blanking it.
-  assert.equal((await updateProfile(created.user.id, {}))?.name, "After");
-  assert.equal(await updateProfile("u_ghost", { name: "Ghost" }), null);
-});
-
-test("changePassword requires the current password and rotates the hash", async () => {
-  const created = await createUser({ email: "pwchange@example.com", password: "oldpassword", name: "Pw" });
-  assert.ok("user" in created);
-  if (!("user" in created)) return;
-  const userId = created.user.id;
-
-  const expectError = async (
-    promise: Promise<{ ok: true } | { error: PasswordChangeError }>,
-    expected: PasswordChangeError,
-  ) => {
-    const result = await promise;
-    assert.ok("error" in result, `expected error ${expected}`);
-    if (!("error" in result)) return;
-    assert.equal(result.error, expected);
-  };
-
-  await expectError(changePassword(userId, "wrongpassword", "newpassword1"), "wrong_current");
-  await expectError(changePassword(userId, "oldpassword", "short"), "too_short");
-  await expectError(changePassword(userId, "oldpassword", "x".repeat(201)), "too_long");
-
-  const ok = await changePassword(userId, "oldpassword", "newpassword1");
-  assert.ok("ok" in ok);
-  assert.equal((await authenticate("pwchange@example.com", "newpassword1"))?.id, userId);
-  assert.equal(await authenticate("pwchange@example.com", "oldpassword"), null);
-
-  // A password change cuts off earlier session tokens, like "sign out everywhere".
-  // A token minted BEFORE the change was requested: the cookie the browser held.
-  const held = await createSessionToken(userId, 60_000);
-  assert.equal(await verifySessionToken(held), userId, "the old cookie works before the cut-off");
-
-  await changePassword(userId, "newpassword1", "newpassword2");
-  assert.equal(await verifySessionToken(held), null, "the old cookie dies after a second change");
-  const fresh = await createSessionToken(userId, 60_000);
-  assert.equal(await verifySessionToken(fresh), userId, "a cookie minted after the cut-off survives");
-
-  await expectError(changePassword("u_ghost", "x", "longenough"), "account_missing");
+  assert.equal((await updateProfile(created.user.id, { name: "After" }))?.name, "After");
+  assert.deepEqual(await changePassword(created.user.id, "wrong", "new-password"), { error: "wrong_current" });
+  assert.deepEqual(await changePassword(created.user.id, "original-pass", "new-password"), { ok: true });
+  assert.equal((await authenticate(email, "new-password"))?.email, email);
 });

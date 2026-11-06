@@ -1,11 +1,10 @@
-import { promises as fs } from "node:fs";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { DATA_DIR, STORAGE_IS_EPHEMERAL, dataFile } from "./data-dir";
 import { normalisePlan, type PlanId } from "./plans";
+import { dbQuery } from "./db/postgres";
 
 /**
- * Password hashing, the user file and the signed session cookie.
+ * Password hashing, PostgreSQL-backed users and the signed session cookie.
  *
  * Deliberately free of Next.js imports so it can be unit-tested with plain
  * Node (see tests/auth.test.ts) and reused by scripts. The framework glue —
@@ -18,22 +17,6 @@ const scrypt = promisify(scryptCb) as (
   salt: string,
   keylen: number,
 ) => Promise<Buffer>;
-
-const SCHEMA_VERSION = 2;
-
-function migrateUserRecords(records: Record<string, unknown>[], fromVersion: number, toVersion: number): StoredUser[] {
-  if (fromVersion >= toVersion) return records.map((r) => r as unknown as StoredUser);
-  let migrated = records;
-  if (fromVersion < 2 && toVersion >= 2) {
-    migrated = migrated.map((r) => ({
-      ...r,
-    }));
-  }
-  return migrated.map((r) => r as unknown as StoredUser);
-}
-
-const USERS_FILE = dataFile("users.json");
-const SECRET_FILE = dataFile("auth-secret");
 
 export const SESSION_COOKIE = "vs_session";
 export const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -140,7 +123,7 @@ export async function verifyPassword(password: string, user: Pick<StoredUser, "s
 }
 
 /* ------------------------------------------------------------------ *
- * User store
+ * User persistence
  * ------------------------------------------------------------------ */
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -151,65 +134,34 @@ const serialise = <T,>(fn: () => Promise<T>): Promise<T> => {
 };
 
 async function readUsers(): Promise<StoredUser[]> {
-  try {
-    const raw = await fs.readFile(USERS_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      const migrated = migrateUserRecords(parsed, 1, SCHEMA_VERSION);
-      return migrated;
-    } else if (
-      parsed &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as { records?: unknown }).records)
-    ) {
-      const envelope = parsed as { records: Record<string, unknown>[]; version?: number };
-      const version = envelope.version || 1;
-      const migrated = migrateUserRecords(envelope.records, version, SCHEMA_VERSION);
-      return migrated;
-    }
-    return Array.isArray(parsed) ? (parsed as StoredUser[]) : [];
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    console.error("[auth] unreadable users file", err);
-    return [];
-  }
+  const { rows } = await dbQuery<{ data: StoredUser }>("SELECT data FROM users");
+  return rows.map(({ data }) => data);
 }
 
-async function writeUsers(users: StoredUser[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${USERS_FILE}.tmp`;
-  const data = { schemaVersion: SCHEMA_VERSION, version: SCHEMA_VERSION, records: users };
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await fs.rename(tmp, USERS_FILE);
-      return;
-    } catch (err) {
-      // Same Windows rename contention as the session store.
-      const code = (err as NodeJS.ErrnoException).code;
-      const transient = code === "EPERM" || code === "EACCES" || code === "EBUSY";
-      if (!transient || attempt >= 5) {
-        await fs.rm(tmp, { force: true });
-        throw err;
-      }
-      await new Promise((r) => setTimeout(r, 25 * 2 ** attempt));
-    }
-  }
+async function writeUser(user: StoredUser): Promise<void> {
+  await dbQuery(
+    `INSERT INTO users (id, email, data) VALUES ($1, $2, $3::jsonb)
+     ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, data = EXCLUDED.data`,
+    [user.id, user.email, JSON.stringify(user)],
+  );
 }
 
 export const uid = () => `u_${Date.now().toString(36)}${randomBytes(UID_RANDOM_BYTES).toString("hex")}`;
 
 export async function countUsers() {
-  return (await readUsers()).length;
+  const { rows } = await dbQuery<{ count: string }>("SELECT count(*)::text AS count FROM users");
+  return Number(rows[0]?.count ?? 0);
 }
 
 export async function findUserByEmail(email: string) {
   const target = normaliseEmail(email);
-  return (await readUsers()).find((u) => u.email === target) ?? null;
+  const { rows } = await dbQuery<{ data: StoredUser }>("SELECT data FROM users WHERE email = $1", [target]);
+  return rows[0]?.data ?? null;
 }
 
 export async function findUserById(id: string) {
-  return (await readUsers()).find((u) => u.id === id) ?? null;
+  const { rows } = await dbQuery<{ data: StoredUser }>("SELECT data FROM users WHERE id = $1", [id]);
+  return rows[0]?.data ?? null;
 }
 
 /** Creates a user. Returns `{ error }` when the email is already registered. */
@@ -238,7 +190,14 @@ export async function createUser(input: {
       plan: "free",
       ...(input.emailVerifiedAt ? { emailVerifiedAt: input.emailVerifiedAt } : {}),
     };
-    await writeUsers([...users, user]);
+    try {
+      await writeUser(user);
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505") {
+        return { error: "An account with that email already exists." } as const;
+      }
+      throw error;
+    }
     return { user: toPublicUser(user) } as const;
   });
 }
@@ -271,7 +230,7 @@ export async function setUserPlan(userId: string, plan: PlanId): Promise<PublicU
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return null;
     users[index] = { ...users[index], plan: normalisePlan(plan) };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return toPublicUser(users[index]);
   });
 }
@@ -290,7 +249,7 @@ export async function updateProfile(
     if (index === -1) return null;
     const name = typeof input.name === "string" ? input.name.trim().slice(0, 60) : "";
     if (name) users[index] = { ...users[index], name };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return toPublicUser(users[index]);
   });
 }
@@ -329,16 +288,13 @@ export async function changePassword(
       passwordHash,
       sessionsValidAfter: new Date().toISOString(),
     };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return { ok: true } as const;
   });
 }
 
 /* ------------------------------------------------------------------ *
- * One-time action tokens (password reset, email verification)
- *
- * A separate JSON file, not the users file, so a token lookup never touches
- * the password hashes. Tokens are single-use and time-boxed.
+ * One-time action tokens (password reset, email verification).
  * ------------------------------------------------------------------ */
 
 export type TokenKind = "reset" | "verify";
@@ -352,39 +308,7 @@ export interface TokenRecord {
   usedAt?: number;
 }
 
-const TOKENS_FILE = dataFile("tokens.json");
 let tokenQueue: Promise<unknown> = Promise.resolve();
-
-async function readTokens(): Promise<TokenRecord[]> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(TOKENS_FILE, "utf8"));
-    return Array.isArray(parsed) ? (parsed as TokenRecord[]) : [];
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    console.error("[auth] unreadable tokens file", err);
-    return [];
-  }
-}
-
-async function writeTokens(tokens: TokenRecord[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${TOKENS_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(tokens, null, 2), "utf8");
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await fs.rename(tmp, TOKENS_FILE);
-      return;
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      const transient = code === "EPERM" || code === "EACCES" || code === "EBUSY";
-      if (!transient || attempt >= 5) {
-        await fs.rm(tmp, { force: true });
-        throw err;
-      }
-      await new Promise((r) => setTimeout(r, 25 * 2 ** attempt));
-    }
-  }
-}
 
 /** Issue a single-use token. Returns the raw token (store it in the link). */
 export async function createToken(
@@ -396,21 +320,17 @@ export async function createToken(
   const secret = await getSecret();
   const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
-    const tokens = await readTokens();
     const now = Date.now();
-    // Purge expired and any existing unused token of the same kind for this user.
-    const fresh = tokens.filter(
-      (t) =>
-        !(t.userId === userId && t.kind === kind && !t.usedAt && t.expiresAt > now),
+    await dbQuery(
+      `DELETE FROM auth_tokens
+       WHERE user_id = $1 AND kind = $2 AND used_at IS NULL AND expires_at > $3`,
+      [userId, kind, now],
     );
-    const record: TokenRecord = {
-      kind,
-      userId,
-      tokenHash,
-      createdAt: now,
-      expiresAt: now + ttlMs,
-    };
-    await writeTokens([...fresh, record]);
+    await dbQuery(
+      `INSERT INTO auth_tokens (token_hash, user_id, kind, created_at, expires_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [tokenHash, userId, kind, now, now + ttlMs],
+    );
     return raw;
   });
   tokenQueue = run.catch(() => undefined);
@@ -425,19 +345,14 @@ export async function consumeToken(
   const secret = await getSecret();
   const tokenHash = createHmac("sha256", secret).update(raw).digest("hex");
   const run = tokenQueue.then(async () => {
-    const tokens = await readTokens();
     const now = Date.now();
-    const index = tokens.findIndex(
-      (t) =>
-        t.kind === kind &&
-        !t.usedAt &&
-        t.expiresAt > now &&
-        t.tokenHash === tokenHash,
+    const { rows } = await dbQuery<{ user_id: string }>(
+      `UPDATE auth_tokens SET used_at = $3
+       WHERE token_hash = $1 AND kind = $2 AND used_at IS NULL AND expires_at > $3
+       RETURNING user_id`,
+      [tokenHash, kind, now],
     );
-    if (index === -1) return null;
-    tokens[index].usedAt = now;
-    await writeTokens(tokens);
-    return tokens[index].userId;
+    return rows[0]?.user_id ?? null;
   });
   tokenQueue = run.catch(() => undefined);
   return run;
@@ -466,7 +381,7 @@ export async function deleteAccount(userId: string): Promise<boolean> {
       emailVerifiedAt: undefined,
       deletedAt: new Date().toISOString(),
     };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return true;
   });
 }
@@ -492,7 +407,7 @@ export async function resetPassword(token: string, newPassword: string) {
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return { error: "Account not found." } as const;
     users[index] = { ...users[index], salt, passwordHash };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return { ok: true } as const;
   });
 }
@@ -506,7 +421,7 @@ export async function verifyEmail(token: string) {
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return { error: "Account not found." } as const;
     users[index] = { ...users[index], emailVerifiedAt: new Date().toISOString() };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return { ok: true } as const;
   });
 }
@@ -560,50 +475,18 @@ export function isSecureRequest(request: Request): boolean {
 }
 
 let cachedSecret: string | null = null;
-let warnedEphemeralSecret = false;
 
 export async function getAuthSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
   const fromEnv = process.env.AUTH_SECRET?.trim();
-  if (fromEnv && fromEnv.length >= 32) {
-    cachedSecret = fromEnv;
-    return cachedSecret;
-  }
   if (fromEnv && fromEnv.length >= 16) {
     cachedSecret = fromEnv;
     return cachedSecret;
   }
-  try {
-    const existing = (await fs.readFile(SECRET_FILE, "utf8")).trim();
-    if (existing.length >= 16) {
-      cachedSecret = existing;
-      return cachedSecret;
-    }
-  } catch {
-    /* generate below */
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET must contain at least 16 characters in production.");
   }
-
-  if (STORAGE_IS_EPHEMERAL && !warnedEphemeralSecret) {
-    warnedEphemeralSecret = true;
-    console.warn(
-      "[auth] AUTH_SECRET is not set on an ephemeral filesystem — a random secret " +
-        "was generated. Sessions will be invalidated whenever a new instance starts. " +
-        "Set AUTH_SECRET in the deployment environment.",
-    );
-  }
-  if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
-    console.error("[auth] CRITICAL: AUTH_SECRET not set in production - sessions will be invalidated on restart");
-  }
-
-  const generated = randomBytes(SECRET_RANDOM_BYTES).toString("hex");
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(SECRET_FILE, generated, { encoding: "utf8", mode: 0o600 });
-  } catch {
-    // Read-only deployment without AUTH_SECRET: keep it in memory rather than
-    // crashing every auth request.
-  }
-  cachedSecret = generated;
+  cachedSecret = randomBytes(SECRET_RANDOM_BYTES).toString("hex");
   return cachedSecret;
 }
 
@@ -671,7 +554,7 @@ export async function revokeSessionToken(token: string): Promise<boolean> {
     // Cap the list so a long-lived account cannot grow it without bound.
     const updated = [...existing, hash].slice(-200);
     users[userIndex] = { ...users[userIndex], revokedSessionHashes: updated };
-    await writeUsers(users);
+    await writeUser(users[userIndex]);
     return true;
   });
 }
@@ -691,7 +574,7 @@ export async function revokeOtherSessions(userId: string): Promise<boolean> {
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return false;
     users[index] = { ...users[index], sessionsValidAfter: new Date().toISOString() };
-    await writeUsers(users);
+    await writeUser(users[index]);
     return true;
   });
 }

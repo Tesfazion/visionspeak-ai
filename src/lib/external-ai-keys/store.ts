@@ -1,92 +1,18 @@
-/**
- * External AI key store — JSON-file backed (same pattern as sessions.json).
- *
- * Never persists raw keys — only keyHash (SHA-256) and public metadata.
- */
-
-import { promises as fs } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { hashExternalAiKey, keyPrefix, AiProvider, DEFAULT_MODELS, StoredExternalAiKey, ExternalAiKeyCreateResult, ExternalAiKeySummary, isValidExternalAiKey } from "./types";
-import { DATA_DIR, dataFile } from "../data-dir";
-
-const FILE = dataFile("external-ai-keys.json");
-
-let initPromise: Promise<StoredExternalAiKey[]> | null = null;
-let storedKeys: StoredExternalAiKey[] = [];
+import {
+  hashExternalAiKey,
+  keyPrefix,
+  DEFAULT_MODELS,
+  type AiProvider,
+  type StoredExternalAiKey,
+  type ExternalAiKeyCreateResult,
+  type ExternalAiKeySummary,
+  isValidExternalAiKey,
+} from "./types";
+import { dbQuery } from "@/lib/db/postgres";
 
 function uid(): string {
   return `ai_${Date.now().toString(36)}${randomBytes(4).toString("hex")}`;
-}
-
-async function initKeys(): Promise<StoredExternalAiKey[]> {
-  if (storedKeys.length > 0) return storedKeys;
-  if (!initPromise) {
-    initPromise = (async () => {
-      try {
-        const raw = await fs.readFile(FILE, "utf8");
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          storedKeys = parsed as StoredExternalAiKey[];
-          return storedKeys;
-        }
-        if (parsed && typeof parsed === "object" && Array.isArray((parsed as { records?: unknown }).records)) {
-          storedKeys = (parsed as { records: StoredExternalAiKey[], version?: number }).records as StoredExternalAiKey[];
-          return storedKeys;
-        }
-        storedKeys = [];
-        return storedKeys;
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-          storedKeys = [];
-          return storedKeys;
-        }
-        console.error("[external-ai-keys] unreadable keys file", err);
-        storedKeys = [];
-        return storedKeys;
-      }
-    })();
-  }
-  return initPromise;
-}
-
-export async function listExternalAiKeys(ownerId: string): Promise<ExternalAiKeySummary[]> {
-  const keys = await initKeys();
-  return keys.filter((k) => k.ownerId === ownerId).sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
-}
-
-export async function createExternalAiKey(
-  ownerId: string,
-  provider: AiProvider,
-  rawKey: string,
-  label: string,
-  model?: string
-): Promise<ExternalAiKeyCreateResult> {
-  if (!isValidExternalAiKey(rawKey)) {
-    throw new Error("Invalid API key format.");
-  }
-
-  return (async () => {
-    const keys = await initKeys();
-    const effectiveModel = model || DEFAULT_MODELS[provider];
-
-    const key: StoredExternalAiKey = {
-      id: uid(),
-      provider,
-      label: label || `Untitled ${provider} key`,
-      prefix: keyPrefix(rawKey, provider),
-      keyHash: hashExternalAiKey(rawKey),
-      apiKey: rawKey,
-      model: effectiveModel,
-      createdAt: new Date().toISOString(),
-      lastUsedAt: null,
-      useCount: 0,
-      ownerId,
-    };
-
-    keys.push(key);
-    await writeKeys(keys);
-    return { key: rawKey, record: omitHash(key) };
-  })();
 }
 
 function omitHash(key: StoredExternalAiKey): Omit<StoredExternalAiKey, "keyHash"> {
@@ -95,60 +21,97 @@ function omitHash(key: StoredExternalAiKey): Omit<StoredExternalAiKey, "keyHash"
   return rest as Omit<StoredExternalAiKey, "keyHash">;
 }
 
-async function writeKeys(keys: StoredExternalAiKey[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify({ schemaVersion: 1, keys }, null, 2), "utf8");
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await fs.rename(tmp, FILE);
-      return;
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      const transient = code === "EPERM" || code === "EACCES" || code === "EBUSY";
-      if (!transient || attempt >= 5) {
-        await fs.rm(tmp, { force: true });
-        throw err;
-      }
-      await new Promise((r) => setTimeout(r, 25 * 2 ** attempt));
-    }
-  }
+function omitApiKey(key: StoredExternalAiKey): ExternalAiKeySummary {
+  return {
+    id: key.id,
+    provider: key.provider,
+    label: key.label,
+    prefix: key.prefix,
+    keyHash: key.keyHash,
+    model: key.model,
+    createdAt: key.createdAt,
+    lastUsedAt: key.lastUsedAt,
+    useCount: key.useCount,
+    ownerId: key.ownerId,
+  };
+}
+
+export async function listExternalAiKeys(ownerId: string): Promise<ExternalAiKeySummary[]> {
+  const { rows } = await dbQuery<{ data: StoredExternalAiKey }>(
+    "SELECT data FROM external_ai_keys WHERE owner_id = $1 ORDER BY created_at DESC",
+    [ownerId],
+  );
+  return rows.map(({ data }) => omitApiKey(data));
+}
+
+export async function createExternalAiKey(
+  ownerId: string,
+  provider: AiProvider,
+  rawKey: string,
+  label: string,
+  model?: string,
+): Promise<ExternalAiKeyCreateResult> {
+  if (!isValidExternalAiKey(rawKey)) throw new Error("Invalid API key format.");
+
+  const key: StoredExternalAiKey = {
+    id: uid(),
+    provider,
+    label: label || `Untitled ${provider} key`,
+    prefix: keyPrefix(rawKey, provider),
+    keyHash: hashExternalAiKey(rawKey),
+    apiKey: rawKey,
+    model: model || DEFAULT_MODELS[provider],
+    createdAt: new Date().toISOString(),
+    lastUsedAt: null,
+    useCount: 0,
+    ownerId,
+  };
+  await dbQuery(
+    `INSERT INTO external_ai_keys (id, owner_id, key_hash, created_at, data)
+     VALUES ($1, $2, $3, $4, $5::jsonb)`,
+    [key.id, ownerId, key.keyHash, key.createdAt, JSON.stringify(key)],
+  );
+  return { key: rawKey, record: omitHash(key) };
 }
 
 export async function getExternalAiKeyByHash(keyHash: string): Promise<StoredExternalAiKey | null> {
-  const keys = await initKeys();
-  return keys.find((k) => k.keyHash === keyHash) ?? null;
+  const { rows } = await dbQuery<{ data: StoredExternalAiKey }>(
+    "SELECT data FROM external_ai_keys WHERE key_hash = $1 LIMIT 1",
+    [keyHash],
+  );
+  return rows[0]?.data ?? null;
 }
 
 export async function touchExternalAiKey(keyId: string): Promise<void> {
-  return (async () => {
-    const keys = await initKeys();
-    const idx = keys.findIndex((k) => k.id === keyId);
-    if (idx === -1) return;
-    const now = new Date().toISOString();
-    keys[idx] = { ...keys[idx], useCount: (keys[idx].useCount ?? 0) + 1, lastUsedAt: now };
-    await writeKeys(keys);
-  })();
+  await dbQuery(
+    `UPDATE external_ai_keys
+     SET data = jsonb_set(
+       jsonb_set(data, '{useCount}', to_jsonb(COALESCE((data->>'useCount')::integer, 0) + 1)),
+       '{lastUsedAt}', to_jsonb($2::text)
+     )
+     WHERE id = $1`,
+    [keyId, new Date().toISOString()],
+  );
 }
 
 export async function deleteExternalAiKey(keyId: string, ownerId: string): Promise<boolean> {
-  return (async () => {
-    const keys = await initKeys();
-    const idx = keys.findIndex((k) => k.id === keyId && k.ownerId === ownerId);
-    if (idx === -1) return false;
-    keys.splice(idx, 1);
-    await writeKeys(keys);
-    return true;
-  })();
+  const { rowCount } = await dbQuery(
+    "DELETE FROM external_ai_keys WHERE id = $1 AND owner_id = $2",
+    [keyId, ownerId],
+  );
+  return rowCount === 1;
 }
 
-export async function setExternalAiKeyModel(keyId: string, ownerId: string, model: string): Promise<boolean> {
-  return (async () => {
-    const keys = await initKeys();
-    const idx = keys.findIndex((k) => k.id === keyId && k.ownerId === ownerId);
-    if (idx === -1) return false;
-    keys[idx] = { ...keys[idx], model };
-    await writeKeys(keys);
-    return true;
-  })();
+export async function setExternalAiKeyModel(
+  keyId: string,
+  ownerId: string,
+  model: string,
+): Promise<boolean> {
+  const { rowCount } = await dbQuery(
+    `UPDATE external_ai_keys
+     SET data = jsonb_set(data, '{model}', to_jsonb($3::text))
+     WHERE id = $1 AND owner_id = $2`,
+    [keyId, ownerId, model],
+  );
+  return rowCount === 1;
 }

@@ -103,7 +103,9 @@ export function AccountSettingsForm({
     }
     setRevokeLoading(true);
     try {
-      const response = await fetch("/api/auth/sessions/revoke", { method: "POST" });
+      const response = await fetch("/api/auth/sessions/revoke", {
+        method: "POST",
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || "Request failed");
@@ -132,7 +134,9 @@ export function AccountSettingsForm({
         </h1>
 
         <Card className="mt-6 p-6">
-          <h2 className="text-[13px] font-medium text-ink">{t("account.profile")}</h2>
+          <h2 className="text-[13px] font-medium text-ink">
+            {t("account.profile")}
+          </h2>
           <form onSubmit={saveProfile} className="mt-4 space-y-4">
             <Field>
               <Label htmlFor="profile-name">{t("account.name")}</Label>
@@ -149,27 +153,43 @@ export function AccountSettingsForm({
               <Label htmlFor="profile-email">{t("account.email")}</Label>
               <Input id="profile-email" type="email" value={email} disabled />
             </Field>
-            {profileError && <p className="text-[12px] text-rose">{profileError}</p>}
-            {profileDone && (
-              <p className="text-[12px] text-mint">{t("account.profileSaved")}</p>
+            {profileError && (
+              <p className="text-[12px] text-rose">{profileError}</p>
             )}
-            <button type="submit" disabled={profileLoading} className={submitClass}>
-              {profileLoading ? t("common.loading") : t("account.profileSubmit")}
+            {profileDone && (
+              <p className="text-[12px] text-mint">
+                {t("account.profileSaved")}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={profileLoading}
+              className={submitClass}
+            >
+              {profileLoading
+                ? t("common.loading")
+                : t("account.profileSubmit")}
             </button>
           </form>
         </Card>
 
         <Card className="mt-4 p-6">
-          <h2 className="text-[13px] font-medium text-ink">{t("account.password.title")}</h2>
+          <h2 className="text-[13px] font-medium text-ink">
+            {t("account.password.title")}
+          </h2>
           <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">
             {t("account.password.body")}
           </p>
           {passwordDone ? (
-            <p className="mt-3 text-[12px] text-mint">{t("account.password.done")}</p>
+            <p className="mt-3 text-[12px] text-mint">
+              {t("account.password.done")}
+            </p>
           ) : (
             <form onSubmit={savePassword} className="mt-4 space-y-4">
               <Field>
-                <Label htmlFor="current-password">{t("account.password.current")}</Label>
+                <Label htmlFor="current-password">
+                  {t("account.password.current")}
+                </Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -180,7 +200,9 @@ export function AccountSettingsForm({
                 />
               </Field>
               <Field>
-                <Label htmlFor="new-password">{t("account.password.new")}</Label>
+                <Label htmlFor="new-password">
+                  {t("account.password.new")}
+                </Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -192,21 +214,33 @@ export function AccountSettingsForm({
                   required
                 />
               </Field>
-              {passwordError && <p className="text-[12px] text-rose">{passwordError}</p>}
-              <button type="submit" disabled={passwordLoading} className={submitClass}>
-                {passwordLoading ? t("common.loading") : t("account.password.submit")}
+              {passwordError && (
+                <p className="text-[12px] text-rose">{passwordError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className={submitClass}
+              >
+                {passwordLoading
+                  ? t("common.loading")
+                  : t("account.password.submit")}
               </button>
             </form>
           )}
         </Card>
 
         <Card className="mt-4 p-6">
-          <h2 className="text-[13px] font-medium text-ink">{t("account.revoke.title")}</h2>
+          <h2 className="text-[13px] font-medium text-ink">
+            {t("account.revoke.title")}
+          </h2>
           <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">
             {t("account.revoke.body")}
           </p>
           {revokeDone ? (
-            <p className="mt-3 text-[12px] text-mint">{t("account.revoke.done")}</p>
+            <p className="mt-3 text-[12px] text-mint">
+              {t("account.revoke.done")}
+            </p>
           ) : (
             <>
               <Field className="mt-4">
@@ -219,7 +253,9 @@ export function AccountSettingsForm({
                   placeholder={email}
                 />
               </Field>
-              {revokeError && <p className="mt-2 text-[12px] text-rose">{revokeError}</p>}
+              {revokeError && (
+                <p className="mt-2 text-[12px] text-rose">{revokeError}</p>
+              )}
               <button
                 type="button"
                 onClick={revoke}

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ meetings: listMeetingsForUser(user.id) });
+  return NextResponse.json({ meetings: await listMeetingsForUser(user.id) });
 }
 
 /** Create a new live meeting. Body: { title?, mode? }. */
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     /* empty body is fine */
   }
   const mode = body.mode === "presentation" || body.mode === "interview" ? body.mode : "practice";
-  const meeting = createMeeting({
+  const meeting = await createMeeting({
     title: body.title ?? "",
     mode,
     hostId: user.id,

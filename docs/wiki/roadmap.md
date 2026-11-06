@@ -31,8 +31,6 @@ and a meeting QA suite wired into CI.
 | `npm run verify` | typecheck + lint + test + build |
 | `npm run fonts` | re-download the self-hosted webfonts |
 | `npm run icons` | re-rasterise the PWA icons from `public/icons/mark.svg` |
-| `npm run backup` | copy `data/` into `backups/<timestamp>/`, keeping the last 30 |
-| `npm run restore -- <dir>` | copy a backup back into the data dir (files absent from the backup are left alone) |
 
 Diagnostic wrappers (`scripts/run-*.cjs`, `smoke`, `test`) write their transcripts to
 `docs/logs`, `docs/notes` and `docs/artifacts` — never the repository root. See

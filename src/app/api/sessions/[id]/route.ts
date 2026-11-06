@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { deleteSession, getSession, updateSession } from "@/lib/mongo-store";
+import { deleteSession, getSession, updateSession } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 

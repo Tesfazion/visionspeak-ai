@@ -14,7 +14,6 @@ import {
   Smile,
   Sparkles,
   TrendingUp,
-  TriangleAlert,
   Video,
 } from "@/components/icons";
 import { FreeUpgrade, ProWorkspace } from "@/components/dashboard/plan-panel";
@@ -24,8 +23,7 @@ import { SessionTrend, type SessionTrendPoint } from "@/components/dashboard/tre
 import { SiteFooter } from "@/components/site/footer";
 import { Bar, ButtonLink, Pill, ScoreRing, scoreLabel, toneFor } from "@/components/ui";
 import { formatDuration } from "@/lib/math";
-import { listSessions } from "@/lib/mongo-store";
-import { STORAGE_IS_EPHEMERAL } from "@/lib/data-dir";
+import { listSessions } from "@/lib/store";
 import { getCurrentUser, loginHref } from "@/lib/auth";
 import { planFor, quotaState, visibleHistory } from "@/lib/plans";
 import { getI18n } from "@/lib/i18n/server";
@@ -241,11 +239,6 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {STORAGE_IS_EPHEMERAL && (
-            <Pill tone="warn" title="This deployment has no durable volume — records are lost on restart">
-              <TriangleAlert className="size-3" /> temporary storage
-            </Pill>
-          )}
           <Pill tone={isPro ? "good" : "neutral"}>
             {isPro ? <Sparkles className="size-3" /> : <Crown className="size-3" />}
             {t("dash.planLabel", { plan: plan.label })}

@@ -147,6 +147,12 @@ export function useVisionSession(
             return [n, ...prev].slice(0, MAX_NUDGES);
           }),
         onError: (message) => {
+          const failedEngine = engineRef.current;
+          engineRef.current = null;
+          failedEngine?.abort();
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          setStream(null);
           setError(message);
           setPhase("error");
         },
@@ -160,6 +166,8 @@ export function useVisionSession(
       engineRef.current = engine;
       await engine.start();
     } catch (err) {
+      engineRef.current?.abort();
+      engineRef.current = null;
       if ((err as Error)?.message === "stage-not-ready") {
         setError("The video stage is not ready yet. Try again in a moment.");
       } else {

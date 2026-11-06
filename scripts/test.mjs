@@ -40,6 +40,8 @@ const args = [
   "--import",
   pathToFileURL(path.join(root, "scripts", "lib", "ts-resolve.mjs")).href,
   "--test",
+  "--test-concurrency=1",
+  "--test-concurrency=1",
   "--test-reporter=spec",
   ...files,
   ...process.argv.slice(2),

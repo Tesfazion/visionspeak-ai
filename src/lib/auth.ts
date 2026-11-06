@@ -6,7 +6,7 @@ import {
   findUserById,
   verifySessionToken,
   type PublicUser,
-} from "./mongo-auth";
+} from "./auth-core";
 import { normalisePlan } from "./plans";
 
 /**

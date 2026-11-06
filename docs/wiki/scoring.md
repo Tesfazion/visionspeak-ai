@@ -24,11 +24,11 @@ product.
 The composite weights are fixed by the spec. What changes with the mode you pick in the studio is
 what **"good"** looks like:
 
-| Mode | Target profile |
-| --- | --- |
-| **Practice** | Baseline — eye contact ≈ 92%, 16 gestures/min, 150 wpm |
-| **Presentation** | Reach — more movement and gesture range, projection-friendly pace |
-| **Interview** | Composure — 96% lens time, ~10 gestures/min, 142 wpm, warmer expression |
+| Mode             | Target profile                                                          |
+| ---------------- | ----------------------------------------------------------------------- |
+| **Practice**     | Baseline — eye contact ≈ 92%, 16 gestures/min, 150 wpm                  |
+| **Presentation** | Reach — more movement and gesture range, projection-friendly pace       |
+| **Interview**    | Composure — 96% lens time, ~10 gestures/min, 142 wpm, warmer expression |
 
 The rubric follows the session: the API passes `mode` into `buildReport(aggregate, mode)`, the
 report stores `report.rubric`, the header states which rubric produced the numbers, and

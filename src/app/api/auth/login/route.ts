@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   authenticate,
-  countUsers,
   createRateLimiter,
   normaliseEmail,
   validateCredentials,

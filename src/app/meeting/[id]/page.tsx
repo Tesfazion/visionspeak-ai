@@ -11,13 +11,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/meeting/${id}`)}`);
 
-  let meeting = getMeeting(id);
+  let meeting = await getMeeting(id);
   if (!meeting || meeting.status !== "live") notFound();
 
   // Invite links are the sharing model: any signed-in account that has the id
   // may join a live room, and joining records them in the meeting store.
   if (!meeting.participants.some((p) => p.id === user.id)) {
-    meeting = joinMeeting(id, { userId: user.id, name: user.name, email: user.email });
+    meeting = await joinMeeting(id, { userId: user.id, name: user.name, email: user.email });
     if (!meeting) notFound();
   }
 

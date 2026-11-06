@@ -10,6 +10,11 @@ node scripts/smoke.mjs http://localhost:3000   # end-to-end checks, against a ru
 node scripts/qa/qa-meeting.mjs                 # checks: lobby, auth, roster, signaling, chat, end
 ```
 
+Database-backed tests are skipped unless `TEST_DATABASE_URL` points to a disposable PostgreSQL
+database. GitHub Actions reads this value from the `TEST_DATABASE_URL` repository secret; the
+database is not provisioned by the workflow, and the smoke job is skipped when the secret is
+absent. Never point this variable at production.
+
 **Unit suite** — covers what is otherwise invisible:
 
 | Area | What is asserted |
@@ -20,11 +25,10 @@ node scripts/qa/qa-meeting.mjs                 # checks: lobby, auth, roster, si
 | Plans | month window, quota counting (own live records only), Free/Pro ceilings, history cutoff |
 | Aggregates | every malformed, over-long, non-finite or over-plan payload is refused; body-size ceiling |
 | Sharing | token round-trip, tampering, expiry, revoke, stranger cannot create, samples are read-only |
-| Auth | scrypt round-trip, duplicate rejection, token tampering/expiry, secret persistence, rate limiter, sign-out-everywhere cut-off, password change |
+| Auth | scrypt round-trip, duplicate rejection, token tampering/expiry, rate limiter, sign-out-everywhere cut-off, password change |
 | Integrity | the saved report re-hashes to its stored digest; one edited sample fails it; key order does not change it |
 | Meetings | signaling auth, roster, chat isolation, ended-state `410`, long-poll cursor |
-| Store | seed-once, per-owner isolation, foreign delete/update refused, idempotent saves |
-| Storage | Vercel/Lambda/Netlify fall back to temp; `VS_DATA_DIR` overrides and is durable |
+| Store | PostgreSQL seed-once, per-owner isolation, foreign delete/update refused, idempotent saves |
 
 **End-to-end suite** — drives a real server through the whole product: security headers, the auth
 gate (`307` + preserved `next=`), signup, saving a session, the generated report, cross-account

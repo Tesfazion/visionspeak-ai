@@ -23,7 +23,7 @@ import { Bar, Pill, ScoreRing, cn, scoreLabel, toneFor } from "@/components/ui";
 import { EMOTION_META } from "@/lib/analysis/emotion";
 import { reportIntegrityHash } from "@/lib/api-guard";
 import { formatClock, formatDuration } from "@/lib/math";
-import { getSession, getSharedSession } from "@/lib/mongo-store";
+import { getSession, getSharedSession } from "@/lib/store";
 import { planFor } from "@/lib/plans";
 import { getI18n } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/auth";

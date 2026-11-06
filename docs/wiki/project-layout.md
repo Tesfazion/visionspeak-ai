@@ -4,7 +4,7 @@
 src/
   app/
     api/auth/{signup,login,logout,me}/   account endpoints
-    api/health/                          liveness + storage-mode probe
+    api/health/                          liveness + PostgreSQL readiness probe
     api/sessions/[id]/                   read & delete one session
     dashboard/                           history, trends, pillar averages
     login/ · signup/                     account pages
@@ -28,13 +28,13 @@ src/
       voice.ts       Web Audio analyser
       speech.ts      Web Speech wrapper
       demo.ts        deterministic sample dataset
-    auth-core.ts     hashing, user store, signed tokens, rate limiter (testable, no Next.js)
+    auth-core.ts     hashing, PostgreSQL users/tokens, signed sessions, rate limiter
     auth.ts          cookie ↔ user glue (server only)
-    data-dir.ts      storage path resolution (local vs serverless)
-    store.ts         session store + per-account visibility
+    db/postgres.ts   PostgreSQL pool and schema initialization
+    store.ts         PostgreSQL sessions + per-account visibility
     math.ts · types.ts
   proxy.ts           auth gate → real 307 before render
-tests/               unit tests (math, scoring, report, auth, store, data-dir)
+tests/               unit tests (math, scoring, report, auth, store)
 public/
   sw.js              static-asset cache + offline shell
   icons/             generated PWA icons
