@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { isAuthSecretConfigured } from "@/lib/auth-core";
 import { checkDatabase } from "@/lib/db/postgres";
 import { BUILD_ID } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
-/** Liveness probe for CI, uptime monitoring and deployment checks. */
+/** Readiness probe for CI, uptime monitoring and deployment checks. */
 export async function GET() {
   const started = Date.now();
   let databaseAvailable = false;
@@ -22,11 +23,12 @@ export async function GET() {
     /* a missing cookie store must not fail the probe */
   }
 
-  const hasAuthSecret = Boolean(process.env.AUTH_SECRET?.trim() && process.env.AUTH_SECRET.trim().length >= 16);
+  const hasAuthSecret = isAuthSecretConfigured(process.env.AUTH_SECRET);
+  const ready = databaseAvailable && hasAuthSecret;
 
   return NextResponse.json(
     {
-      ok: true,
+      ok: ready,
       service: "visionspeak-ai",
       version: process.env.npm_package_version ?? "1.0.0",
       // A deploy you cannot name is a deploy you cannot debug from a dashboard.
@@ -40,7 +42,7 @@ export async function GET() {
       at: new Date().toISOString(),
     },
     {
-      status: databaseAvailable ? 200 : 503,
+      status: ready ? 200 : 503,
       headers: { "Cache-Control": "no-store" },
     },
   );

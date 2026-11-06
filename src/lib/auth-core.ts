@@ -476,10 +476,14 @@ export function isSecureRequest(request: Request): boolean {
 
 let cachedSecret: string | null = null;
 
+export function isAuthSecretConfigured(secret: string | undefined): boolean {
+  return Boolean(secret?.trim() && secret.trim().length >= 16);
+}
+
 export async function getAuthSecret(): Promise<string> {
   if (cachedSecret) return cachedSecret;
   const fromEnv = process.env.AUTH_SECRET?.trim();
-  if (fromEnv && fromEnv.length >= 16) {
+  if (fromEnv && isAuthSecretConfigured(fromEnv)) {
     cachedSecret = fromEnv;
     return cachedSecret;
   }

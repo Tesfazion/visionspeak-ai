@@ -41,7 +41,6 @@ const args = [
   pathToFileURL(path.join(root, "scripts", "lib", "ts-resolve.mjs")).href,
   "--test",
   "--test-concurrency=1",
-  "--test-concurrency=1",
   "--test-reporter=spec",
   ...files,
   ...process.argv.slice(2),
@@ -56,18 +55,19 @@ const child = spawn(process.execPath, args, {
   env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
 });
 
-child.stdout.pipe(log);
-child.stderr.pipe(log);
+child.stdout.pipe(log, { end: false });
+child.stderr.pipe(log, { end: false });
 
 child.on("error", (err) => {
   console.error("[test] failed to start the test runner:", err.message);
-  log.end(`\n[spawn error] ${err.message}\n`);
+  log.write(`\n[spawn error] ${err.message}\n`);
   process.exitCode = 1;
 });
 
-child.on("exit", (code, signal) => {
+child.on("close", (code, signal) => {
   log.end(`\n[exit ${code}${signal ? ` signal=${signal}` : ""}]\n`);
-  if (code === 0) return;
-  // A signal death (e.g. OOM) must not read as success either.
-  process.exitCode = code ?? 1;
+  if (code !== 0) {
+    // A signal death (e.g. OOM) must not read as success either.
+    process.exitCode = code ?? 1;
+  }
 });

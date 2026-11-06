@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS, createSessionToken, SESSION_COOKIE } from "@/lib/auth-core";
+import { createUser, createRateLimiter, validateCredentials, createToken, VERIFY_TTL_MS, createSessionToken, SESSION_COOKIE, getAuthSecret } from "@/lib/auth-core";
 import { clientIp } from "@/lib/api-guard";
 import { cookieOptionsFor } from "@/lib/auth";
 import { sendEmail, emailConfigured } from "@/lib/email";
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await getAuthSecret();
     const result = await createUser({
       ...parsed,
       // Verification is only meaningful when the platform can actually send the

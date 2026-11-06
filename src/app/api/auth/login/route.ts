@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   authenticate,
   createRateLimiter,
+  getAuthSecret,
   normaliseEmail,
   validateCredentials,
   createSessionToken,
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await getAuthSecret();
     const user = await authenticate(email, parsed.password);
     if (!user) {
       // Don't reveal whether accounts exist to prevent user enumeration

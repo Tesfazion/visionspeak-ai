@@ -16,6 +16,7 @@ const {
   findUserByEmail,
   getAuthSecret,
   hashPassword,
+  isAuthSecretConfigured,
   isSecureRequest,
   normaliseEmail,
   revokeOtherSessions,
@@ -117,6 +118,14 @@ test("signing out everywhere invalidates earlier tokens", { skip: !testDatabaseU
 test("the configured signing secret is reused", async () => {
   assert.equal(await getAuthSecret(), process.env.AUTH_SECRET);
   assert.equal(await getAuthSecret(), process.env.AUTH_SECRET);
+});
+
+test("auth secret readiness requires at least 16 non-whitespace characters", () => {
+  assert.equal(isAuthSecretConfigured(undefined), false);
+  assert.equal(isAuthSecretConfigured("   "), false);
+  assert.equal(isAuthSecretConfigured("short"), false);
+  assert.equal(isAuthSecretConfigured("1234567890123456"), true);
+  assert.equal(isAuthSecretConfigured("  1234567890123456  "), true);
 });
 
 test("rate limiter blocks after the limit and recovers after the window", () => {
