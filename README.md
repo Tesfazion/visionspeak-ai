@@ -30,6 +30,16 @@ Create an account at **`/signup`**, open **Studio → Enable camera & mic**, and
 Want to see the output first? **`/report/demo`** is a public, fully scored sample session — no
 sign-in required. Requirements: a Chromium browser (Chrome or Edge), a webcam and a microphone.
 
+## AI speaking coach
+
+Sign in and open **AI coach** (or `/ai`) to chat and request AI feedback on saved sessions. Add an
+OpenAI, OpenRouter or Anthropic key on that page or under **Account settings**. Requests use your
+provider account and are billed by that provider. Keys are encrypted at rest using the stable
+`AUTH_SECRET`; rotating that secret requires reconnecting provider keys.
+
+AI session feedback uses the saved report metrics and does not send the session transcript. Chat
+messages are sent to the provider you select. Camera frames and audio remain on-device.
+
 ## Documentation
 
 |                                                                     |                                                       |

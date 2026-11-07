@@ -21,7 +21,8 @@ repository secret for integration and smoke tests; never use production data.
    build command are declared in `vercel.json`.
 2. Add the Neon pooled `DATABASE_URL`, `AUTH_SECRET` and `NEXT_PUBLIC_SITE_URL` in Project →
    Settings → Environment Variables. Generate `AUTH_SECRET` using the command in
-   [configuration](configuration.md).
+   [configuration](configuration.md), and keep it stable: BYOK provider keys are encrypted with
+   a key derived from it. If you rotate `AUTH_SECRET`, users must reconnect their AI provider keys.
 3. Deploy. `npm install` runs `scripts/setup-assets.mjs`, which installs the vision runtime assets.
 
 `/api/health` reports PostgreSQL availability and returns HTTP 503 when it cannot connect.

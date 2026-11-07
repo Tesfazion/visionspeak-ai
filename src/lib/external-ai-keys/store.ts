@@ -10,15 +10,10 @@ import {
   isValidExternalAiKey,
 } from "./types";
 import { dbQuery } from "@/lib/db/postgres";
+import { decryptExternalAiKey, encryptExternalAiKey } from "./crypto";
 
 function uid(): string {
   return `ai_${Date.now().toString(36)}${randomBytes(4).toString("hex")}`;
-}
-
-function omitHash(key: StoredExternalAiKey): Omit<StoredExternalAiKey, "keyHash"> {
-  const rest: Partial<StoredExternalAiKey> = { ...key };
-  delete rest.keyHash;
-  return rest as Omit<StoredExternalAiKey, "keyHash">;
 }
 
 function omitApiKey(key: StoredExternalAiKey): ExternalAiKeySummary {
@@ -27,12 +22,10 @@ function omitApiKey(key: StoredExternalAiKey): ExternalAiKeySummary {
     provider: key.provider,
     label: key.label,
     prefix: key.prefix,
-    keyHash: key.keyHash,
     model: key.model,
     createdAt: key.createdAt,
     lastUsedAt: key.lastUsedAt,
     useCount: key.useCount,
-    ownerId: key.ownerId,
   };
 }
 
@@ -59,7 +52,7 @@ export async function createExternalAiKey(
     label: label || `Untitled ${provider} key`,
     prefix: keyPrefix(rawKey, provider),
     keyHash: hashExternalAiKey(rawKey),
-    apiKey: rawKey,
+    apiKey: encryptExternalAiKey(rawKey),
     model: model || DEFAULT_MODELS[provider],
     createdAt: new Date().toISOString(),
     lastUsedAt: null,
@@ -71,15 +64,26 @@ export async function createExternalAiKey(
      VALUES ($1, $2, $3, $4, $5::jsonb)`,
     [key.id, ownerId, key.keyHash, key.createdAt, JSON.stringify(key)],
   );
-  return { key: rawKey, record: omitHash(key) };
+  return { record: omitApiKey(key) };
 }
 
-export async function getExternalAiKeyByHash(keyHash: string): Promise<StoredExternalAiKey | null> {
+export async function getExternalAiKey(keyId: string, ownerId: string): Promise<StoredExternalAiKey | null> {
   const { rows } = await dbQuery<{ data: StoredExternalAiKey }>(
-    "SELECT data FROM external_ai_keys WHERE key_hash = $1 LIMIT 1",
-    [keyHash],
+    "SELECT data FROM external_ai_keys WHERE id = $1 AND owner_id = $2 LIMIT 1",
+    [keyId, ownerId],
   );
-  return rows[0]?.data ?? null;
+  const stored = rows[0]?.data;
+  if (!stored) return null;
+  const decrypted = decryptExternalAiKey(stored.apiKey);
+  if (!decrypted.encrypted) {
+    const encrypted = { ...stored, apiKey: encryptExternalAiKey(decrypted.plaintext) };
+    await dbQuery("UPDATE external_ai_keys SET data = $2::jsonb WHERE id = $1 AND owner_id = $3", [
+      stored.id,
+      JSON.stringify(encrypted),
+      ownerId,
+    ]);
+  }
+  return { ...stored, apiKey: decrypted.plaintext };
 }
 
 export async function touchExternalAiKey(keyId: string): Promise<void> {

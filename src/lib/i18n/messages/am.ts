@@ -17,6 +17,7 @@ export const am = {
   "nav.sample": "ናሙና ሪፖርት",
   "nav.pricing": "ዋጋ",
   "nav.history": "ታሪክ",
+  "nav.aiCoach": "AI አሰልጣኝ",
   "nav.openStudio": "ስቱዲዮ ክፈት",
   "nav.dashboard": "ዳሽቦርድ",
   "nav.signIn": "ይግቡ",

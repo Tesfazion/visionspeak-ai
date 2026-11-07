@@ -26,6 +26,7 @@ export const en = {
   "nav.sample": "Sample report",
   "nav.pricing": "Pricing",
   "nav.history": "History",
+  "nav.aiCoach": "AI coach",
   "nav.meetings": "Meetings",
   "nav.overview": "Overview",
   "nav.openStudio": "Open studio",

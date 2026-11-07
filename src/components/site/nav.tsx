@@ -30,6 +30,7 @@ const MARKETING_LINKS: { href: string; key: MessageKey }[] = [
 
 const APP_LINKS: { href: string; key: MessageKey }[] = [
   { href: "/studio", key: "nav.openStudio" },
+  { href: "/ai", key: "nav.aiCoach" },
   { href: "/meeting", key: "nav.meetings" },
   { href: "/dashboard", key: "nav.history" },
   { href: "/pricing", key: "nav.pricing" },

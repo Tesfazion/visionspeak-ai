@@ -3,6 +3,11 @@
 - **Camera frames, audio and landmarks never leave the device.** There is no upload path in the
   code. Only the derived aggregate (numbers + transcript text) is sent when you press
   *End & analyse*.
+- **Optional AI features** run only when requested from `/ai`. Chat messages are sent to the
+  selected provider using the account owner's key. Session feedback sends report metrics and
+  coaching insights, not the transcript. Provider keys are AES-256-GCM encrypted in PostgreSQL
+  with a key derived from the stable `AUTH_SECRET`; replacing that secret requires reconnecting
+  provider keys. Provider usage is billed by the provider.
 - **Samples are read-only.** Seeded sample reports are shared reference material, cannot be
   deleted or edited by an account, and never appear in a user's own history or averages.
 - **Share links are explicit and revocable** — an unguessable token plus the report id, expiring

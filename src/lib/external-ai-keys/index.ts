@@ -1,6 +1,6 @@
 export type { AiProvider, StoredExternalAiKey, ExternalAiKeyCreateResult, ExternalAiKeySummary } from "./types";
 export { DEFAULT_MODELS } from "./types";
-export { listExternalAiKeys, createExternalAiKey, getExternalAiKeyByHash, touchExternalAiKey, deleteExternalAiKey, setExternalAiKeyModel } from "./store";
+export { listExternalAiKeys, createExternalAiKey, getExternalAiKey, touchExternalAiKey, deleteExternalAiKey, setExternalAiKeyModel } from "./store";
 export { callLlm, providerConfig, buildRequest, extractResponse } from "./client";
 export type { LlmRequest, LlmResponse } from "./client";
 export { keyPrefix } from "./types";

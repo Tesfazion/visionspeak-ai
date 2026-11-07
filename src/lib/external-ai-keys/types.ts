@@ -20,7 +20,7 @@ export const DEFAULT_MODELS: Record<AiProvider, string> = {
   anthropic: "claude-3-haiku-20240307",
 };
 
-/** Stored external AI key record; the raw provider key is persisted for API calls. */
+/** Provider key record. `apiKey` is encrypted in PostgreSQL and decrypted only for server-side calls. */
 export interface StoredExternalAiKey {
   id: string;
   /** Provider (openai | openrouter | anthropic). */
@@ -31,9 +31,7 @@ export interface StoredExternalAiKey {
   prefix: string;
   /** SHA-256 of the raw key — index for lookups. */
   keyHash: string;
-  /** Raw API key used for calls (mounted as the stored credential; the user
-   *  brought it, so this is standard BYOK practice — the platform does not
-   *  re-expose it after creation except the single send-back at create time). */
+  /** Decrypted API key in server memory only. */
   apiKey: string;
   /** Default model to use. */
   model: string;
@@ -47,22 +45,19 @@ export interface StoredExternalAiKey {
   ownerId: string;
 }
 
-/** What the create endpoint returns — raw key exactly once. */
-export interface ExternalAiKeyCreateResult {
-  /** The raw key only ever sent back once. */
-  key: string;
-  /** Record without the key hash. */
-  record: Omit<StoredExternalAiKey, "keyHash">;
-}
+/** Public key metadata. Provider credentials and lookup hashes are never returned. */
+export type ExternalAiKeySummary = Omit<StoredExternalAiKey, "apiKey" | "keyHash" | "ownerId">;
 
-/** What list returns — raw key (apiKey) never included, but keyHash kept for lookups. */
-export type ExternalAiKeySummary = Omit<StoredExternalAiKey, "apiKey">;
+export interface ExternalAiKeyCreateResult {
+  record: ExternalAiKeySummary;
+}
 
 /** Chatbot request body. */
 export interface ChatbotRequest {
   message: string;
   /** Optional conversation history. */
-  history?: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
+  keyId?: string;
   /** Override provider/model for this request. */
   provider?: AiProvider;
   model?: string;
@@ -78,8 +73,7 @@ export interface ChatbotResponse {
 /** Mentor request body — session analysis for coaching. */
 export interface MentorRequest {
   sessionId: string;
-  /** Optional raw session data to analyze. */
-  sessionData?: unknown;
+  keyId?: string;
   /** Override provider/model for this request. */
   provider?: AiProvider;
   model?: string;

@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser, loginHref } from "@/lib/auth";
 import { AccountSettingsForm } from "./account-form";
+import { AiKeysPanel } from "@/components/ai/ai-keys-panel";
 import { BillingStatus } from "@/components/account/billing-status";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function AccountPage() {
   return (
     <AccountSettingsForm email={user.email} name={user.name}>
       <BillingStatus plan={user.plan} />
+      <AiKeysPanel />
     </AccountSettingsForm>
   );
 }

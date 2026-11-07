@@ -11,6 +11,7 @@ export const fr = {
   "nav.sample": "Rapport d’exemple",
   "nav.pricing": "Tarifs",
   "nav.history": "Historique",
+  "nav.aiCoach": "Coach IA",
   "nav.openStudio": "Ouvrir le studio",
   "nav.dashboard": "Tableau de bord",
   "nav.signIn": "Se connecter",

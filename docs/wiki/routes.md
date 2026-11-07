@@ -9,6 +9,7 @@
 | `/verify-email/[token]` | public | Confirms address ownership after signup |
 | `/account` | **required** | Profile, plan/billing status, "sign out everywhere" |
 | `/studio` | **required** | Real-time analysis studio — camera, overlays, live coach |
+| `/ai` | **required** | BYOK provider-key management, AI chat and saved-session feedback |
 | `/report/[id]` | owner | Full session report (`/report/demo` is public; `?share=<token>` is a link-only view) |
 | `/dashboard` | **required** | Session history, plan usage, trends, pillar averages (paginated) |
 | `/meeting` · `/meeting/[id]` | **required** | Co-coaching lobby and room: roster, chat, presence, WebRTC media |
@@ -17,6 +18,9 @@
 | `/api/health` | public | Liveness + storage + build probe |
 | `/api/sessions/[id]/pdf` | owner, Pro | Server-rendered PDF report |
 | `/api/sessions/[id]/verify` | owner | Re-hashes the stored inputs; the report badge is computed server-side |
+| `/api/ai/keys` · `/api/ai/keys/[id]` | owner | Manage encrypted provider keys and models |
+| `/api/ai/chatbot` | owner | Chat using the selected owner's provider key |
+| `/api/ai/mentor` | owner | Generate feedback from an owner-verified saved session report |
 | `/api/report/[id]/email` | owner | Emails a report (or a download link) when SMTP is configured |
 | `/api/billing/webhook` | provider | The only writer of `plan`; `410` unless `BILLING_WEBHOOK_SECRET` is set |
 | `/api/errors` | public | Rate-limited crash sink for the client error boundary |

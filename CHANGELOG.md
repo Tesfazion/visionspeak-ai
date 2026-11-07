@@ -8,3 +8,5 @@
 - Seed sample reports even when the sessions table already contains user data.
 - Persist the project's development, security, accessibility, and delivery rules
   in `AGENTS.md`.
+- Add an authenticated AI workspace for provider-key management, AI chat and saved-session
+  feedback; encrypt BYOK credentials at rest and verify session ownership before analysis.
