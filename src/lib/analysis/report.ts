@@ -60,6 +60,8 @@ const CHOSEN_MAX = 4;
  * targets move to match the situation (interview vs. stage presentation).
  */
 export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportData {
+  const analysisMode = agg.analysisMode ?? "video";
+  const audioOnly = analysisMode === "audio-only";
   const rubric = rubricFor(mode);
   const fillerPer100 = agg.speech.words >= MIN_WORDS_FOR_FILLER_RATE ? (agg.speech.totalFillers / agg.speech.words) * 100 : 2.2;
 
@@ -107,19 +109,21 @@ export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportDat
     gestureActivity: scoreGestureActivity(agg.gestureRatePerMin, rubric),
   });
 
-  const overall = Math.round(
-    pillars.confidence * 0.35 + pillars.communication * 0.25 + pillars.leadership * 0.2 + pillars.engagement * 0.2,
-  );
+  const overall = audioOnly
+    ? primitives.voice
+    : Math.round(
+        pillars.confidence * 0.35 + pillars.communication * 0.25 + pillars.leadership * 0.2 + pillars.engagement * 0.2,
+      );
   const rating = ratingFor(overall);
 
   const emotions = normaliseEmotions(agg.emotions);
   const dominant = (Object.entries(emotions).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "neutral") as EmotionLabel;
 
-  const strengths = buildStrengths(agg, pillars, fillerPer100);
-  const improvements = buildImprovements(agg, pillars, fillerPer100);
-  const plan = buildPlan(agg, pillars, fillerPer100, rubric);
+  const strengths = audioOnly ? buildAudioStrengths(agg) : buildStrengths(agg, pillars, fillerPer100);
+  const improvements = audioOnly ? buildAudioImprovements(agg, fillerPer100) : buildImprovements(agg, pillars, fillerPer100);
+  const plan = audioOnly ? buildAudioPlan(agg, fillerPer100) : buildPlan(agg, pillars, fillerPer100, rubric);
 
-  const timeline = agg.timeline.map((s) => ({
+  const timeline = audioOnly ? [] : agg.timeline.map((s) => ({
     t: s.t,
     confidence: s.confidence,
     engagement: s.engagement,
@@ -133,10 +137,13 @@ export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportDat
   }));
 
   return {
+    analysisMode,
     overall,
     grade: rating.grade,
     gradeLabel: rating.label,
-    summary: buildSummary(agg, pillars, overall, rating.blurb),
+    summary: audioOnly
+      ? `Voice-only practice indicator: ${overall}/100. It summarizes acoustic delivery cues and is not a validated assessment of speaking ability.`
+      : buildSummary(agg, pillars, overall, rating.blurb),
     pillars,
     voice: {
       speakingTimePct: round(agg.voice.speakingTimePct),
@@ -192,9 +199,56 @@ export function buildReport(agg: Agg, mode: SessionMode = "practice"): ReportDat
     strengths,
     improvements,
     plan,
-    benchmark: benchmarkFor(pillars),
+    benchmark: audioOnly ? [] : benchmarkFor(pillars),
     rubric: { mode: rubric.mode, label: rubric.label, summary: rubric.summary },
   };
+}
+
+function buildAudioStrengths(agg: Agg): Insight[] {
+  return [
+    {
+      icon: "mic",
+      title: "Voice practice completed",
+      detail: `${Math.round(agg.voice.speakingTimePct)}% of the session was detected as speaking.`,
+    },
+  ];
+}
+
+function buildAudioImprovements(agg: Agg, fillerPer100: number): Insight[] {
+  const items: Insight[] = [];
+  if (agg.wpm > PACE_HOT) {
+    items.push({ icon: "mic", title: "Try a slower pace", detail: `The estimated rate was ${agg.wpm} words per minute.` });
+  }
+  if (fillerPer100 > FILLER_RATE_MODERATE) {
+    items.push({ icon: "message", title: "Pause instead of filling silence", detail: `About ${round(fillerPer100, 1)} fillers per 100 words were detected.` });
+  }
+  if (agg.voice.pauseCount < 2) {
+    items.push({ icon: "clock", title: "Add deliberate pauses", detail: "Try one short pause between each main idea." });
+  }
+  return items.length ? items : [{ icon: "mic", title: "Repeat with one goal", detail: "Choose one voice cue and compare another audio-only practice." }];
+}
+
+function buildAudioPlan(agg: Agg, fillerPer100: number): CoachingAction[] {
+  return [
+    {
+      title: agg.wpm > PACE_HOT ? "Slow the opening" : "Mark the key phrase",
+      why: "A measured opening gives listeners time to follow the main idea.",
+      drill: "Read three sentences aloud and pause briefly after each complete thought.",
+      target: "Pace",
+    },
+    {
+      title: fillerPer100 > FILLER_RATE_MODERATE ? "Replace fillers with silence" : "Use a purposeful pause",
+      why: "A short pause can separate ideas without adding filler words.",
+      drill: "Explain one point in 30 seconds; pause once before the key sentence.",
+      target: "Pauses",
+    },
+    {
+      title: "Repeat the same prompt",
+      why: "Keeping the prompt and mode similar makes a score comparison more useful.",
+      drill: "Rehearse the same answer once more and compare the voice cues, not just the headline number.",
+      target: "Retry",
+    },
+  ];
 }
 
 function normaliseEmotions(input: Record<EmotionLabel, number>) {

@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { normalisePlan, type PlanId } from "./plans";
-import { dbQuery } from "./db/postgres";
+import { dbQuery, withDbTransaction } from "./db/postgres";
 
 /**
  * Password hashing, PostgreSQL-backed users and the signed session cookie.
@@ -50,6 +50,15 @@ export interface StoredUser {
   teamId?: string;
   /** Role within the team: owner | member. Absent on solo accounts. */
   teamRole?: "owner" | "member";
+  billing?: {
+    provider: "lemon_squeezy";
+    subscriptionId: string;
+    customerId: string;
+    status: string;
+    endsAt: string | null;
+    customerPortalUrl: string | null;
+    updatedAt: string;
+  };
 }
 
 export interface PublicUser {
@@ -61,6 +70,7 @@ export interface PublicUser {
   emailVerifiedAt?: string;
   teamId?: string;
   teamRole?: "owner" | "member";
+  billing?: StoredUser["billing"];
 }
 
 export const toPublicUser = (u: StoredUser): PublicUser => ({
@@ -72,7 +82,53 @@ export const toPublicUser = (u: StoredUser): PublicUser => ({
   emailVerifiedAt: u.emailVerifiedAt,
   teamId: u.teamId,
   teamRole: u.teamRole,
+  billing: u.billing,
 });
+
+export async function applyLemonSubscriptionEvent(input: {
+  eventHash: string;
+  userId: string;
+  subscriptionId: string;
+  customerId: string;
+  status: string;
+  endsAt: string | null;
+  customerPortalUrl: string | null;
+  updatedAt: string;
+  hasProAccess: boolean;
+}): Promise<"applied" | "duplicate" | "user_missing"> {
+  return withDbTransaction(async (client) => {
+    const inserted = await client.query(
+      `INSERT INTO billing_events (event_hash) VALUES ($1)
+       ON CONFLICT (event_hash) DO NOTHING RETURNING event_hash`,
+      [input.eventHash],
+    );
+    if (!inserted.rowCount) return "duplicate";
+
+    const { rows } = await client.query<{ data: StoredUser }>(
+      "SELECT data FROM users WHERE id = $1 FOR UPDATE",
+      [input.userId],
+    );
+    const current = rows[0]?.data;
+    if (!current) return "user_missing";
+    if (current.billing && Date.parse(current.billing.updatedAt) > Date.parse(input.updatedAt)) return "applied";
+
+    const updated: StoredUser = {
+      ...current,
+      plan: input.hasProAccess ? "pro" : "free",
+      billing: {
+        provider: "lemon_squeezy",
+        subscriptionId: input.subscriptionId,
+        customerId: input.customerId,
+        status: input.status,
+        endsAt: input.endsAt,
+        customerPortalUrl: input.customerPortalUrl,
+        updatedAt: input.updatedAt,
+      },
+    };
+    await client.query("UPDATE users SET data = $2::jsonb WHERE id = $1", [input.userId, JSON.stringify(updated)]);
+    return "applied";
+  });
+}
 
 /* ------------------------------------------------------------------ *
  * Validation

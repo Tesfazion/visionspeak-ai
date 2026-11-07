@@ -221,7 +221,7 @@ export const am = {
   "dash.plan.remaining": "{count} ቀርቷል · {date} ይታደሳል",
   "dash.plan.reached": "ወርሃዊ ገደብ ደርሷል — {date} ይታደሳል።",
   "dash.planLabel": "{plan} እቅድ",
-  "dash.lifetimeAvg": "የዕድሜ ልክ አማካይ",
+  "dash.lifetimeAvg": "ተመሳሳይ የልምምድ ክፍለ ጊዜዎች አማካይ",
 
   "studio.eyebrow": "ስቱዲዮ",
   "studio.title": "ቀጥታ የንግግር ትንተና",

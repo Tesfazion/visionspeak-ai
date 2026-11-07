@@ -180,7 +180,7 @@ export const es = {
   "dash.plan.remaining": "Quedan {count} · se renueva el {date}",
   "dash.plan.reached": "Límite mensual alcanzado — se renueva el {date}.",
   "dash.planLabel": "Plan {plan}",
-  "dash.lifetimeAvg": "promedio histórico",
+  "dash.lifetimeAvg": "promedio de sesiones comparables",
 
   "studio.eyebrow": "Estudio",
   "studio.title": "Análisis de oratoria en vivo",

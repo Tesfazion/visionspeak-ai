@@ -12,18 +12,20 @@
 | `/ai` | **required** | BYOK provider-key management, AI chat and saved-session feedback |
 | `/report/[id]` | owner | Full session report (`/report/demo` is public; `?share=<token>` is a link-only view) |
 | `/dashboard` | **required** | Session history, plan usage, trends, pillar averages (paginated) |
+| `/admin/metrics` | allowlisted account | Aggregate activation, return, and same-mode score trends; requires `ANALYTICS_ADMIN_EMAIL` |
 | `/meeting` · `/meeting/[id]` | **required** | Co-coaching lobby and room: roster, chat, presence, WebRTC media |
 | `/privacy` · `/terms` | public | Privacy policy and terms of service |
 | `/offline` | public | Service-worker fallback |
 | `/api/health` | public | Liveness + storage + build probe |
 | `/api/auth/me/export` | **required** | Downloads the signed-in account's JSON data archive |
+| `/api/billing/checkout` | **required** | Creates an authenticated monthly or yearly Lemon Squeezy checkout for the signed-in account |
 | `/api/sessions/[id]/pdf` | owner, Pro | Server-rendered PDF report |
 | `/api/sessions/[id]/verify` | owner | Re-hashes the stored inputs; the report badge is computed server-side |
 | `/api/ai/keys` · `/api/ai/keys/[id]` | owner | Manage encrypted provider keys and models |
 | `/api/ai/chatbot` | owner | Chat using the selected owner's provider key |
 | `/api/ai/mentor` | owner | Generate feedback from an owner-verified saved session report |
 | `/api/report/[id]/email` | owner | Emails a report (or a download link) when SMTP is configured |
-| `/api/billing/webhook` | provider | The only writer of `plan`; `410` unless `BILLING_WEBHOOK_SECRET` is set |
+| `/api/billing/webhook` | Lemon Squeezy | Verifies `X-Signature`; synchronizes subscription events; `410` until billing config is present |
 | `/api/errors` | public | Rate-limited crash sink for the client error boundary |
 
 ---
@@ -50,6 +52,8 @@ cannot advertise a limit it does not apply.
   session. A session that fails to save never consumes quota.
 - **Idempotency** — the studio sends a `clientSessionId`; a retried save returns the original
   report instead of creating a duplicate or spending a second unit of quota.
-- **Plan changes** — `POST /api/billing/webhook` is the only writer of `plan` (constant-time
-  secret compare, `410` when unconfigured). Set `NEXT_PUBLIC_PRO_CHECKOUT_URL` to a real payment
-  link and `/pricing` sells Pro; leave it unset and the page says billing is not enabled.
+- **Plan changes** — `POST /api/billing/webhook` is the only billing writer of `plan`; it verifies
+  Lemon Squeezy's `X-Signature`, checks the configured store and recurring variant, and deduplicates
+  subscription events. Checkout remains disabled unless the API key, store, monthly variant, and
+  webhook secret are configured. Validate checkout and subscription lifecycle events in provider
+  test mode before enabling live charges.

@@ -104,6 +104,15 @@ export default function StudioPage() {
   }, [speaker]);
 
   useEffect(() => {
+    const requestedMode = new URLSearchParams(window.location.search).get("mode");
+    if (requestedMode === "practice" || requestedMode === "presentation" || requestedMode === "interview") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- report retry preset
+      setMode(requestedMode);
+      setTitle(`Retry ${MODE_LABEL[requestedMode].toLowerCase()} practice`);
+    }
+  }, []);
+
+  useEffect(() => {
     try {
       window.localStorage.setItem("visionspeak:lang", language);
     } catch {
@@ -299,8 +308,8 @@ export default function StudioPage() {
             Live speaking analysis
           </h1>
           <p className="pretty mt-1.5 max-w-xl text-[12.5px] leading-relaxed text-fog sm:text-[13px]">
-            Set the frame, hit start, and speak. Nine scores update five times a second while the coach
-            watches for habits you can feel but can&apos;t see.
+            Choose one speaking goal, practise with video or audio-only, then use the report&apos;s drill in another attempt.
+            Scores summarize observable cues; they are not a judgment of your ability or audience response.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -330,6 +339,12 @@ export default function StudioPage() {
         }}
 disabled={phase === "live" || phase === "paused" || saving}
         />
+
+      <div className="panel mt-4 grid gap-3 p-4 text-[12px] sm:grid-cols-3">
+        <p><span className="font-medium text-ink">1. Pick one goal</span><br /><span className="text-fog">Use the title as a reminder, such as “pause after key points.”</span></p>
+        <p><span className="font-medium text-ink">2. Practise</span><br /><span className="text-fog">Choose video cues or voice-only practice and speak for at least 10 seconds.</span></p>
+        <p><span className="font-medium text-ink">3. Review and retry</span><br /><span className="text-fog">Choose one drill from your report, then practise the same mode again.</span></p>
+      </div>
 
       {offline && offlineQueue.length > 0 && (
         <div className="panel mt-4 flex flex-col gap-3 border-rose/25 bg-rose/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -401,7 +416,9 @@ disabled={phase === "live" || phase === "paused" || saving}
             error={live.error}
             metrics={metrics}
             samples={samples}
-            onStart={live.start}
+            audioOnly={audioOnly}
+            onStart={() => live.start()}
+            onStartAudioOnly={() => live.start(true)}
             onReset={resetSession}
           />
 
@@ -412,7 +429,7 @@ disabled={phase === "live" || phase === "paused" || saving}
            * breakpoint keeps a sensible reading order without JS layout logic.
            */}
           <div className="xl:hidden">
-            <LiveScorePanel metrics={metrics} phase={phase} />
+            <LiveScorePanel metrics={metrics} phase={phase} audioOnly={audioOnly} />
           </div>
 
           {/* Docked on phones so Pause / End are always one thumb away. */}
@@ -444,7 +461,7 @@ disabled={phase === "live" || phase === "paused" || saving}
             />
           </div>
 
-          <SignalGrid metrics={metrics} />
+          {!audioOnly && <SignalGrid metrics={metrics} />}
 
           {!live.speechSupported && (
             <div className="panel flex items-start gap-2.5 px-4 py-3">
@@ -468,7 +485,7 @@ disabled={phase === "live" || phase === "paused" || saving}
 
         <div className="space-y-4">
           <div className="hidden xl:block">
-            <LiveScorePanel metrics={metrics} phase={phase} />
+            <LiveScorePanel metrics={metrics} phase={phase} audioOnly={audioOnly} />
           </div>
           <VoiceMeter metrics={metrics} />
           <TranscriptPanel

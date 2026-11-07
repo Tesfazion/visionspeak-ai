@@ -60,7 +60,9 @@ export default function PrivacyPage() {
             </ul>
             <p>
               We do not store video, audio, landmarks or raw images. We do not run advertising or
-              third-party tracking scripts.
+              third-party tracking scripts. Private aggregate product metrics are calculated from
+              account and saved-session records; they do not include media, transcripts or account
+              identities.
             </p>
           </Section>
 

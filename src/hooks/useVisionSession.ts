@@ -71,7 +71,7 @@ export function useVisionSession(
     };
   }, []);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (useAudioOnly = false) => {
     if (engineRef.current) return;
     if (typeof window === "undefined") return;
     setError(null);
@@ -79,7 +79,7 @@ export function useVisionSession(
     setSamples([]);
     setMetrics(null);
     setSpeech(null);
-    setAudioOnly(false);
+    setAudioOnly(useAudioOnly);
 
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setPhase("error");
@@ -103,15 +103,16 @@ export function useVisionSession(
         throw audioErr;
       }
 
-      try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user", frameRate: { ideal: 30 } },
-        });
-        // Combine audio + video
-        videoStream.getVideoTracks().forEach((t) => stream!.addTrack(t));
-      } catch {
-        // Fall back to audio-only mode if video fails
-        setAudioOnly(true);
+      if (!useAudioOnly) {
+        try {
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user", frameRate: { ideal: 30 } },
+          });
+          videoStream.getVideoTracks().forEach((t) => stream!.addTrack(t));
+        } catch {
+          setAudioOnly(true);
+          useAudioOnly = true;
+        }
       }
 
       if (!stream) throw new Error("stream-failed");
@@ -123,14 +124,15 @@ export function useVisionSession(
       if (!video || !canvas) throw new Error("stage-not-ready");
 
       video.srcObject = stream;
-      await video.play().catch(() => undefined);
-      // Wait for the first real frame so landmark coordinates are valid.
-      await new Promise<void>((resolve) => {
-        if (video.videoWidth > 0) return resolve();
-        const onLoaded = () => resolve();
-        video.addEventListener("loadeddata", onLoaded, { once: true });
-        setTimeout(resolve, 2500);
-      });
+      if (!useAudioOnly) {
+        await video.play().catch(() => undefined);
+        await new Promise<void>((resolve) => {
+          if (video.videoWidth > 0) return resolve();
+          const onLoaded = () => resolve();
+          video.addEventListener("loadeddata", onLoaded, { once: true });
+          setTimeout(resolve, 2500);
+        });
+      }
 
       setPhase("loading");
       const engine = new VisionEngine(video, canvas, stream, mode, {
@@ -160,7 +162,7 @@ export function useVisionSession(
         // the engine's metric cadence is the simplest reliable sync: ~5 Hz is
         // fast enough for a transcript to read as live while batching renders.
         onTick: () => setSpeech(engine.getSpeech()),
-      });
+      }, speechLanguageRef.current, useAudioOnly);
       // Boot the recogniser in whatever language the user already picked.
       engine.setSpeechLanguage(speechLanguageRef.current);
       engineRef.current = engine;

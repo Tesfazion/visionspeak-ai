@@ -18,7 +18,7 @@ export interface SessionTrendPoint {
   leadership: number;
 }
 
-export function SessionTrend({ data }: { data: SessionTrendPoint[] }) {
+export function SessionTrend({ data, voiceOnly = false }: { data: SessionTrendPoint[]; voiceOnly?: boolean }) {
   const chart = useChartTheme();
 
   if (data.length < 2) {
@@ -53,30 +53,34 @@ export function SessionTrend({ data }: { data: SessionTrendPoint[] }) {
           <Line
             type="monotone"
             dataKey="overall"
-            name="Overall"
+            name={voiceOnly ? "Voice" : "Overall"}
             stroke={chart.hue.violet}
             strokeWidth={2.2}
             dot={{ r: 2.5, strokeWidth: 0, fill: chart.hue.violet }}
             isAnimationActive={false}
           />
-          <Line
-            type="monotone"
-            dataKey="confidence"
-            name="Confidence"
-            stroke={chart.hue.cyan}
-            strokeWidth={1.6}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="leadership"
-            name="Leadership"
-            stroke={chart.hue.emerald}
-            strokeWidth={1.6}
-            dot={false}
-            isAnimationActive={false}
-          />
+          {!voiceOnly && (
+            <Line
+              type="monotone"
+              dataKey="confidence"
+              name="Confidence"
+              stroke={chart.hue.cyan}
+              strokeWidth={1.6}
+              dot={false}
+              isAnimationActive={false}
+            />
+          )}
+          {!voiceOnly && (
+            <Line
+              type="monotone"
+              dataKey="leadership"
+              name="Leadership"
+              stroke={chart.hue.emerald}
+              strokeWidth={1.6}
+              dot={false}
+              isAnimationActive={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

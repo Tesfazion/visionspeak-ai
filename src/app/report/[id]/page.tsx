@@ -157,6 +157,7 @@ export default async function ReportPage({
       : "unverified";
 
   const r = session.report;
+  const isAudioOnly = r.analysisMode === "audio-only";
   const tone = toneFor(r.overall);
   const fmtDate = (iso: string) =>
     new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
@@ -173,13 +174,15 @@ export default async function ReportPage({
     ? r.timeline.reduce((max, p) => (p.confidence > max.confidence ? p : max), r.timeline[0])
     : null;
 
-  const pillarRows = [
+  const pillarRows = isAudioOnly
+    ? [{ label: "Voice", value: r.pillars.voice, icon: Mic, hint: `${r.voice.avgWpm || "—"} wpm` }]
+    : [
     { label: "Eye contact", value: r.pillars.eyeContact, icon: Eye, hint: `${r.face.eyeContactPct}% lens time` },
     { label: "Posture", value: r.pillars.posture, icon: Activity, hint: `${r.pose.avgLeanDeg}° avg lean` },
     { label: "Gestures", value: r.pillars.gestures, icon: Hand, hint: `${r.gesture.gestureRatePerMin}/min` },
     { label: "Voice", value: r.pillars.voice, icon: Mic, hint: `${r.voice.avgWpm || "—"} wpm` },
     { label: "Expression", value: r.pillars.expression, icon: Smile, hint: `${r.face.smilePct}% smiling` },
-  ];
+      ];
 
   return (
     <div className="container-page pb-10 pt-24">
@@ -202,8 +205,8 @@ export default async function ReportPage({
       <section className="panel mt-4 overflow-hidden">
         <div className="flex flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-center lg:gap-8">
           <div className="flex items-center gap-4 sm:gap-5">
-            <ScoreRing value={r.overall} size={128} stroke={9} label={t("metric.overall")} className="sm:hidden" />
-            <ScoreRing value={r.overall} size={148} stroke={10} label={t("metric.overall")} className="max-sm:hidden" />
+            <ScoreRing value={r.overall} size={128} stroke={9} label={isAudioOnly ? "Voice" : t("metric.overall")} className="sm:hidden" />
+            <ScoreRing value={r.overall} size={148} stroke={10} label={isAudioOnly ? "Voice" : t("metric.overall")} className="max-sm:hidden" />
             <div className="lg:hidden">
               <div className="metric-num text-2xl font-medium" style={{ color: tone.color }}>
                 {r.grade}
@@ -241,6 +244,11 @@ export default async function ReportPage({
             <p className="mt-3 max-w-2xl rounded-lg border border-line/60 bg-raised/40 p-3 text-[16px] leading-relaxed text-fog">
               {t("report.interpretationNote")}
             </p>
+            {isAudioOnly && (
+              <p className="mt-2 rounded-lg border border-amber/25 bg-amber/[0.05] p-3 text-[16px] leading-relaxed text-fog">
+                Audio-only report: visual cues were not measured. The headline is a heuristic voice-practice indicator, not a validated assessment.
+              </p>
+            )}
           </div>
 
           <div className="hidden shrink-0 flex-col items-end gap-1 lg:flex">
@@ -254,7 +262,8 @@ export default async function ReportPage({
           </div>
         </div>
 
-        <div
+        {!isAudioOnly ? (
+          <div
           className={cn(
             // Hairline stat grid: 2 columns on phones, 4 from lg. The nth-child
             // rules draw interior rules only, so no stray edge border appears.
@@ -280,18 +289,20 @@ export default async function ReportPage({
               <Bar value={s.value} height={3} className="mt-2" />
             </div>
           ))}
-        </div>
+          </div>
+        ) : null}
       </section>
 
       {/* ------------------------------ profile + pillars ------------------------------ */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">        <section className="panel p-5">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+        {!isAudioOnly && <section className="panel p-5">
           <PanelHead title={t("report.profile")} hint={t("report.profileHint")} icon={Activity} />
           <ProfileRadar pillars={r.pillars} />
           <p className="mt-1 text-center text-[10.5px] text-fog/70">{t("report.profileNote")}</p>
-        </section>
+        </section>}
 
         <section className="panel p-5">
-          <PanelHead title={t("report.pillars")} hint={t("report.pillarsHint")} icon={Gauge} />
+          <PanelHead title={isAudioOnly ? "Voice practice indicator" : t("report.pillars")} hint={isAudioOnly ? "audio-only" : t("report.pillarsHint")} icon={Gauge} />
           <div className="mt-4 space-y-3.5">
             {pillarRows.map((p) => (
               <div key={p.label}>
@@ -311,16 +322,16 @@ export default async function ReportPage({
             ))}
           </div>
 
-          <div className="mt-5 rounded-xl border border-line/70 bg-raised/45 p-3">
+          {!isAudioOnly && <div className="mt-5 rounded-xl border border-line/70 bg-raised/45 p-3">
             <p className="font-mono text-[10px] leading-relaxed text-fog">
               confidence = 0.30·eye + 0.25·posture + 0.20·gestures + 0.15·voice + 0.10·expression
             </p>
-          </div>
+          </div>}
         </section>
       </div>
 
       {/* --------------------------------- timeline --------------------------------- */}
-      <section className="panel mt-4 p-5">
+      {!isAudioOnly && <section className="panel mt-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PanelHead
             title={t("report.timeline")}
@@ -345,7 +356,7 @@ export default async function ReportPage({
         <div className="mt-4">
           <TimelineChart timeline={r.timeline} />
         </div>
-      </section>
+      </section>}
 
       {/* --------------------------- strengths / improvements --------------------------- */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -394,8 +405,8 @@ export default async function ReportPage({
       </div>
 
       {/* ------------------------------- detail metrics ------------------------------- */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <section className="panel p-5">
+      <div className={`mt-4 grid gap-4 ${isAudioOnly ? "lg:grid-cols-1" : "lg:grid-cols-3"}`}>
+        {!isAudioOnly && <section className="panel p-5">
           <PanelHead title="Gaze & face" hint="vision" icon={Eye} />
           <div className="mt-2">
             <MetricRow label="Eye contact" value={`${r.face.eyeContactPct}%`} />
@@ -406,9 +417,9 @@ export default async function ReportPage({
             <MetricRow label="Head stability" value={`${r.face.headStabilityPct}%`} />
             <MetricRow label="Face visible" value={`${r.face.faceVisiblePct}%`} />
           </div>
-        </section>
+        </section>}
 
-        <section className="panel p-5">
+        {!isAudioOnly && <section className="panel p-5">
           <PanelHead title="Posture & movement" hint="pose" icon={Activity} />
           <div className="mt-2">
             <MetricRow label="Alignment" value={r.pose.alignmentScore} hint="/100" />
@@ -420,7 +431,7 @@ export default async function ReportPage({
             <MetricRow label="Hands visible" value={`${r.gesture.handsVisiblePct}%`} />
             <MetricRow label="Gesture openness" value={r.gesture.avgOpenness} hint="ratio" />
           </div>
-        </section>
+        </section>}
 
         <section className="panel p-5">
           <PanelHead title="Voice & rhythm" hint="audio" icon={Mic} />
@@ -441,7 +452,7 @@ export default async function ReportPage({
       </div>
 
       {/* --------------------------- emotion + benchmark --------------------------- */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+      {!isAudioOnly && <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <section className="panel p-5">
           <PanelHead title={t("report.emotion")} hint="52 blendshapes" icon={Smile} />
           <div className="mt-4 space-y-2.5">
@@ -487,7 +498,7 @@ export default async function ReportPage({
             {t("report.benchmarkNote")}
           </p>
         </section>
-      </div>
+      </div>}
 
       {/* ------------------------------- transcript ------------------------------- */}
       <section className="panel mt-4 p-5">
@@ -546,8 +557,8 @@ export default async function ReportPage({
           Generated by the VisionSpeak behavioural engine · {r.timeline.length} one-second samples ·{" "}
           {session.source === "demo" ? "sample dataset" : "live capture"}
         </p>
-        <Link href="/studio" className="text-[11.5px] font-medium text-brand-soft hover:text-brand">
-          Run this again →
+        <Link href={`/studio?mode=${session.mode}`} className="text-[11.5px] font-medium text-brand-soft hover:text-brand">
+          Practise this mode again →
         </Link>
       </div>
 

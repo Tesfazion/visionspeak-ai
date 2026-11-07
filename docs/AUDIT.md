@@ -2,8 +2,8 @@
 
 What stands between this build and a platform someone can pay for, and what has already
 been closed. First written after a full run of the product on 29 October 2026; updated
-after the second pass on 31 October 2026 (launch gates, money paths, meetings, report
-integrity).
+after the second pass on 31 October 2026 and the coach-practice implementation pass on
+7 November 2026.
 
 **Severity** — `BLOCKER` cannot launch, `HIGH` loses money or trust, `MEDIUM` maturity,
 `LOW` polish. **Status** — ✅ shipped, ⬜ open, ◐ partial (what is missing is named).
@@ -13,6 +13,11 @@ integrity).
 ## 1. Verified state
 
 Run on 31 October 2026, in this environment (8 GB RAM, ~0.5–1 GB free — see the build row).
+
+Implementation checks on 7 November 2026: typecheck, lint, 16 focused report/metrics/billing tests,
+and a two-worker production build passed. The full `npm test` suite was not run because
+`TEST_DATABASE_URL` is not configured in this environment; provider test-mode billing and real
+camera/microphone behavior also remain unverified.
 
 | Check | Command | Result |
 | --- | --- | --- |
@@ -67,7 +72,7 @@ those until a human runs them.
 | ✅ No way to hand a report to a coach | Revocable, expiring share links (`POST/DELETE /api/sessions/[id]/share`, `?share=` view, `noindex`). |
 | ✅ Unlimited signup/save abuse | Signup 20/hour/IP (valid submissions only), saves 30/hour/account; login limiter unchanged. |
 | ✅ No legal surface | `/privacy`, `/terms`, footer links, and env-driven operator/contact fields. |
-| ✅ Contact-free upgrades | `/pricing` generated from the same plan object the API enforces; checkout is a real seam (`NEXT_PUBLIC_PRO_CHECKOUT_URL`) and says so when unset. |
+| ✅ Contact-free upgrades | `/pricing` is generated from the enforced plan object; Lemon Squeezy checkout is available only when provider and signed-webhook configuration are present. |
 | ✅ Unfalsifiable deploys | `/api/health` reports the build SHA; API events are single-line JSON (`src/lib/log.ts`). |
 | ✅ `robots.txt` blocked the only indexable report | `/report/demo` and the new public pages are allowed, per-user reports stay out. |
 
@@ -105,8 +110,8 @@ those until a human runs them.
 | 4 | Session revocation | HIGH | ✅ |
 | 5 | Password change, profile edit, MFA, idle timeout | MEDIUM | ◐ — profile edit and password change shipped; MFA and idle timeout remain open |
 | 6 | Admin/role/audit surface | HIGH | ⬜ — `teamId`/`teamRole` exist on the user row, nothing reads them |
-| 7 | Real payment provider (webhook, invoices, dunning, refunds) | BLOCKER | ◐ — the seam and the only-writer webhook exist; no provider is wired |
-| 8 | Usage metering beyond the monthly session count | MEDIUM | ⬜ — minutes analysed are not recorded |
+| 7 | Real payment provider (webhook, invoices, dunning, refunds) | BLOCKER | ◐ — authenticated Lemon Squeezy checkout and signed, deduplicated subscription updates are implemented; merchant configuration and test-mode lifecycle verification remain before live sales; invoices, dunning and refunds remain open |
+| 8 | Usage metering beyond the monthly session count | MEDIUM | ✅ — API enforces both session and analysed-minute quotas; dashboard usage detail remains limited |
 | 9 | Team/org/seat model, cohort dashboard | HIGH | ⬜ |
 | 10 | Persistence was single-process, not multi-instance safe | HIGH | ✅ — application persistence migrated to PostgreSQL |
 | 11 | No schema version in `sessions.json` | HIGH | ✅ — session and meeting records persist in PostgreSQL |
@@ -118,9 +123,9 @@ those until a human runs them.
 | 17 | No embeds, no white-label | MEDIUM | ◐ — brand name/tagline are configurable; `frame-ancestors 'none'` still forbids embeds |
 | 18 | Transcript exported with no redaction option | MEDIUM | ⬜ |
 | 19 | Client-submitted aggregates cannot prove measurement authenticity | HIGH | ◐ — reports now explain that scores are practice indicators and fixed reference values are illustrative, not population comparisons; a crafted POST can still submit fabricated measurements. No certification claim is made. |
-| 20 | One camera+mic prompt, no audio-only fallback | HIGH | ⬜ |
+| 20 | One camera+mic prompt, no audio-only fallback | HIGH | ✅ — explicit audio-only capture, voice-only reports and camera-denial fallback |
 | 21 | Offline support is a shell page only | MEDIUM | ⬜ |
-| 22 | No error tracking / product analytics | HIGH | ◐ — crash envelope and structured logs exist; no analytics, no retention measurement |
+| 22 | No error tracking / product analytics | HIGH | ◐ — crash envelope, structured logs and private aggregate activation/return metrics exist; there is no third-party event tracking, and the metrics only reflect saved sessions |
 | 23 | Only a root error boundary | MEDIUM | ✅ (`global-error.tsx`; per-segment boundaries still open) |
 | 24 | Silent client session cap | LOW | ⬜ |
 | 25 | UI was English-only | HIGH | ◐ — catalogues and switcher exist; long-form pages and emails are English |
@@ -128,23 +133,23 @@ those until a human runs them.
 | 27 | No pricing/legal JSON-LD, no blog | LOW | ◐ — pricing JSON-LD done; no content programme |
 | 28 | Dates hard-coded to `en-GB` | LOW | ⬜ |
 | 29 | No browser E2E for camera denial, speech absence, print | MEDIUM | ◐ — `scripts/qa/qa-browser.mjs` and `qa-meeting.mjs` drive real Chrome over CDP; no Playwright suite |
-| 30 | No test for a payment webhook | HIGH | ⬜ — nothing to test until a provider is wired |
+| 30 | No test for a payment webhook | HIGH | ◐ — signature, event parsing, entitlement and deduplication helpers are unit-tested; a real provider test-mode lifecycle run and route-level integration test remain |
 | 31 | No load/concurrency test of the store | HIGH | ⬜ |
 
 ---
 
 ## 4. Recommended order
 
-1. **Wire the payment provider** (#7) to the existing webhook, and test upgrade, downgrade
-   and failed payment against it. Until then Pro is a manual `plan` flip.
-2. **MFA + idle timeout** (#5) — profile editing and password changes are available
-   in account settings.
-3. **Postgres (or SQLite on a single VM) behind the five store functions** (#10–11) and a
-   scheduled backup (#12). Until then, say plainly that this is a single-instance
-   deployment.
-4. **Server-side score derivation** (#19) before any comparative or certified claim.
-5. **Error tracking + analytics** (#22) before spending on acquisition — activation and
-   retention are currently unmeasurable.
-6. **Teams/seats** (#9) once individual Pro has a paying cohort.
+1. **Verify Lemon Squeezy in test mode** (#7): complete checkout and exercise renewal,
+   cancellation, expiration and failed-payment behavior before enabling live charges.
+2. **Run a consented, coach-reviewed scoring pilot** (#19) before making reliability,
+   improvement or certification claims. Current tests validate code paths, not measurement
+   quality or causality.
+3. **Use the aggregate product metrics** (#22) to measure activation and return, then conduct
+   customer interviews and iterate on onboarding and the practice-feedback-retry loop.
+4. **MFA + idle timeout** (#5) — profile editing and password changes are available in account
+   settings.
+5. **Teams/seats** (#9) only after confirming demand from paying coaches or organizations.
+6. **Scheduled backups and store load/concurrency tests** (#12, #31) remain operational work.
 
 Everything else is maturity, not a gate.

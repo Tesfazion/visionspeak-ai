@@ -121,6 +121,7 @@ export interface CoachingAction {
 }
 
 export interface ReportData {
+  analysisMode?: "video" | "audio-only";
   overall: number;
   grade: string;
   gradeLabel: string;

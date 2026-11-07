@@ -116,6 +116,10 @@ async function ensureSchema(): Promise<void> {
         );
         CREATE INDEX IF NOT EXISTS external_ai_keys_owner_created_at_idx
           ON external_ai_keys (owner_id, created_at DESC);
+        CREATE TABLE IF NOT EXISTS billing_events (
+          event_hash text PRIMARY KEY,
+          received_at timestamptz NOT NULL DEFAULT now()
+        );
       `);
     })().catch((error) => {
       current.schema = null;

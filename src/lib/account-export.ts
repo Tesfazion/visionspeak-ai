@@ -19,7 +19,9 @@ type ExportedAiKey = Pick<
 export interface AccountExport {
   exportVersion: 1;
   exportedAt: string;
-  account: PublicUser;
+  account: Omit<PublicUser, "billing"> & {
+    billing?: Omit<NonNullable<PublicUser["billing"]>, "customerPortalUrl">;
+  };
   sessions: ExportedSession[];
   meetings: ExportedMeeting[];
   aiProviderKeys: ExportedAiKey[];
@@ -37,7 +39,28 @@ export function buildAccountExport(input: {
   return {
     exportVersion: 1,
     exportedAt: input.exportedAt ?? new Date().toISOString(),
-    account: user,
+    account: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      plan: user.plan,
+      emailVerifiedAt: user.emailVerifiedAt,
+      teamId: user.teamId,
+      teamRole: user.teamRole,
+      ...(user.billing
+        ? {
+            billing: {
+              provider: user.billing.provider,
+              subscriptionId: user.billing.subscriptionId,
+              customerId: user.billing.customerId,
+              status: user.billing.status,
+              endsAt: user.billing.endsAt,
+              updatedAt: user.billing.updatedAt,
+            },
+          }
+        : {}),
+    },
     sessions: sessions.map((session) => ({
       ...session,
       share: session.share

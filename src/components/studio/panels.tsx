@@ -30,7 +30,15 @@ const PILLARS = [
   { key: "expression", label: "Expression", color: "var(--color-rose)" },
 ] as const;
 
-export function LiveScorePanel({ metrics, phase }: { metrics: LiveMetrics | null; phase: string }) {
+export function LiveScorePanel({
+  metrics,
+  phase,
+  audioOnly = false,
+}: {
+  metrics: LiveMetrics | null;
+  phase: string;
+  audioOnly?: boolean;
+}) {
   const confidence = metrics?.confidence ?? 0;
   const composites = [
     { label: "Engagement", value: metrics?.engagement ?? 0, icon: Waves },
@@ -41,13 +49,13 @@ export function LiveScorePanel({ metrics, phase }: { metrics: LiveMetrics | null
   return (
     <div className="panel p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-medium text-ink">Live score</h2>
+        <h2 className="text-[13px] font-medium text-ink">{audioOnly ? "Voice practice indicator" : "Live score"}</h2>
         <Pill tone={phase === "live" ? "good" : phase === "paused" ? "warn" : "neutral"} className="!py-0.5">
           {phase === "live" ? "analysing" : phase === "paused" ? "paused" : "standby"}
         </Pill>
       </div>
 
-      <div className="mt-4 flex items-center gap-5">
+      {!audioOnly && <div className="mt-4 flex items-center gap-5">
         <ScoreRing value={confidence} size={124} stroke={9} label="confidence" />
         <div className="flex-1 space-y-3">
           {composites.map((c) => (
@@ -62,12 +70,17 @@ export function LiveScorePanel({ metrics, phase }: { metrics: LiveMetrics | null
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <div className="mt-5 hairline" />
+      {audioOnly && (
+        <p className="mt-3 text-[11px] leading-relaxed text-fog">
+          Only acoustic voice cues are available in this mode. This practice indicator is not a validated assessment.
+        </p>
+      )}
+      {!audioOnly && <div className="mt-5 hairline" />}
 
-      <div className="mt-4 space-y-3">
-        {PILLARS.map((p) => {
+      <div className={`${audioOnly ? "mt-4" : "mt-4"} space-y-3`}>
+        {(audioOnly ? PILLARS.filter((p) => p.key === "voice") : PILLARS).map((p) => {
           const value = metrics ? metrics[p.key] : 0;
           return (
             <div key={p.key}>

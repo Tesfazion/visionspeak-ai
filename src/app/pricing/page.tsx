@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, Minus, Shield, Sparkles, Zap } from "@/components/icons";
+import { Check, Minus, Shield, Zap } from "@/components/icons";
 import { SiteFooter } from "@/components/site/footer";
 import { ButtonLink, Pill, cn } from "@/components/ui";
+import { CheckoutButton } from "@/components/billing/checkout-button";
 import { PLANS, PLAN_IDS, formatUsd, formatEtb } from "@/lib/plans";
 
 export const metadata: Metadata = {
@@ -13,13 +14,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Checkout is a configuration seam, not a fake button. Set
- * NEXT_PUBLIC_PRO_CHECKOUT_URL to a Stripe Payment Link / Lemon Squeezy
- * checkout and this page starts selling; leave it unset and it markets the
- * plan honestly instead of pretending to charge.
+ * Checkout stays unavailable until the provider, recurring variant, and
+ * signed webhook are configured together.
  */
-const checkoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL?.trim() || "";
-
 const comparison = [
   { label: "Analysed sessions per month", free: "5", pro: "200" },
   { label: "Maximum session length", free: "10 min", pro: "60 min" },
@@ -42,6 +39,12 @@ const Cell = ({ value }: { value: string | boolean }) => {
 
 export default function PricingPage() {
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
+  const billingConfigured = Boolean(
+    process.env.LEMON_SQUEEZY_API_KEY &&
+      process.env.LEMON_SQUEEZY_STORE_ID &&
+      process.env.LEMON_SQUEEZY_WEBHOOK_SECRET &&
+      process.env.LEMON_SQUEEZY_PRO_MONTHLY_VARIANT_ID,
+  );
   const pricingJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -62,8 +65,8 @@ export default function PricingPage() {
         name: "Pro",
         price: String(PLANS.pro.priceMonthlyUsd),
         priceCurrency: "USD",
-        availability: checkoutUrl ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
-        url: checkoutUrl || `${base}/pricing`,
+        availability: billingConfigured ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        url: `${base}/pricing`,
         priceSpecification: {
           "@type": "PriceSpecification",
           price: String(PLANS.pro.priceMonthlyUsd),
@@ -76,8 +79,8 @@ export default function PricingPage() {
         name: "Pro (ETB)",
         price: String(PLANS.pro.priceMonthlyEtb),
         priceCurrency: "ETB",
-        availability: checkoutUrl ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
-        url: checkoutUrl || `${base}/pricing`,
+        availability: billingConfigured ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        url: `${base}/pricing`,
         priceSpecification: {
           "@type": "PriceSpecification",
           price: String(PLANS.pro.priceMonthlyEtb),
@@ -165,20 +168,15 @@ export default function PricingPage() {
 
               <div className="mt-6">
                 {featured ? (
-                  checkoutUrl ? (
-                    <ButtonLink href={checkoutUrl} className="w-full">
-                      <Sparkles className="size-3.5" /> Get Pro
-                    </ButtonLink>
-                  ) : (
-                    <>
-                      <ButtonLink href="/signup" variant="subtle" className="w-full">
-                        Start free — upgrade when billing opens
-                      </ButtonLink>
-                      <p className="mt-2 text-center text-[10px] leading-relaxed text-fog/70">
-                        Pro checkout is not switched on for this deployment. Nothing is charged here.
-                      </p>
-                    </>
-                  )
+                  <div className="space-y-2">
+                    <CheckoutButton configured={billingConfigured} />
+                    {billingConfigured && (
+                      <CheckoutButton
+                        interval="yearly"
+                        configured={Boolean(process.env.LEMON_SQUEEZY_PRO_YEARLY_VARIANT_ID)}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <ButtonLink href="/signup" variant="outline" className="w-full">
                     Create a free account
@@ -214,6 +212,10 @@ export default function PricingPage() {
         </div>
         <p className="mt-3 text-center text-[10.5px] text-fog/80">
           Quotas reset on the first of each month (UTC). A session that fails to save never counts.
+        </p>
+        <p className="mt-2 text-center text-[10.5px] text-fog/80">
+          Payments are processed by Lemon Squeezy. Available payment methods and final billing currency are shown
+          securely at checkout; local Ethiopian payment rails are not yet enabled.
         </p>
       </section>
 

@@ -18,6 +18,18 @@ test("a demo aggregate produces a complete report", () => {
   assert.ok(report.timeline.length > 0);
 });
 
+test("audio-only reports expose voice cues without fabricating visual scores", () => {
+  const aggregate = { ...buildDemoAggregate(), analysisMode: "audio-only" as const };
+  const report = buildReport(aggregate, "practice");
+
+  assert.equal(report.analysisMode, "audio-only");
+  assert.equal(report.overall, report.pillars.voice);
+  assert.equal(report.timeline.length, 0);
+  assert.equal(report.benchmark.length, 0);
+  assert.equal(report.plan.length, 3);
+  assert.match(report.summary, /voice-only practice indicator/i);
+});
+
 test("every report field is a finite number the UI can render", () => {
   const r = buildReport(buildDemoAggregate(), "practice");
   const numbers = [

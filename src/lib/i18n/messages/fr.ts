@@ -220,7 +220,7 @@ export const fr = {
   "dash.plan.remaining": "{count} restantes · réinitialisation le {date}",
   "dash.plan.reached": "Limite mensuelle atteinte — réinitialisation le {date}.",
   "dash.planLabel": "Formule {plan}",
-  "dash.lifetimeAvg": "moyenne globale",
+  "dash.lifetimeAvg": "moyenne des sessions comparables",
 
   "studio.eyebrow": "Studio",
   "studio.title": "Analyse de prise de parole en direct",

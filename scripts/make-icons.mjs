@@ -1,4 +1,4 @@
-// Rasterises public/icons/mark.svg into the PNG sizes the web manifest and
+// Rasterises the supplied app logo into the PNG sizes the web manifest and
 // Apple touch icon need. Sharp ships with Next, so this adds no dependency.
 //
 // Usage: node scripts/make-icons.mjs
@@ -8,7 +8,7 @@ import sharp from "sharp";
 
 const root = path.resolve(import.meta.dirname, "..");
 const outDir = path.join(root, "public", "icons");
-const svg = await readFile(path.join(outDir, "mark.svg"));
+const logo = await readFile(path.join(root, "public", "visionspeak-logo.png"));
 
 await mkdir(outDir, { recursive: true });
 
@@ -16,7 +16,7 @@ await mkdir(outDir, { recursive: true });
 async function maskable(size) {
   const inner = Math.round(size * 0.78);
   const padding = Math.round((size - inner) / 2);
-  const layers = await sharp(svg).resize(inner, inner).png().toBuffer();
+  const layers = await sharp(logo).resize(inner, inner).png().toBuffer();
   return sharp({
     create: {
       width: size,
@@ -31,11 +31,11 @@ async function maskable(size) {
 }
 
 const jobs = [
-  ["icon-192.png", () => sharp(svg).resize(192, 192).png().toBuffer()],
-  ["icon-512.png", () => sharp(svg).resize(512, 512).png().toBuffer()],
+  ["icon-192.png", () => sharp(logo).resize(192, 192).png().toBuffer()],
+  ["icon-512.png", () => sharp(logo).resize(512, 512).png().toBuffer()],
   ["maskable-512.png", () => maskable(512)],
-  ["apple-touch-icon.png", () => sharp(svg).resize(180, 180).png().toBuffer()],
-  ["favicon-32.png", () => sharp(svg).resize(32, 32).png().toBuffer()],
+  ["apple-touch-icon.png", () => sharp(logo).resize(180, 180).png().toBuffer()],
+  ["favicon-32.png", () => sharp(logo).resize(32, 32).png().toBuffer()],
 ];
 
 const report = [];

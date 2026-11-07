@@ -1,7 +1,7 @@
 # Roadmap
 
 - **Phase 2** — uploaded-recording batch analysis (Whisper + librosa + DeepFace) reusing the same
-  scoring model; team and cohort comparisons.
+  scoring model; team and cohort comparisons only after coach/organization demand is validated.
 - **Phase 3** — mobile capture, multi-language transcription, personalised coaching plans,
   longitudinal improvement roadmaps.
 
@@ -12,9 +12,12 @@ installable PWA with an offline shell, generated OpenGraph card, loading and err
 print stylesheet, Free/Pro plans with server-enforced quotas, idempotent saves, on-device draft
 recovery, revocable report share links, legal pages, structured logging, password reset, email
 verification, account deletion, "sign out everywhere", server-rendered PDF export, SMTP delivery,
-a billing webhook seam, a rate-limited crash sink, paginated history, `en/es/fr/am` UI catalogues,
-accessible chart tables, co-coaching meeting rooms, and a full unit suite plus an end-to-end suite
-and a meeting QA suite wired into CI.
+Lemon Squeezy checkout and signed subscription webhooks, explicit audio-only practice, comparable
+same-mode score trends, privacy-preserving activation/return metrics, a rate-limited crash sink,
+paginated history, `en/es/fr/am` UI catalogues, accessible chart tables, co-coaching meeting rooms,
+and a full unit suite plus an end-to-end suite and a meeting QA suite wired into CI. Scoring
+reliability still requires a consented, coach-reviewed pilot; live billing still requires provider
+test-mode verification and merchant configuration.
 
 ---
 

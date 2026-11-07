@@ -155,13 +155,23 @@ export default async function DashboardPage() {
   }
 
   const totalSec = sessions.reduce((acc, s) => acc + s.durationSec, 0);
-  const best = Math.max(...sessions.map((s) => s.report.overall));
-  const avgOverall = Math.round(sessions.reduce((acc, s) => acc + s.report.overall, 0) / sessions.length);
+  const latest = sessions[0];
+  const voiceOnly = latest.report.analysisMode === "audio-only";
+  const scoreSessions = sessions.filter(
+    (session) =>
+      session.mode === latest.mode &&
+      (session.report.analysisMode ?? "video") === (latest.report.analysisMode ?? "video"),
+  );
+  const best = Math.max(...scoreSessions.map((s) => s.report.overall));
+  const avgOverall = Math.round(
+    scoreSessions.reduce((acc, s) => acc + s.report.overall, 0) / scoreSessions.length,
+  );
 
-  const { weekCount, weekAverage, streak } = recentActivity(sessions);
+  const { weekCount, streak } = recentActivity(sessions);
+  const { weekAverage } = recentActivity(scoreSessions);
   const weekAvg = weekAverage ?? avgOverall;
 
-  const trend: SessionTrendPoint[] = [...sessions]
+  const trend: SessionTrendPoint[] = [...scoreSessions]
     .reverse()
     .slice(-10)
     .map((s) => ({
@@ -171,12 +181,15 @@ export default async function DashboardPage() {
       leadership: s.report.pillars.leadership,
     }));
 
-  const pillarAvg = PILLAR_KEYS.map((key) => ({
+  const visiblePillars = voiceOnly ? PILLAR_KEYS.filter((key) => key === "voice") : PILLAR_KEYS;
+  const pillarAvg = visiblePillars.map((key) => ({
     key,
     label: t(PILLAR_META[key].label),
     color: PILLAR_META[key].color,
     icon: PILLAR_ICONS[key],
-    value: Math.round(sessions.reduce((acc, s) => acc + s.report.pillars[key], 0) / sessions.length),
+    value: Math.round(
+      scoreSessions.reduce((acc, s) => acc + s.report.pillars[key], 0) / scoreSessions.length,
+    ),
   })).sort((a, b) => b.value - a.value);
 
   const weakest = pillarAvg[pillarAvg.length - 1];
@@ -264,7 +277,7 @@ export default async function DashboardPage() {
           now — a meeting room, not another chart. */}
       <MeetingCallout t={t} />
 
-      {/* Hero: lifetime average ring + headline stat strip */}
+      {/* Scores compare like-for-like sessions; activity totals still include every mode. */}
       <section className="panel mt-4 overflow-hidden">
         <div className="grid-lines pointer-events-none opacity-30" aria-hidden />
         <div className="relative flex flex-col items-center gap-6 p-5 sm:flex-row sm:gap-8 sm:p-6">
@@ -286,7 +299,7 @@ export default async function DashboardPage() {
             <p className="pretty mt-2.5 text-[12.5px] leading-relaxed text-fog sm:max-w-md">
               {t("dash.heroBody", {
                 avg: avgOverall,
-                count: sessions.length,
+                count: scoreSessions.length,
                 pillar: weakest.label,
                 value: weakest.value,
               })}
@@ -334,18 +347,23 @@ export default async function DashboardPage() {
             </span>
           </div>
           <div className="mt-4">
-            <SessionTrend data={trend} />
+            <SessionTrend data={trend} voiceOnly={voiceOnly} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-fog">
             <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-brand-soft" /> {t("dash.legend.overall")}
+              <span className="size-1.5 rounded-full bg-brand-soft" />
+              {voiceOnly ? "Voice" : t("dash.legend.overall")}
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-aqua" /> {t("dash.legend.confidence")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-mint" /> {t("dash.legend.leadership")}
-            </span>
+            {!voiceOnly && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-aqua" /> {t("dash.legend.confidence")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-mint" /> {t("dash.legend.leadership")}
+                </span>
+              </>
+            )}
           </div>
         </section>
 

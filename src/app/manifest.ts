@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 /**
- * Installable PWA metadata. Icons are rasterised from `public/icons/mark.svg`
+ * Installable PWA metadata. Icons are rasterised from `public/visionspeak-logo.png`
  * by `node scripts/make-icons.mjs` (part of `npm run icons`).
  */
 export default function manifest(): MetadataRoute.Manifest {

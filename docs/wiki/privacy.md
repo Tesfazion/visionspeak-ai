@@ -11,6 +11,13 @@
 - **Account export** is available from account settings as a JSON archive of the profile, saved
   sessions, attended meetings, and safe metadata for connected AI provider keys. Provider
   credentials and active share-link tokens are intentionally excluded.
+- **Product metrics** are a private, aggregate view at `/admin/metrics`, enabled only for the
+  account matching `ANALYTICS_ADMIN_EMAIL`. It reads account and saved-session timestamps and
+  numeric scores; it does not read media, transcripts, or expose account identities. Activation
+  means a first saved session within seven days of signup, counting only signups with a complete
+  seven-day observation window; return means another session within seven days of the first,
+  counting only first sessions with full follow-up; score change compares the first and latest three scores in the same
+  practice and capture mode. These are descriptive product signals, not causal evidence.
 - **Samples are read-only.** Seeded sample reports are shared reference material, cannot be
   deleted or edited by an account, and never appear in a user's own history or averages.
 - **Share links are explicit and revocable** — an unguessable token plus the report id, expiring

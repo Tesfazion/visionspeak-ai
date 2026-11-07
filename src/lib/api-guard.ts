@@ -148,6 +148,9 @@ export function parseAggregate(input: unknown, options: AggregateOptions): Guard
 
   const a = input as Record<string, unknown>;
   const { durationSec, timeline, voice, speech, emotions } = a;
+  if (a.analysisMode !== undefined && a.analysisMode !== "video" && a.analysisMode !== "audio-only") {
+    return fail(422, "analysisMode must be 'video' or 'audio-only'.", "invalid_aggregate");
+  }
 
   if (!isFiniteNumber(durationSec) || durationSec <= 0) {
     return fail(422, "Session payload needs a positive durationSec.", "invalid_aggregate");

@@ -104,13 +104,28 @@ export function LoadMore({ initialSessions, total, pageSize = 50 }: LoadMoreProp
                   <span className="capitalize">{t(MODE_LABEL_KEY[s.mode as keyof typeof MODE_LABEL_KEY])}</span>
                   <span className="text-fog/40">·</span>
                   <span>{formatDuration(s.durationSec)}</span>
+                  {r.analysisMode === "audio-only" && (
+                    <>
+                      <span className="text-fog/40">·</span>
+                      <span>Voice only</span>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {[r.pillars.confidence, r.pillars.leadership, r.pillars.communication].map((v: number, i: number) => (
+              {(r.analysisMode === "audio-only"
+                ? [null, null, null]
+                : [r.pillars.confidence, r.pillars.leadership, r.pillars.communication]
+              ).map((v: number | null, i: number) => (
                 <div key={i} className="hidden text-right lg:block">
-                  <span className="metric-num text-[12px] text-mist">{v}</span>
-                  <Bar value={v} height={2} className="mt-1 opacity-60" />
+                  {v === null ? (
+                    <span className="text-[12px] text-fog" aria-label="Not measured">—</span>
+                  ) : (
+                    <>
+                      <span className="metric-num text-[12px] text-mist">{v}</span>
+                      <Bar value={v} height={2} className="mt-1 opacity-60" />
+                    </>
+                  )}
                 </div>
               ))}
 

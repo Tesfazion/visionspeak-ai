@@ -46,6 +46,7 @@ const MODELS = {
 
 export interface SessionAggregate {
   durationSec: number;
+  analysisMode?: "video" | "audio-only";
   analyzedFrames: number;
   faceVisiblePct: number;
   eyeContactPct: number;
@@ -217,6 +218,7 @@ export class VisionEngine {
     private mode: SessionMode,
     private cb: EngineCallbacks = {},
     private language: SpeechLanguage = "en-US",
+    private audioOnly = false,
   ) {
     // Built here (not as a field initializer) because field initializers run
     // before TypeScript's parameter-property assignments.
@@ -244,17 +246,19 @@ export class VisionEngine {
   async start() {
     this.setStatus("loading");
     try {
-      this.cb.onProgress?.("Loading vision runtime");
-      const fileset = await FilesetResolver.forVisionTasks(WASM_PATH).catch(() =>
-        FilesetResolver.forVisionTasks(CDN_WASM),
-      );
+      if (!this.audioOnly) {
+        this.cb.onProgress?.("Loading vision runtime");
+        const fileset = await FilesetResolver.forVisionTasks(WASM_PATH).catch(() =>
+          FilesetResolver.forVisionTasks(CDN_WASM),
+        );
 
-      this.cb.onProgress?.("Loading face + behaviour models");
-      [this.face, this.pose, this.hand] = await Promise.all([
-        this.createFace(fileset),
-        this.createPose(fileset),
-        this.createHand(fileset),
-      ]);
+        this.cb.onProgress?.("Loading face + behaviour models");
+        [this.face, this.pose, this.hand] = await Promise.all([
+          this.createFace(fileset),
+          this.createPose(fileset),
+          this.createHand(fileset),
+        ]);
+      }
 
       this.voice = new VoiceEngine(this.stream);
       await this.voice.start();
@@ -368,18 +372,77 @@ export class VisionEngine {
   private loop = () => {
     if (!this.active) return;
     this.raf = requestAnimationFrame(this.loop);
-    if (!this.video || !this.canvas) return;
 
     if (!this.paused) {
       const now = performance.now();
-      if (now - this.lastStep >= 30 && this.video.readyState >= 2 && this.video.videoWidth > 0) {
+      if (now - this.lastStep >= 30 && (this.audioOnly || (this.video.readyState >= 2 && this.video.videoWidth > 0))) {
         this.lastStep = now;
-        this.step(now);
+        if (this.audioOnly) this.stepAudioOnly(now);
+        else this.step(now);
       }
     }
 
-    if (this.overlayFrame) drawOverlay(this.canvas, this.video, { ...this.overlayFrame, analyzing: !this.paused });
+    if (!this.audioOnly && this.overlayFrame) {
+      drawOverlay(this.canvas, this.video, { ...this.overlayFrame, analyzing: !this.paused });
+    }
   };
+
+  private stepAudioOnly(now: number) {
+    const dt = this.lastTs ? Math.min(0.25, (now - this.lastTs) / 1000) : 0;
+    this.lastTs = now;
+    this.elapsed += dt;
+    this.frameIndex++;
+    if (this.frameIndex % 6 === 0 || !this.latestVoice) {
+      this.latestVoice = this.voice?.sample(now) ?? null;
+    }
+    const voice = this.latestVoice;
+    const fillerPer100 = this.speech.fillerDensity();
+    const voiceScore = voice
+      ? scoreVoice({
+          volumeConsistency: voice.volumeConsistency,
+          energy: voice.energy,
+          pitchVariation: voice.pitchVariation,
+          speakingTimePct: voice.speakingTimePct || 60,
+          fillerPer100,
+        })
+      : 0;
+    const wpm = this.currentWpm();
+    this.latestMetrics = {
+      confidence: 0,
+      engagement: 0,
+      leadership: 0,
+      communication: 0,
+      eyeContact: 0,
+      posture: 0,
+      gestures: 0,
+      voice: clampScore(voiceScore),
+      expression: 0,
+      gaze: 0,
+      yaw: 0,
+      pitch: 0,
+      db: Math.round(voice?.db ?? -100),
+      energy: Math.round(voice?.energy ?? 0),
+      wpm: Math.round(wpm),
+      face: false,
+      hands: 0,
+      emotion: "neutral",
+      speaking: voice?.speaking ?? false,
+      postureLabel: "Unavailable",
+      gazeLabel: "Audio-only",
+      blinkRate: 0,
+      fillerCount: this.speech.totalFillers(),
+      wordCount: this.speech.snapshot().words,
+      elapsed: Math.round(this.elapsed),
+    };
+    if (now - this.lastEmit > 190) {
+      this.lastEmit = now;
+      this.emitMetrics();
+    }
+    if (this.elapsed - this.lastSampleAt >= 1) {
+      this.lastSampleAt = Math.floor(this.elapsed);
+      this.recordSample();
+    }
+  }
 
   private step(now: number) {
     const dt = this.lastTs ? Math.min(0.25, (now - this.lastTs) / 1000) : 0;
@@ -828,6 +891,7 @@ export class VisionEngine {
 
     return {
       durationSec: Math.round(this.elapsed),
+      analysisMode: this.audioOnly ? "audio-only" : "video",
       analyzedFrames: c.faceFrames + postureFrames,
       faceVisiblePct: clamp((c.faceFrames / Math.max(1, c.steps)) * 100),
       eyeContactPct: (c.engagedFrames / faceFrames) * 100,

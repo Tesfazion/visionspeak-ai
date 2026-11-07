@@ -8,10 +8,8 @@ import type { SessionRecord } from "./types";
  * page. A quota that the pricing page advertises and the API does not enforce
  * is worse than no quota at all, so both read from this file.
  *
- * Billing itself is intentionally not wired to a provider here: the platform
- * ships with `NEXT_PUBLIC_PRO_CHECKOUT_URL` as the seam (see `.env.example`).
- * Without it the upgrade CTA falls back to a sales contact, never a fake
- * checkout that silently charges nobody.
+ * Lemon Squeezy is the payment provider; its server-side integration never
+ * changes these entitlements until a signed subscription event arrives.
  */
 
 export type PlanId = "free" | "pro";

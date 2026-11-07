@@ -38,13 +38,22 @@ export function ProWorkspace({
   t: Translate;
 }) {
   // Oldest-first slices: the last three sessions against the three before them.
-  const chronological = [...sessions].reverse();
+  const latest = sessions[0];
+  const comparable = [...sessions].reverse().filter(
+    (session) =>
+      session.mode === latest?.mode &&
+      (session.report.analysisMode ?? "video") === (latest?.report.analysisMode ?? "video"),
+  );
+  const chronological = comparable;
   const now = averagePillars(chronological.slice(-3));
   const before = averagePillars(chronological.slice(-6, -3));
+  const scoredPillars = latest?.report.analysisMode === "audio-only"
+    ? PILLAR_KEYS.filter((key) => key === "voice")
+    : PILLAR_KEYS;
 
   const deltas =
     now && before
-      ? PILLAR_KEYS.map((key) => ({
+      ? scoredPillars.map((key) => ({
           key,
           label: t(PILLAR_META[key].label),
           delta: now[key] - before[key],
@@ -54,8 +63,6 @@ export function ProWorkspace({
 
   const rising = deltas.filter((d) => d.delta > 0).slice(0, 2);
   const slipping = deltas.filter((d) => d.delta < 0).slice(-2).reverse();
-  const latest = sessions[0];
-
   return (
     <section className="relative mt-4 overflow-hidden rounded-xl border-2 border-brand/40 bg-gradient-to-br from-brand/[0.08] via-brand/[0.03] to-transparent p-6">
       <div

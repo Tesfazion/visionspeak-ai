@@ -14,6 +14,7 @@ import {
   Timer,
   TriangleAlert,
   Video,
+  Mic,
 } from "lucide-react";
 import { formatClock, formatDuration } from "@/lib/math";
 import type { FrameSample, LiveMetrics } from "@/lib/types";
@@ -33,6 +34,8 @@ export function Stage({
   metrics,
   samples,
   onStart,
+  onStartAudioOnly,
+  audioOnly,
   onReset,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -43,6 +46,8 @@ export function Stage({
   metrics: LiveMetrics | null;
   samples: FrameSample[];
   onStart: () => void;
+  onStartAudioOnly: () => void;
+  audioOnly: boolean;
   onReset: () => void;
 }) {
   const live = phase === "live" || phase === "paused";
@@ -88,12 +93,12 @@ export function Stage({
                 <span className={cn("relative size-1.5 rounded-full", phase === "paused" ? "bg-amber" : "bg-rose")} />
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/80">
-                {phase === "paused" ? "paused" : "live"}
+                {phase === "paused" ? "paused" : audioOnly ? "audio-only live" : "live"}
               </span>
               <span className="metric-num text-[10px] text-white/60">{formatClock(elapsed)}</span>
             </div>
 
-            <div className="absolute right-4 top-4 flex items-center gap-1.5">
+            {!audioOnly && <div className="absolute right-4 top-4 flex items-center gap-1.5">
               <span
                 className={cn(
                   "rounded-full border px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] backdrop-blur",
@@ -107,19 +112,30 @@ export function Stage({
               <span className="rounded-full border border-aqua/25 bg-aqua/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-aqua backdrop-blur">
                 {metrics?.hands ?? 0} hand{(metrics?.hands ?? 0) === 1 ? "" : "s"}
               </span>
-            </div>
+            </div>}
 
-            <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-3">
-              <div className="rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 backdrop-blur">
-                <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/50">gaze</div>
-                <div className="text-[11px] font-medium text-white/85">{metrics?.gazeLabel ?? "—"}</div>
+            {!audioOnly && (
+              <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-3">
+                <div className="rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 backdrop-blur">
+                  <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/50">gaze</div>
+                  <div className="text-[11px] font-medium text-white/85">{metrics?.gazeLabel ?? "—"}</div>
+                </div>
+                <div className="flex-1" />
+                <div className="hidden rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-right backdrop-blur sm:block">
+                  <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/50">posture</div>
+                  <div className="text-[11px] font-medium text-white/85">{metrics?.postureLabel ?? "—"}</div>
+                </div>
               </div>
-              <div className="flex-1" />
-              <div className="hidden rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-right backdrop-blur sm:block">
-                <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/50">posture</div>
-                <div className="text-[11px] font-medium text-white/85">{metrics?.postureLabel ?? "—"}</div>
+            )}
+            {audioOnly && (
+              <div className="absolute inset-0 grid place-items-center text-center">
+                <div className="rounded-xl border border-white/10 bg-black/45 p-5 backdrop-blur">
+                  <Mic className="mx-auto size-6 text-aqua" />
+                  <p className="mt-2 text-[14px] font-medium text-white">Audio-only practice</p>
+                  <p className="mt-1 text-[11px] text-white/70">Voice cues only · no camera requested</p>
+                </div>
               </div>
-            </div>
+            )}
 
             {phase === "paused" && (
               <div className="absolute inset-0 grid place-items-center bg-black/45 backdrop-blur-[2px]">
@@ -171,12 +187,15 @@ export function Stage({
                   </span>
                   <h2 className="mt-4 text-[17px] font-medium text-ink">Ready when you are</h2>
                   <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">
-                    VisionSpeak needs your camera and microphone to read gaze, posture, gestures and
-                    voice. Analysis runs entirely in this tab.
+                    Use camera and microphone for visual delivery cues, or choose audio-only for voice practice.
+                    Media analysis runs in this tab.
                   </p>
                   <div className="mt-5 flex flex-col items-center gap-3">
                     <Button size="md" onClick={onStart} className="w-full sm:w-auto">
                       <Video className="size-4" /> Enable camera &amp; mic
+                    </Button>
+                    <Button variant="outline" size="md" onClick={onStartAudioOnly} className="w-full sm:w-auto">
+                      Practice with audio only
                     </Button>
                     <span className="flex items-center gap-1.5 text-[10.5px] text-fog/80">
                       <Shield className="size-3 text-mint/80" /> No video is uploaded, stored or shared

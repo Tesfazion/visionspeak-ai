@@ -23,7 +23,19 @@ heuristics, not reliable emotion detection. The report's comparison values are f
 references, not results from a representative speaker study.
 
 The weights are asserted by unit tests, so a refactor cannot silently change every score in the
-product.
+product. These tests verify the implementation; they do not establish that the cues predict
+real-world speaking outcomes or that scores are reliable across devices and environments.
+
+## Audio-only reports
+
+When camera access is declined or unavailable, an audio-only session is an explicit capture mode.
+It does not load visual models, and its headline indicator is the voice score only. Visual pillars,
+composite interpretation, visual trend lines, and visual benchmark comparisons are not presented
+as measured results. Older reports without a capture-mode field are treated as camera sessions.
+
+Camera and audio-only scores are kept separate in dashboard and product score comparisons. Any
+claim that scores reflect improvement still needs a consented, coach-reviewed pilot; synthetic
+tests alone cannot validate measurement quality or causality.
 
 ## Mode rubrics
 

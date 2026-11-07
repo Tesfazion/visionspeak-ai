@@ -12,6 +12,15 @@ const user: PublicUser = {
   name: "Speaker",
   createdAt: "2026-11-01T10:00:00.000Z",
   plan: "pro",
+  billing: {
+    provider: "lemon_squeezy",
+    subscriptionId: "subscription-1",
+    customerId: "customer-1",
+    status: "active",
+    endsAt: null,
+    customerPortalUrl: "https://app.lemonsqueezy.com/private/portal-token",
+    updatedAt: "2026-11-07T10:00:00.000Z",
+  },
 };
 
 test("account export excludes bearer tokens and third-party credentials", () => {
@@ -87,4 +96,5 @@ test("account export excludes bearer tokens and third-party credentials", () => 
   assert.equal(serialized.includes("secret-share-token"), false);
   assert.equal(serialized.includes("sk-secret"), false);
   assert.equal(serialized.includes("other@example.com"), false);
+  assert.equal(serialized.includes("private/portal-token"), false);
 });

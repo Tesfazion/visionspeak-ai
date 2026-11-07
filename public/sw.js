@@ -7,11 +7,11 @@
  *  - static build assets (_next/static, icons, mediapipe) are cache-first,
  *    which is where the real repeat-visit win is.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `vs-static-${VERSION}`;
 const SHELL_CACHE = `vs-shell-${VERSION}`;
 
-const SHELL = ["/offline", "/icons/icon-192.png", "/icons/mark.svg"];
+const SHELL = ["/offline", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
