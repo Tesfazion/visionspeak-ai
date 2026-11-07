@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 // have counsel review this page and /terms before taking payment.
 const entity = process.env.NEXT_PUBLIC_LEGAL_ENTITY?.trim() || "VisionSpeak AI";
 const contact = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@visionspeak.ai";
-const updated = "29 October 2026";
+const updated = "7 November 2026";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mt-7">
@@ -53,7 +53,9 @@ export default function PrivacyPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>Account: your name, email address, a salted scrypt hash of your password, plan and sign-up date.</li>
               <li>Session: the derived metrics, the generated report, your chosen title, speaker name and mode.</li>
+              <li>Meeting: room title, your participant details, transcript and shared notes.</li>
               <li>Transcript: the text your browser&apos;s speech recogniser produced, if that browser supports it.</li>
+              <li>Optional AI provider credentials: encrypted for server-side use; they are not included in exports.</li>
               <li>Session cookie: a signed, expiring token. It contains your user id and an expiry — no personal details.</li>
             </ul>
             <p>
@@ -101,8 +103,9 @@ export default function PrivacyPage() {
           <Section title="Your rights">
             <p>
               Depending on where you live you may have the right to access, correct, export, restrict or
-              delete your personal data, and to object to processing. You can export a single report as
-              JSON (and, on Pro, CSV) from the report page; for a full export or erasure, contact us.
+              delete your personal data, and to object to processing. Export your profile and saved
+              product data from account settings, or export an individual report as JSON (and, on Pro,
+              CSV) from its report page. For account erasure or other privacy requests, contact us.
               Requests are answered within 30 days.
             </p>
           </Section>

@@ -79,7 +79,7 @@ export const fr = {
   "auth.loginSample": "Ou explorez d’abord un rapport d’exemple",
   "auth.loginCardBody": "Connectez-vous pour ouvrir votre tableau de bord.",
   "auth.signupHeadline": "Mesurez ce que",
-  "auth.signupHeadlineAccent": "la salle ressent",
+  "auth.signupHeadlineAccent": "vous pouvez améliorer",
   "auth.signupBody":
     "Deux minutes devant votre propre caméra suffisent pour une base. Tout se passe sur votre appareil : seuls les résultats finaux sont enregistrés.",
   "auth.signupPoint1": "Sans carte, sans compte à rebours",
@@ -111,7 +111,7 @@ export const fr = {
   "auth.verify.dashboard": "Ou aller au tableau de bord",
 
   "footer.tagline":
-    "Un coach d’art oratoire qui mesure ce que le public ressent vraiment — et vous le dit à temps pour agir.",
+    "Un coach de prise de parole qui suit des indices visibles et audibles et les transforme en conseils pratiques.",
   "footer.chip.private": "Privé par défaut",
   "footer.chip.coaching": "Du coaching, pas une note",
   "footer.chip.practice": "Pensé pour l’entraînement",
@@ -249,8 +249,11 @@ export const fr = {
   "report.gaze": "Regard et visage",
   "report.posture": "Posture et mouvement",
   "report.voice": "Voix et rythme",
-  "report.emotion": "Lecture émotionnelle",
-  "report.benchmark": "Vous face à la salle",
+  "report.emotion": "Indices d’expression faciale",
+  "report.benchmark": "Valeurs de référence",
+  "report.emotionNote": "Ces catégories sont des estimations simplifiées des mouvements du visage ; elles ne détectent pas fiablement les émotions et ne disent pas ce que vous ressentez.",
+  "report.benchmarkNote": "Ces valeurs fixes sont des repères illustratifs pour s’entraîner ; elles ne proviennent pas d’une étude représentative et ne constituent pas un classement.",
+  "report.interpretationNote": "Ce sont des indicateurs d’entraînement fondés sur des indices visibles et audibles, pas une lecture de la réaction du public, de la personnalité ou de l’état émotionnel. Le cadrage, l’éclairage, le bruit et le navigateur peuvent influer sur les résultats.",
   "report.transcript": "Transcription et tics de langage",
   "report.noFillers": "aucun tic détecté",
   "report.plan": "Vos trois prochains exercices",

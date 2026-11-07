@@ -16,11 +16,7 @@ export function toBlendshapeMap(categories: BlendshapeCategory[] | undefined | n
 const get = (m: BlendshapeMap, key: string) => m[key] ?? 0;
 const two = (m: BlendshapeMap, a: string, b: string) => (get(m, a) + get(m, b)) / 2;
 
-/**
- * Emotion inference from the 52 ARKit-style blendshapes produced by
- * MediaPipe Face Landmarker. This is the same signal set DeepFace/FER models
- * use (action units → emotion), computed on-device with zero upload.
- */
+/** Relative facial-movement heuristics, not a validated emotion classifier. */
 export function emotionFromBlendshapes(m: BlendshapeMap): Record<EmotionLabel, number> {
   const smile = two(m, "mouthSmileLeft", "mouthSmileRight");
   const frown = two(m, "mouthFrownLeft", "mouthFrownRight");
@@ -82,9 +78,9 @@ export function tensionScore(m: BlendshapeMap) {
 
 export const EMOTION_META: Record<EmotionLabel, { label: string; color: string; emoji: string }> = {
   neutral: { label: "Neutral", color: "#8b8ba4", emoji: "•" },
-  happy: { label: "Warm", color: "#34d399", emoji: "◡" },
-  surprise: { label: "Surprised", color: "#fbbf24", emoji: "!" },
-  sad: { label: "Concerned", color: "#60a5fa", emoji: "︵" },
-  angry: { label: "Tense", color: "#fb7185", emoji: "︿" },
-  fear: { label: "Anxious", color: "#c084fc", emoji: "◦" },
+  happy: { label: "Smile pattern", color: "#34d399", emoji: "◡" },
+  surprise: { label: "Raised brows / jaw", color: "#fbbf24", emoji: "!" },
+  sad: { label: "Frown pattern", color: "#60a5fa", emoji: "︵" },
+  angry: { label: "Brow / mouth tension", color: "#fb7185", emoji: "︿" },
+  fear: { label: "Raised brows / wide eyes", color: "#c084fc", emoji: "◦" },
 };

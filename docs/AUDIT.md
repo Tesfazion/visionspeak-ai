@@ -91,6 +91,7 @@ those until a human runs them.
 | ✅ No structured data for pricing | `Product`/`Offer` JSON-LD generated from the same plan object the API enforces. |
 | ✅ No live co-coaching surface | `/meeting` lobby + `/meeting/[id]` room: roster, chat, presence and an ended state over HTTP long-poll signaling (`src/lib/meeting/`), with a WebRTC mesh (`src/hooks/useWebRtc.ts`, trickle-ICE buffering) for media. Media is unverified here — see §1. |
 | ✅ The dashboard read as a mirror, not a room | Everything above the fold reported on past sessions, so the product looked like a mirror you speak into alone and the meeting surface was unreachable from the page users land on. `src/components/dashboard/meeting-callout.tsx` now sits on both the empty state and the populated dashboard, in all four locales, with two entries into `/meeting`. Smoke asserts the copy and the link. |
+| ✅ Account settings lacked profile/password controls and a complete export | Profile edits and password changes are available in `/account`; `/api/auth/me/export` downloads the account, saved sessions, attended meetings, and safe AI-key metadata without share tokens or provider credentials. |
 
 ---
 
@@ -100,9 +101,9 @@ those until a human runs them.
 | --- | --- | --- | --- |
 | 1 | Password reset | BLOCKER | ✅ |
 | 2 | Email verification | BLOCKER | ✅ |
-| 3 | Account deletion / export (art. 17) | BLOCKER | ✅ (art. 20 self-serve export still open) |
+| 3 | Account deletion / export (art. 17/20) | BLOCKER | ✅ — account deletion API and self-serve JSON export; deletion remains support-assisted in the current UI |
 | 4 | Session revocation | HIGH | ✅ |
-| 5 | Password change, profile edit, MFA, idle timeout | MEDIUM | ⬜ — `/account` shows the profile read-only and says so |
+| 5 | Password change, profile edit, MFA, idle timeout | MEDIUM | ◐ — profile edit and password change shipped; MFA and idle timeout remain open |
 | 6 | Admin/role/audit surface | HIGH | ⬜ — `teamId`/`teamRole` exist on the user row, nothing reads them |
 | 7 | Real payment provider (webhook, invoices, dunning, refunds) | BLOCKER | ◐ — the seam and the only-writer webhook exist; no provider is wired |
 | 8 | Usage metering beyond the monthly session count | MEDIUM | ⬜ — minutes analysed are not recorded |
@@ -116,7 +117,7 @@ those until a human runs them.
 | 16 | No email delivery of a report | HIGH | ✅ (weekly digest still open) |
 | 17 | No embeds, no white-label | MEDIUM | ◐ — brand name/tagline are configurable; `frame-ancestors 'none'` still forbids embeds |
 | 18 | Transcript exported with no redaction option | MEDIUM | ⬜ |
-| 19 | Scores are computed in the browser and trusted by the server | HIGH | ◐ — the integrity hash makes edited inputs visible; a crafted POST can still store any score. Must stay open before any "certified" or comparative claim |
+| 19 | Client-submitted aggregates cannot prove measurement authenticity | HIGH | ◐ — reports now explain that scores are practice indicators and fixed reference values are illustrative, not population comparisons; a crafted POST can still submit fabricated measurements. No certification claim is made. |
 | 20 | One camera+mic prompt, no audio-only fallback | HIGH | ⬜ |
 | 21 | Offline support is a shell page only | MEDIUM | ⬜ |
 | 22 | No error tracking / product analytics | HIGH | ◐ — crash envelope and structured logs exist; no analytics, no retention measurement |
@@ -136,8 +137,8 @@ those until a human runs them.
 
 1. **Wire the payment provider** (#7) to the existing webhook, and test upgrade, downgrade
    and failed payment against it. Until then Pro is a manual `plan` flip.
-2. **Password change + profile edit** (#5) — the last thing support cannot do for a
-   customer.
+2. **MFA + idle timeout** (#5) — profile editing and password changes are available
+   in account settings.
 3. **Postgres (or SQLite on a single VM) behind the five store functions** (#10–11) and a
    scheduled backup (#12). Until then, say plainly that this is a single-instance
    deployment.

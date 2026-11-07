@@ -15,12 +15,12 @@ const COPY: Record<ReportIntegrity, { label: string; tone: string; icon: typeof 
 /**
  * Report integrity badge.
  *
- * Scores are computed in the browser and trusted by the server, so a crafted
- * POST can store any number. The badge does not stop that; it makes stored-input
- * tampering visible. The state is computed server-side by the report page from
- * the same hash the save path wrote (`reportIntegrityHash`), so it renders in the
- * first paint, works for a shared report's anonymous reader, and needs no
- * client-side request that could 401 into a false "unverified".
+ * The server builds scores from a browser-submitted aggregate, but cannot prove
+ * that aggregate matches the camera/microphone signals without receiving the
+ * raw media. This hash detects edits to the stored report inputs, not fabricated
+ * measurements. The state is computed from the same hash the save path wrote
+ * (`reportIntegrityHash`), so it renders in the first paint and works for shared
+ * reports without a client-side request that could 401 into a false warning.
  */
 export function ReportVerify({ state }: { state: ReportIntegrity }) {
   const { label, tone, icon: Icon } = COPY[state];

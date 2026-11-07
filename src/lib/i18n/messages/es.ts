@@ -71,7 +71,7 @@ export const es = {
   "auth.errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
 
   "footer.tagline":
-    "Un entrenador de oratoria que mide lo que el público siente de verdad — y te lo dice a tiempo para usarlo.",
+    "Un coach de oratoria que observa señales visibles y audibles al hablar y las convierte en consejos prácticos.",
   "footer.chip.private": "Privado por defecto",
   "footer.chip.coaching": "Entrenamiento, no una nota",
   "footer.chip.practice": "Hecho para practicar",
@@ -209,8 +209,11 @@ export const es = {
   "report.gaze": "Mirada y rostro",
   "report.posture": "Postura y movimiento",
   "report.voice": "Voz y ritmo",
-  "report.emotion": "Lectura emocional",
-  "report.benchmark": "Tú frente a la sala",
+  "report.emotion": "Señales de expresión facial",
+  "report.benchmark": "Valores de referencia",
+  "report.emotionNote": "Estas categorías son estimaciones simples basadas en movimientos faciales; no detectan emociones de forma fiable ni indican cómo te sientes.",
+  "report.benchmarkNote": "Estos valores fijos son una referencia ilustrativa para practicar; no proceden de un estudio representativo ni son una clasificación competitiva.",
+  "report.interpretationNote": "Son indicadores de práctica basados en señales visibles y audibles, no una lectura de la reacción del público, la personalidad o el estado emocional. El encuadre, la iluminación, el ruido y el navegador pueden afectar los resultados.",
   "report.transcript": "Transcripción y muletillas",
   "report.noFillers": "sin muletillas detectadas",
   "report.plan": "Tus tres próximos ejercicios",

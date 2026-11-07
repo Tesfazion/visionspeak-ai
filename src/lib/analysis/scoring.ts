@@ -283,7 +283,7 @@ export function ratingFor(score: number) {
   return RATINGS.find((r) => score >= r.min) ?? RATINGS[RATINGS.length - 1];
 }
 
-/** Human benchmarks used for the "you vs. the room" comparison bars. */
+/** Fixed internal reference values for practice context; not sampled population data. */
 export function benchmarkFor(pillars: PillarScores) {
   return [
     { metric: "Eye contact", you: pillars.eyeContact, average: 54 },

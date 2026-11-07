@@ -8,6 +8,9 @@
   coaching insights, not the transcript. Provider keys are AES-256-GCM encrypted in PostgreSQL
   with a key derived from the stable `AUTH_SECRET`; replacing that secret requires reconnecting
   provider keys. Provider usage is billed by the provider.
+- **Account export** is available from account settings as a JSON archive of the profile, saved
+  sessions, attended meetings, and safe metadata for connected AI provider keys. Provider
+  credentials and active share-link tokens are intentionally excluded.
 - **Samples are read-only.** Seeded sample reports are shared reference material, cannot be
   deleted or edited by an account, and never appear in a user's own history or averages.
 - **Share links are explicit and revocable** — an unguessable token plus the report id, expiring
@@ -21,8 +24,9 @@
 - **Password change** re-hashes the stored password and verifies the current one; the old password
   never grants access after a change.
 - **Report integrity** — the server stores a hash of the inputs a report was built from and
-  re-computes it for the badge. It makes edited stored inputs visible; it does **not** make
-  client-computed scores trustworthy, which is why nothing here claims to be certified.
+  re-computes it for the badge. It makes edited stored inputs visible; it cannot prove that
+  browser-submitted measurements match the camera and microphone signals. Reports are not
+  certified performance assessments.
 - **Email** — SMTP is plain Node, and a server that offers neither implicit TLS nor STARTTLS
   never receives a password. Billing webhooks are compared in constant time, and `/api/errors`
   is rate-limited because it writes attacker-supplied text into the ops log.

@@ -16,6 +16,12 @@ Grades map to `RATINGS` in `src/lib/analysis/scoring.ts`; every sentence in a re
 from a measured value by `buildStrengths`, `buildImprovements` and `buildPlan` in
 `src/lib/analysis/report.ts`.
 
+These are practice indicators built from device-measured cues, not validated measures of
+personality, audience reaction, or speaking ability. Camera framing, lighting, background noise,
+and browser support can affect results. Facial-expression categories are simplified movement
+heuristics, not reliable emotion detection. The report's comparison values are fixed internal
+references, not results from a representative speaker study.
+
 The weights are asserted by unit tests, so a refactor cannot silently change every score in the
 product.
 

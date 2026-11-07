@@ -238,6 +238,9 @@ export default async function ReportPage({
               <span className="text-mist">{t("report.rubric", { name: r.rubric?.label ?? session.mode })}</span>
               {r.rubric ? ` — ${r.rubric.summary}` : " — scored on the practice rubric."}
             </p>
+            <p className="mt-3 max-w-2xl rounded-lg border border-line/60 bg-raised/40 p-3 text-[16px] leading-relaxed text-fog">
+              {t("report.interpretationNote")}
+            </p>
           </div>
 
           <div className="hidden shrink-0 flex-col items-end gap-1 lg:flex">
@@ -440,7 +443,7 @@ export default async function ReportPage({
       {/* --------------------------- emotion + benchmark --------------------------- */}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <section className="panel p-5">
-          <PanelHead title="Emotional read" hint="52 blendshapes" icon={Smile} />
+          <PanelHead title={t("report.emotion")} hint="52 blendshapes" icon={Smile} />
           <div className="mt-4 space-y-2.5">
             {Object.entries(r.emotions)
               .sort((a, b) => b[1] - a[1])
@@ -457,15 +460,13 @@ export default async function ReportPage({
                 );
               })}
           </div>
-          <p className="mt-4 text-[11px] leading-relaxed text-fog">
-            Dominant state: <span className="text-ink">{EMOTION_META[r.dominantEmotion].label}</span>. A
-            neutral or slightly warm baseline reads as credible; long stretches of tension or fear read as
-            discomfort on camera.
+          <p className="mt-4 text-[16px] leading-relaxed text-fog">
+            {t("report.emotionNote")}
           </p>
         </section>
 
         <section className="panel p-5">
-          <PanelHead title="You vs. the room" hint="benchmark" icon={Crown} />
+          <PanelHead title={t("report.benchmark")} hint="benchmark" icon={Crown} />
           <div className="mt-4 space-y-3">
             {r.benchmark.map((b) => (
               <div key={b.metric}>
@@ -482,9 +483,8 @@ export default async function ReportPage({
               </div>
             ))}
           </div>
-          <p className="mt-4 text-[10.5px] leading-relaxed text-fog/80">
-            Benchmarks are reference bands drawn from typical untrained speakers — directional context, not
-            a competitive ranking.
+          <p className="mt-4 text-[16px] leading-relaxed text-fog/80">
+            {t("report.benchmarkNote")}
           </p>
         </section>
       </div>

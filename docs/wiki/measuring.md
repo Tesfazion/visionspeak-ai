@@ -10,6 +10,10 @@
 | **Voice**              | Web Audio API `AnalyserNode`                     | loudness (dBFS), energy, volume consistency, pitch variation in semitones, pauses, speaking-time ratio |
 | **Speech**             | Web Speech API                                   | transcript, WPM, filler words per 100 words                                                            |
 
+Facial-expression categories are simplified heuristics over facial movement, not reliable emotion
+detection. Composite scores are practice indicators, not direct measures of audience reaction or
+personality; setup and browser conditions can affect them.
+
 > **Why the browser instead of Python?** The original spec called for MediaPipe + TensorFlow +
 > DeepFace + Whisper in Python. Those wheels do not exist for this stack, so a Python service could
 > not actually run. Executing the _identical_ MediaPipe models through WebAssembly is faster (no

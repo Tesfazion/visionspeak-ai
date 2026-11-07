@@ -102,7 +102,7 @@ export const en = {
   "auth.loginSample": "Or explore a sample report first",
   "auth.loginCardBody": "Sign in to open your dashboard.",
   "auth.signupHeadline": "Start measuring what",
-  "auth.signupHeadlineAccent": "the room feels",
+  "auth.signupHeadlineAccent": "you can improve",
   "auth.signupBody":
     "Two minutes in front of your own camera is enough to get a baseline. Everything runs on your device — only the final numbers are saved to your account.",
   "auth.signupPoint1": "No card, no trial clock",
@@ -150,6 +150,9 @@ export const en = {
   "account.password.submit": "Update password",
   "account.password.done": "Password updated. Other sessions were signed out.",
   "account.editNote": "Name and email edits are not yet available. Contact support to change them.",
+  "account.export.title": "Export your data",
+  "account.export.body": "Download a JSON copy of your profile, saved sessions, meeting notes and transcripts, and connected AI provider settings. Credentials and active share-link tokens are never included.",
+  "account.export.submit": "Download account data",
   "account.revoke.title": "Revoke other sessions",
   "account.revoke.body": "Every session cookie this account has issued stops working immediately — except the one you are using now, which is replaced with a fresh one. A stolen cookie dies here.",
   "account.revoke.confirm": "Type your email to confirm",
@@ -183,7 +186,7 @@ export const en = {
 
   /* ------------------------------------------------------------- footer */
   "footer.tagline":
-    "A speaking coach that measures what an audience actually feels — and tells you the truth in time to use it.",
+    "A speaking coach that tracks visible and audible delivery cues, then turns them into practical feedback.",
   "footer.chip.private": "Private by default",
   "footer.chip.coaching": "Coaching, not scoring",
   "footer.chip.practice": "Built for practice",
@@ -229,21 +232,21 @@ export const en = {
   "landing.preview.coachNote": "Coach note",
   "landing.preview.pause": "Land the key line with a pause",
   "landing.signals.eyebrow": "Six signals",
-  "landing.signals.title": "Everything an audience notices,",
+  "landing.signals.title": "Six delivery cues,",
   "landing.signals.titleAccent": "measured",
   "landing.signals.copy":
-    "People read six channels at once and remember none of the numbers. VisionSpeak tracks all six continuously and turns them into something you can act on.",
+    "VisionSpeak tracks six visible and audible delivery cues and turns their patterns into practical exercises.",
   "landing.signal.eye.title": "Eye contact & gaze",
   "landing.signal.eye.copy":
-    "Knows when you leave the lens — and exactly how long you were gone.",
+    "Estimates how often your gaze stays near the camera lens and how often it shifts.",
   "landing.signal.eye.metric": "Gaze breaks, counted",
   "landing.signal.posture.title": "Posture & alignment",
   "landing.signal.posture.copy":
-    "Shoulder line, torso lean and head stack: the geometry audiences read as authority.",
+    "Shoulder line, torso lean and head alignment — visible posture cues in this camera setup.",
   "landing.signal.posture.metric": "Upright time, measured",
   "landing.signal.gestures.title": "Gesture quality",
   "landing.signal.gestures.copy":
-    "Count, openness and hand jitter separate expressive beats from nervous fidgeting.",
+    "Hand visibility, movement and openness help you notice repeated gesture habits.",
   "landing.signal.gestures.metric": "Beats per minute",
   "landing.signal.voice.title": "Vocal delivery",
   "landing.signal.voice.copy":
@@ -251,11 +254,11 @@ export const en = {
   "landing.signal.voice.metric": "Pace, pitch and pauses",
   "landing.signal.expression.title": "Facial expression",
   "landing.signal.expression.copy":
-    "Warmth, variety and held tension — the expression the room remembers.",
+    "Tracks visible facial movement and variation; these cues do not reveal what you or an audience feels.",
   "landing.signal.expression.metric": "Expression range",
   "landing.signal.presence.title": "Presence composite",
   "landing.signal.presence.copy":
-    "Confidence, engagement and leadership, weighted and explained — never a black box.",
+    "Composite practice indicators built from delivery cues — not direct measures of personal traits.",
   "landing.signal.presence.metric": "Nine live scores",
   "landing.how.eyebrow": "How it works",
   "landing.how.titleA": "Camera to coaching in",
@@ -329,10 +332,10 @@ export const en = {
   "landing.usecase.three.copy": "Hold attention across a full session, not five minutes.",
   "landing.usecase.four.title": "Leadership & boardroom",
   "landing.usecase.four.copy": "Build the presence that makes a room lean in.",
-  "landing.evidence.eyebrow": "Why you can trust it",
-  "landing.evidence.title": "No mock data. No theatre.",
+  "landing.evidence.eyebrow": "How to read the scores",
+  "landing.evidence.title": "Cues, not conclusions.",
   "landing.evidence.copy":
-    "Every number comes from a real measurement of you — never a random number dressed up to look impressive.",
+    "Scores summarize visible and audible behavior. Camera setup, lighting, noise and browser support can affect results; they are not a reading of how an audience feels.",
   "landing.evidence.one": "Analysed on your device",
   "landing.evidence.oneCopy": "Video and audio are never uploaded or stored.",
   "landing.evidence.two": "Every score traceable",
@@ -577,12 +580,14 @@ export const en = {
   "report.gaze": "Gaze & face",
   "report.posture": "Posture & movement",
   "report.voice": "Voice & rhythm",
-  "report.emotion": "Emotional read",
-  "report.benchmark": "You vs. the room",
+  "report.emotion": "Facial movement patterns",
+  "report.benchmark": "Reference values",
   "report.benchmarkNote":
-    "Benchmarks are reference bands drawn from typical untrained speakers — directional context, not a competitive ranking.",
+    "These fixed reference values are illustrative practice context, not results from a representative speaker study or a competitive ranking.",
   "report.emotionNote":
-    "Dominant state: {emotion}. A neutral or slightly warm baseline reads as credible; long stretches of tension read as discomfort.",
+    "These categories are simplified facial-movement heuristics, not reliable emotion detection or a measure of how you feel.",
+  "report.interpretationNote":
+    "These are practice indicators based on visible and audible cues—not a reading of audience reaction, personality, or emotional state. Camera framing, lighting, background noise, and browser support can affect results.",
   "report.transcript": "Transcript & filler words",
   "report.transcriptEmpty":
     "No transcript was captured for this session. Pace and pauses were still scored from the sound of your voice.",

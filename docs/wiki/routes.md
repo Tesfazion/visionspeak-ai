@@ -16,6 +16,7 @@
 | `/privacy` · `/terms` | public | Privacy policy and terms of service |
 | `/offline` | public | Service-worker fallback |
 | `/api/health` | public | Liveness + storage + build probe |
+| `/api/auth/me/export` | **required** | Downloads the signed-in account's JSON data archive |
 | `/api/sessions/[id]/pdf` | owner, Pro | Server-rendered PDF report |
 | `/api/sessions/[id]/verify` | owner | Re-hashes the stored inputs; the report badge is computed server-side |
 | `/api/ai/keys` · `/api/ai/keys/[id]` | owner | Manage encrypted provider keys and models |

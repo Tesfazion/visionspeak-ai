@@ -1,10 +1,11 @@
 # VisionSpeak AI
 
-**An intelligent public speaking coach that measures what an audience actually feels.**
+**An on-device speaking coach that turns observable delivery cues into practice feedback.**
 
-VisionSpeak AI watches and listens while you speak — then tells you the truth about how you land:
-eye contact, posture, gestures, vocal delivery and facial expression, folded into the three
-composite scores people read in a room: **confidence**, **engagement** and **leadership presence**.
+VisionSpeak AI tracks visible and audible cues while you practice — gaze toward the camera, posture,
+gestures, vocal delivery and facial movement — then turns them into coaching indicators and drills.
+Scores named **confidence**, **engagement** and **leadership presence** are practice heuristics, not
+direct measures of audience reaction, personality or speaking ability.
 
 Every score traces back to a model output. Nothing is mocked, randomised or invented for show.
 Everything runs **on-device** — no frame, no audio, no landmark ever reaches a server.

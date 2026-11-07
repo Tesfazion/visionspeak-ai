@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     template: "%s · VisionSpeak",
   },
   description:
-    "VisionSpeak is a speaking coach that measures what an audience actually feels: confidence, warmth and leadership presence, scored honestly and coached in the moment.",
+    "VisionSpeak helps you practice communication by summarizing visible and audible delivery cues into coaching feedback. Scores are practice indicators, not direct measures of audience reaction or personality.",
   applicationName: "VisionSpeak",
   keywords: [
     "public speaking coach",
@@ -100,7 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     name: "VisionSpeak",
     url: base,
     description:
-      "VisionSpeak is a speaking coach that measures what an audience actually feels: confidence, warmth and leadership presence, scored honestly and coached in the moment.",
+      "VisionSpeak helps you practice communication by summarizing visible and audible delivery cues into coaching feedback. Scores are practice indicators, not direct measures of audience reaction or personality.",
   };
   const softwareAppJsonLd = {
     "@context": "https://schema.org",

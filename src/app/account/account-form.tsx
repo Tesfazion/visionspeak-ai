@@ -232,6 +232,25 @@ export function AccountSettingsForm({
 
         <Card className="mt-4 p-6">
           <h2 className="text-[13px] font-medium text-ink">
+            {t("account.export.title")}
+          </h2>
+          <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">
+            {t("account.export.body")}
+          </p>
+          <a
+            href="/api/auth/me/export"
+            download
+            className={cn(
+              "mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-4 py-2 text-[13px] font-medium text-ink transition-colors hover:border-brand/50 hover:text-brand-soft",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-base",
+            )}
+          >
+            {t("account.export.submit")}
+          </a>
+        </Card>
+
+        <Card className="mt-4 p-6">
+          <h2 className="text-[13px] font-medium text-ink">
             {t("account.revoke.title")}
           </h2>
           <p className="pretty mt-2 text-[12.5px] leading-relaxed text-fog">
