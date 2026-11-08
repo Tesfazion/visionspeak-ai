@@ -64,10 +64,11 @@ export function MeetingRoom({
     handleOffer,
     handleAnswer,
     handleIce,
-    createOffer,
+    connectPeer,
     removePeer,
     cleanup,
   } = useWebRtc({
+    peerId: socket.peerId,
     sendOffer: (to, sdp) => socketRef.current.sendOffer(to, sdp),
     sendAnswer: (to, sdp) => socketRef.current.sendAnswer(to, sdp),
     sendIce: (to, candidate) => socketRef.current.sendIce(to, candidate),
@@ -125,19 +126,17 @@ export function MeetingRoom({
     if (stream) addLocalStream(stream);
   }, [stream, addLocalStream]);
 
-  // Deterministic offerer: the lower peer id offers, so the two sides never
-  // collide. Wait for the local stream so the first offer already carries media.
+  // Use peer IDs to pick one initial connection creator; perfect negotiation
+  // handles later track additions and simultaneous renegotiation.
   useEffect(() => {
     const myId = socket.peerId;
     if (!myId || !stream) return;
     for (const peer of socket.peers) {
-      if (peer.id === myId) continue;
-      if (myId < peer.id && !offered.current.has(peer.id)) {
-        offered.current.add(peer.id);
-        void createOffer(peer.id, peer.name);
-      }
+      if (peer.id === myId || myId > peer.id || offered.current.has(peer.id)) continue;
+      offered.current.add(peer.id);
+      connectPeer(peer.id, peer.name);
     }
-  }, [socket.peers, socket.peerId, stream, createOffer]);
+  }, [socket.peers, socket.peerId, stream, connectPeer]);
 
   const join = useCallback(async () => {
     setJoined(true);

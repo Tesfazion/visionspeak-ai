@@ -1,12 +1,8 @@
 /**
- * Zero-dependency SMTP sender.
+ * Zero-dependency email sender with Resend API and SMTP transports.
  *
- * Email is a configuration seam, not a built-in: set `SMTP_HOST`, `SMTP_PORT`,
- * `SMTP_SECURE` (implicit TLS on 465), `SMTP_USER`, `SMTP_PASS` and `SMTP_FROM`
- * to actually send. Without a host and sender the caller gets
- * `{ ok: false, reason: "not_configured" }` and a structured log line — the same
- * pattern as the billing checkout, so a deploy cannot accidentally pretend to
- * email nobody.
+ * Resend is preferred when `RESEND_API_KEY` and `RESEND_FROM` are configured.
+ * SMTP remains available as a fallback transport.
  *
  * No `nodemailer`: the platform already runs zero native dependencies, and SMTP
  * is a handful of commands. The transport is either implicit TLS (465) or a
@@ -38,8 +34,16 @@ type SmtpSocket = net.Socket | tls.TLSSocket;
 const TIMEOUT_MS = 15_000;
 const readEnv = (key: string) => process.env[key]?.trim() || "";
 
-export function emailConfigured() {
+function resendConfigured() {
+  return Boolean(readEnv("RESEND_API_KEY") && readEnv("RESEND_FROM"));
+}
+
+function smtpConfigured() {
   return Boolean(readEnv("SMTP_HOST") && readEnv("SMTP_FROM"));
+}
+
+export function emailConfigured() {
+  return resendConfigured() || smtpConfigured();
 }
 
 /**
@@ -220,6 +224,8 @@ function upgrade(socket: net.Socket, host: string): Promise<tls.TLSSocket> {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
+  if (resendConfigured()) return sendWithResend(options);
+
   const host = readEnv("SMTP_HOST");
   const port = Number(readEnv("SMTP_PORT") || "587");
   const secure = readEnv("SMTP_SECURE") === "1" || port === 465;
@@ -280,5 +286,57 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     return { ok: false, reason: err instanceof Error ? err.message : "send failed" };
   } finally {
     socket?.destroy();
+  }
+}
+
+async function sendWithResend(options: EmailOptions): Promise<EmailResult> {
+  const apiKey = readEnv("RESEND_API_KEY");
+  const from = readEnv("RESEND_FROM");
+
+  try {
+    const to = headerValue(options.to, "recipient");
+    const subject = headerValue(options.subject, "subject");
+    const sender = headerValue(from, "sender");
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      body: JSON.stringify({
+        from: sender,
+        to: [to],
+        subject,
+        html: options.html,
+        text: options.text,
+        ...(options.attachments?.length
+          ? {
+              attachments: options.attachments.map((attachment) => ({
+                filename: headerValue(attachment.filename, "attachment name"),
+                content: attachment.content.toString("base64"),
+                content_type: attachment.contentType,
+              })),
+            }
+          : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      logEvent("error", "email.send_failed", { provider: "resend", status: response.status });
+      return { ok: false, reason: `provider_rejected_${response.status}` };
+    }
+
+    const result = await response.json() as { id?: unknown };
+    return {
+      ok: true,
+      ...(typeof result.id === "string" ? { messageId: result.id } : {}),
+    };
+  } catch (err) {
+    logEvent("error", "email.send_failed", {
+      provider: "resend",
+      error: String(err),
+    });
+    return { ok: false, reason: "provider_request_failed" };
   }
 }

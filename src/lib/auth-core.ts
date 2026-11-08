@@ -462,7 +462,12 @@ export async function resetPassword(token: string, newPassword: string) {
     const users = await readUsers();
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return { error: "Account not found." } as const;
-    users[index] = { ...users[index], salt, passwordHash };
+    users[index] = {
+      ...users[index],
+      salt,
+      passwordHash,
+      sessionsValidAfter: new Date().toISOString(),
+    };
     await writeUser(users[index]);
     return { ok: true } as const;
   });

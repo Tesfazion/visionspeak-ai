@@ -206,6 +206,8 @@ export const en = {
   "footer.terms": "Terms",
   "footer.contact": "Contact",
   "footer.security": "Data & security",
+  "footer.sunshineTechSolution": "Sunshine Tech Solution",
+  "footer.madeBy": "Made by",
   "footer.rights": "© {year} VisionSpeak. Built for speakers who want the truth.",
   "footer.note": "Transforming public speaking through AI.",
 

@@ -92,7 +92,7 @@ export function Tile({
           videoOff && "hidden",
         )}
         playsInline
-        muted={isSelf || muted}
+        muted
       />
       <audio ref={audioRef} className="hidden" />
 

@@ -11,10 +11,13 @@ node scripts/qa/qa-meeting.mjs                 # checks: lobby, auth, roster, si
 ```
 
 Tests require `TEST_DATABASE_URL` to point to a dedicated, disposable Neon database branch.
-Configure it locally before `npm test` and as the GitHub Actions `TEST_DATABASE_URL` secret. The
-test runner fails if it is missing, so integration coverage cannot silently disappear. Tests use
-verified TLS and delete only records created by their own unique run; never use a production Neon
-database for tests.
+The test runner loads `.env.local` for local runs, so it can use the configured test URL without
+manually exporting it in each shell. Neon branch selection is represented by its endpoint ID in
+the hostname, not by a different password; the runner refuses local tests if `TEST_DATABASE_URL`
+targets the same endpoint as `DATABASE_URL`. Copy the connection string after selecting the
+disposable test branch in Neon Console. CI supplies the dedicated test secret to both database
+variables in its isolated runner. Tests use verified TLS and delete only records created by their
+own unique run; never use a production Neon database for tests.
 
 **Unit suite** — covers what is otherwise invisible:
 

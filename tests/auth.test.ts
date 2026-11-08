@@ -21,7 +21,9 @@ const {
   isAuthSecretConfigured,
   isSecureRequest,
   normaliseEmail,
+  requestPasswordReset,
   revokeOtherSessions,
+  resetPassword,
   updateProfile,
   validateCredentials,
   verifyPassword,
@@ -175,4 +177,23 @@ test("profile edits and password changes persist in PostgreSQL", { skip: !testDa
   assert.deepEqual(await changePassword(created.user.id, "wrong", "new-password"), { error: "wrong_current" });
   assert.deepEqual(await changePassword(created.user.id, "original-pass", "new-password"), { ok: true });
   assert.equal((await authenticate(email, "new-password"))?.email, email);
+});
+
+test("password reset uses a single-use token and revokes existing sessions", {
+  skip: !testDatabaseUrl,
+}, async () => {
+  const email = testEmail("reset");
+  const created = await createUser({ email, password: "original-pass", name: "Reset" });
+  assert.ok("user" in created);
+  if (!("user" in created)) return;
+
+  const session = await createSessionToken(created.user.id, 60_000);
+  const token = await requestPasswordReset(email.toUpperCase());
+  if (!token) throw new Error("Reset token was not created for an existing test account.");
+  assert.deepEqual(await resetPassword(token, "changed-password"), { ok: true });
+  assert.equal((await authenticate(email, "changed-password"))?.email, email);
+  assert.equal(await authenticate(email, "original-pass"), null);
+  assert.equal(await verifySessionToken(session), null);
+  const reused = await resetPassword(token, "another-password");
+  assert.deepEqual(reused, { error: "Reset link is invalid or has expired." });
 });

@@ -15,9 +15,10 @@ after the second pass on 31 October 2026 and the coach-practice implementation p
 Run on 31 October 2026, in this environment (8 GB RAM, ~0.5–1 GB free — see the build row).
 
 Implementation checks on 7 November 2026: typecheck, lint, 16 focused report/metrics/billing tests,
-and a two-worker production build passed. The full `npm test` suite was not run because
-`TEST_DATABASE_URL` is not configured in this environment; provider test-mode billing and real
-camera/microphone behavior also remain unverified.
+and a two-worker production build passed. The configured local `TEST_DATABASE_URL` shares its
+Neon endpoint with `DATABASE_URL`, so it is not accepted as an isolated test target; the runner now
+blocks local execution until a separate disposable branch is configured. Provider test-mode
+billing and real camera/microphone behavior also remain unverified.
 
 | Check | Command | Result |
 | --- | --- | --- |

@@ -131,6 +131,8 @@ export const fr = {
   "footer.terms": "Conditions",
   "footer.contact": "Contact",
   "footer.security": "Données et sécurité",
+  "footer.sunshineTechSolution": "Sunshine Tech Solution",
+  "footer.madeBy": "Créé par",
   "footer.rights": "© {year} VisionSpeak. Pour celles et ceux qui veulent la vérité.",
   "footer.note": "Transformer la prise de parole par l’IA.",
 

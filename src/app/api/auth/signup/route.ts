@@ -42,8 +42,8 @@ export async function POST(request: Request) {
     const result = await createUser({
       ...parsed,
       // Verification is only meaningful when the platform can actually send the
-      // link. With no SMTP configured (CI, local dev, self-hosts without a mail
-      // setup) an unverifiable account would be locked out of the studio
+      // link. With no email provider configured (CI, local dev, self-hosts
+      // without a mail setup) an unverifiable account would be locked out
       // forever — so the address is trusted as-is and no token is issued.
       ...(emailConfigured()
         ? {}

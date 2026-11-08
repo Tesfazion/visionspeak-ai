@@ -84,6 +84,7 @@ export function ParticipantGrid({
                 name={p.name}
                 role={p.role}
                 video={p.stream}
+                audio={p.stream}
                 muted={p.muted}
                 videoOff={p.videoOff}
                 screenSharing={p.screenSharing}
@@ -138,6 +139,7 @@ export function ParticipantGrid({
                 name={p.name}
                 role={p.role}
                 video={p.stream}
+                audio={p.stream}
                 muted={p.muted}
                 videoOff={p.videoOff}
                 screenSharing={p.screenSharing}
@@ -174,6 +176,7 @@ export function ParticipantGrid({
           name={p.name}
           role={p.role}
           video={p.stream}
+          audio={p.stream}
           muted={p.muted}
           videoOff={p.videoOff}
           screenSharing={p.screenSharing}

@@ -135,6 +135,8 @@ export const am = {
   "footer.terms": "ውሎች",
   "footer.contact": "ያግኙን",
   "footer.security": "መረጃና ደህንነት",
+  "footer.sunshineTechSolution": "Sunshine Tech Solution",
+  "footer.madeBy": "በ",
   "footer.rights": "© {year} VisionSpeak። እውነቱን ለሚፈልጉ ተናጋሪዎች።",
   /* ----------------------------------------------------------- account */
   "account.eyebrow": "መለያ",

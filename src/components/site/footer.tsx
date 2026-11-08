@@ -43,6 +43,7 @@ const columns: Column[] = [
   {
     title: "footer.company",
     links: [
+      { label: "footer.sunshineTechSolution", href: "https://sunshinetechsolution.vercel.app/" },
       { label: "footer.privacy", href: "/privacy" },
       { label: "footer.terms", href: "/terms" },
       ...(supportEmail ? [{ label: "footer.contact" as MessageKey, href: `mailto:${supportEmail}` }] : []),
@@ -90,7 +91,20 @@ export function SiteFooter() {
 
       <div className="border-t border-line/60">
         <div className="container-page flex flex-col gap-2 py-5 text-[11px] text-fog/70 sm:flex-row sm:items-center sm:justify-between">
-          <p>{t("footer.rights", { year: new Date().getFullYear() })}</p>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <p>{t("footer.rights", { year: new Date().getFullYear() })}</p>
+            <p>
+              {t("footer.madeBy")}{" "}
+              <a
+                href="https://sunshinetechsolution.vercel.app/"
+                target="_blank"
+                rel="noreferrer"
+                className="transition-colors hover:text-ink"
+              >
+                Sunshine Tech Solution
+              </a>
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link href="/pricing" className="transition-colors hover:text-ink">
               {t("footer.pricing")}
